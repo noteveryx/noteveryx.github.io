@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>知识库</title>
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+  <style>
+    /* 代码块 */
+    .markdown-section pre {
+      border-radius: 6px;
+    }
+    /* 侧边栏宽度 */
+    .sidebar { width: 260px; }
+    .sidebar-toggle { width: 260px; }
+    .content { left: 260px; }
+    @media (min-width: 768px) {
+      .sidebar-toggle { width: 260px; }
+    }
+    /* 首页 hero */
+    .home-hero {
+      text-align: center;
+      padding: 60px 20px 40px;
+    }
+    .home-hero h1 {
+      font-size: 2.2em;
+      margin-bottom: 10px;
+    }
+    .home-hero p {
+      color: #666;
+      font-size: 1.1em;
+    }
+    /* 搜索框 */
+    .search { margin: 10px 15px; }
+    .search input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      outline: none;
+      font-size: 14px;
+    }
+    .search input:focus { border-color: #42b983; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    window.$docsify = {
+      name: '知识库',
+      repo: '',
+      loadSidebar: '_sidebar.md',
+      subMaxLevel: 2,
+      auto2top: true,
+      search: {
+        placeholder: '搜索...',
+        noData: '没有结果',
+        paths: 'auto'
+      },
+      // markdown 渲染支持
+      markdown: {
+        smartypants: true
+      },
+      // 最后更新时间
+      formatUpdated: '{YYYY}-{MM}-{DD} {HH}:{mm}',
+    }
+  </script>
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/plugins/zoom-image.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify-copy-code/dist/docsify-copy-code.min.js"></script>
+</body>
+</html>
