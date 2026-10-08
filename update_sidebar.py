@@ -50,7 +50,7 @@ HOME_TOP_LEVEL_ORDER = ['申论', '讲话稿', '软考']
 # 里已经有的, 顺序/位置被保留, 不会因为其他目录的增删而位移.
 LOCKED_ENTRIES = [
     {'kind': 'manual', 'line': '* [电子资源](docs/电子资源.md)', 'name': '电子资源'},
-    {'kind': 'section', 'title': '高性价比', 'name': '高性价比'},
+    {'kind': 'section', 'title': '高性价比', 'link': 'docs/高性价比.md', 'name': '高性价比'},
 ]
 
 def ensure_locked_entries(entries):
@@ -72,11 +72,14 @@ def ensure_locked_entries(entries):
                         locked['name'] in e.get('title', '')):
                     present = True; break
         if not present:
-            entries.insert(insert_at, {
+            restored = {
                 'kind': locked['kind'],
                 'line': locked.get('line'),
                 'title': locked.get('title'),
-            })
+            }
+            if 'link' in locked:
+                restored['link'] = locked['link']
+            entries.insert(insert_at, restored)
             insert_at += 1
             print(f'  [lock] auto-restored: {locked["name"]} ({locked["kind"]})')
 
@@ -203,7 +206,16 @@ def parse_existing_sidebar():
         next_is_subitem = (j < len(raw_lines) and raw_lines[j].startswith('  * '))
 
         if next_is_subitem:
-            SIDEBAR_ENTRIES.append({'kind': 'section', 'title': body})
+            # 顶层栏目后跟子项, 解析 [label](path) 形式提取可选 link
+            m_link = re.match(r'^\[(.+?)\]\((.+?)\)\s*$', body)
+            if m_link:
+                SIDEBAR_ENTRIES.append({
+                    'kind': 'section',
+                    'title': m_link.group(1),
+                    'link': m_link.group(2),
+                })
+            else:
+                SIDEBAR_ENTRIES.append({'kind': 'section', 'title': body})
             i = j   # 跳过子项 (后续重新生成)
         else:
             # 顶层独立条目, 只在是 [label](path) 形状时保留
@@ -288,14 +300,15 @@ def generate_sidebar(dry_run=False):
     matched_dirs = set()
     preserved, dropped = [], []
 
-    def render_section_block(title):
+    def render_section_block(title, link=None):
         dir_key = match_section_to_directory(title, dir_map)
         if not dir_key or dir_key not in dir_map:
             return None
         files, path_prefix = dir_map[dir_key]
         matched_dirs.add(dir_key)
         sorted_files = smart_sort_files(files)
-        return [f'* {title}'] + [
+        head = f'* [{title}]({link})' if link else f'* {title}'
+        return [head] + [
             f'  * [{f[:-3]}]({path_prefix}/{f})' for f in sorted_files
         ]
 
@@ -319,7 +332,7 @@ def generate_sidebar(dry_run=False):
         if entry['kind'] == 'home':
             blocks.append(['* [首页](/)'])
         elif entry['kind'] == 'section':
-            block = render_section_block(entry['title'])
+            block = render_section_block(entry['title'], entry.get('link'))
             if block:
                 blocks.append(block)
         elif entry['kind'] == 'manual':

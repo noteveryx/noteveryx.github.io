@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>知识库</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
   <link rel="stylesheet" href="assets/vue.css">
   <style>
     /* 代码块 */
@@ -122,6 +124,12 @@
       name: '知识库',
       repo: 'noteveryx/noteveryx.github.io',
       loadSidebar: '_sidebar.md',
+      // alias: 任何形如 `<dir>/_sidebar.md` 的子路径都重写为根相对路径
+      // docsify 的 isAbsolutePath 不会把单前导 `/` 识别为绝对路径，
+      // 因此不能直接用 `/_sidebar.md`；用相对路径 + alias 兜底最稳。
+      alias: {
+        '.*/_sidebar\\.md$': '/_sidebar.md'
+      },
       subMaxLevel: 2,
       auto2top: true,
       search: {
