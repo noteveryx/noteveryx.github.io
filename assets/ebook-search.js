@@ -128,10 +128,17 @@
         } catch (e) { safeLink = escapeHtml(book.link); }
       }
       var fmt = (book.formats || []).join(', ') || '—';
+      // 整个卡片用 <a> 包裹 -> 整片可点击 + 默认 cursor:pointer
+      // 内层「⬇ 下载」改成 <span> 避免嵌套 anchor
       html += ''
-        + '<div style="padding:14px 18px; margin-bottom:10px; background:#fff; border:1px solid #ebeef5; border-left:4px solid #42b983; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all .15s ease;" '
-        +     'onmouseenter="this.style.borderLeftColor=\'#35495e\';this.style.boxShadow=\'0 4px 12px rgba(66,185,131,0.18)\';" '
-        +     'onmouseleave="this.style.borderLeftColor=\'#42b983\';this.style.boxShadow=\'0 1px 3px rgba(0,0,0,0.04)\';">'
+        + '<a href="' + safeLink + '" target="_blank" rel="noopener" '
+        +    'style="display:block; padding:14px 18px; margin-bottom:10px; '
+        +          'background:#fff; border:1px solid #ebeef5; border-left:4px solid #42b983; '
+        +          'border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.04); '
+        +          'transition:all .15s ease; text-decoration:none; color:inherit; '
+        +          'cursor:pointer !important;" '
+        +    'onmouseenter="this.style.borderLeftColor=\'#35495e\';this.style.boxShadow=\'0 4px 12px rgba(66,185,131,0.18)\';this.style.transform=\'translateY(-1px)\';" '
+        +    'onmouseleave="this.style.borderLeftColor=\'#42b983\';this.style.boxShadow=\'0 1px 3px rgba(0,0,0,0.04)\';this.style.transform=\'translateY(0)\';">'
         +   '<div style="font-size:16px; font-weight:600; color:#303133; margin-bottom:6px;">'
         +     highlight(book.title || '未知', k)
         +   '</div>'
@@ -144,11 +151,11 @@
         +     ' &nbsp;|&nbsp; '
         +     '<span>📦 ' + escapeHtml(fmt) + '</span>'
         +   '</div>'
-        +   '<a href="' + safeLink + '" target="_blank" rel="noopener" '
-        +      'style="display:inline-block; padding:5px 14px; background:#42b983; color:#fff; text-decoration:none; border-radius:4px; font-size:13px; font-weight:500;">'
+        +   '<span style="display:inline-block; padding:5px 14px; background:#42b983; color:#fff; '
+        +              'text-decoration:none; border-radius:4px; font-size:13px; font-weight:500;">'
         +     '⬇ 下载'
-        +   '</a>'
-        + '</div>';
+        +   '</span>'
+        + '</a>';
     }
     box.innerHTML = html;
   }

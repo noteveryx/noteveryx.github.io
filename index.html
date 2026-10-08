@@ -41,6 +41,78 @@
       font-size: 14px;
     }
     .search input:focus { border-color: #42b983; }
+
+    /* 一级侧栏菜单固定加粗 (首页 / 电子资源 / 高性价比 / 申论 / 等)
+       vue.css 默认所有 sidebar 链接 font-weight:400, 只有 .active>a 加粗.
+       docsify 实际 DOM 是 `aside.sidebar > .sidebar-nav > ul > li > p > a`
+       (每个一级条目都被包了一层 <p>), 所以必须同时写 `> a` 和 `> p > a` 两条路径. */
+    .sidebar > ul > li > a,
+    .sidebar > ul > li > p > a,
+    .sidebar-nav > ul > li > a,
+    .sidebar-nav > ul > li > p > a {
+      font-weight: 700 !important;
+      color: #364149 !important;
+      font-size: 15px !important;
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+    /* active 状态用主题绿色 (激活的栏目整体变绿, 整行留 brand color) */
+    .sidebar > ul > li.active > a,
+    .sidebar > ul > li.active > p > a,
+    .sidebar-nav > ul > li.active > a,
+    .sidebar-nav > ul > li.active > p > a {
+      color: #42b983 !important;
+    }
+    /* 包裹一级标题的 <p>: 去掉默认的 700 让 <a> 自己控制; 顺带去掉上下 margin */
+    .sidebar > ul > li > p,
+    .sidebar-nav > ul > li > p {
+      font-weight: 700;
+      margin: 0;
+    }
+    /* 二级及更深条目保持细体, 不要被上面规则串到 */
+    .sidebar ul li ul li a,
+    .sidebar-nav ul li ul li a {
+      font-weight: 400 !important;
+      font-size: 13px !important;
+      padding-top: 2px;
+      padding-bottom: 2px;
+    }
+    /* 所有 sidebar <a> + 顶级 <p> (无链接的纯标题, 比如 * 高性价比 / * 申论)
+       都要手型 + hover 下划线. 一级菜单在 _sidebar.md 里写成 `* 名字` 时
+       docsify 只输出 <p>名字</p>, 没有 <a>, 所以光给 <a>:hover 是不行的. */
+    .sidebar a,
+    .sidebar-nav a,
+    .sidebar > ul > li > p,
+    .sidebar-nav > ul > li > p {
+      cursor: pointer !important;
+    }
+    .sidebar a:hover,
+    .sidebar-nav a:hover {
+      text-decoration: underline !important;
+    }
+    /* 关键: 只在 <p> 内没有嵌套 <ul> 时 (即纯文本标题, 如 高性价比, 申论, 讲话稿,
+       软考 *, 示例) 才用 text-decoration 下划线. 一旦 <p> 里包了 <ul>
+       (首页这种嵌入了 app-sub-sidebar 的结构), text-decoration 会向下继承,
+       让子项也出现下划线 —— 这就是用户报的"鼠标在一级标题上, 子项跟着变"的根因.
+       这类有 <ul> 的 <p>, 让内部 <a>:hover 自管, 我们不下划线父 <p>. */
+    .sidebar > ul > li > p:not(:has(ul)):hover,
+    .sidebar-nav > ul > li > p:not(:has(ul)):hover {
+      text-decoration: underline !important;
+    }
+    /* 顶级 <p> (无链接标题如 高性价比 / 申论) 加左右 padding,
+       让 hover 命中区扩到整行, 不止文本宽度. */
+    .sidebar > ul > li > p,
+    .sidebar-nav > ul > li > p {
+      padding-left: 4px;
+      padding-right: 4px;
+    }
+    /* 电子资源/高性价比两个插件里的可点击元素: chip + 卡片整片
+       全部强制 cursor:pointer, 避免被 docsify / 主题默认 cursor:text 覆盖 */
+    .ebook-cat-chip,
+    #ebook-search-results a,
+    #lb-search-results a {
+      cursor: pointer !important;
+    }
   </style>
 </head>
 <body>
@@ -73,5 +145,7 @@
   <script src="assets/sidebar-collapse.min.js"></script>
   <!-- 电子资源搜索插件 (docsify plugin) -->
   <script src="assets/ebook-search.js"></script>
+  <!-- 高性价比搜索插件 (docsify plugin) -->
+  <script src="assets/living-better-search.js"></script>
 </body>
 </html>
