@@ -39,8 +39,9 @@ def soft_exam_sort_key(name):
             return (0, i, name)
     return (1, 0, natural_sort_key(name))
 
-# 今日新增表格的一级栏目顺序 (申论 → 讲话稿 → 软考 → 其他)
-HOME_TOP_LEVEL_ORDER = ['申论', '讲话稿', '软考']
+# 今日新增表格的一级栏目顺序 (申论 → 讲话稿 → 寓言故事 → 软考 → 其他)
+# 与侧边栏顺序保持一致: 申论/讲话稿/寓言故事属于"日常内容"区, 软考是"备考"区
+HOME_TOP_LEVEL_ORDER = ['申论', '讲话稿', '寓言故事', '软考']
 
 # 锁定菜单: 不论 _sidebar.md 如何变化, 这 3 个菜单必须存在并保持原位
 #   - 首页永远是第一个 (kind=home 由 docsify 内置渲染)
@@ -51,6 +52,13 @@ HOME_TOP_LEVEL_ORDER = ['申论', '讲话稿', '软考']
 LOCKED_ENTRIES = [
     {'kind': 'manual', 'line': '* [电子资源](docs/电子资源.md)', 'name': '电子资源'},
     {'kind': 'section', 'title': '高性价比', 'link': 'docs/高性价比.md', 'name': '高性价比'},
+]
+
+# 紧跟"高性价比"之后的固定菜单: 位置在 高性价比 section 之后,
+# 其它 section 之前. 新建寓言故事类目时, 在这里登记即可保证下次跑脚本
+# 时它不会因为 sort/order 变化被挪到末尾.
+LOCKED_ENTRIES_AFTER_HIGHBILITY = [
+    {'kind': 'section', 'title': '寓言故事', 'name': '寓言故事'},
 ]
 
 def ensure_locked_entries(entries):
@@ -82,6 +90,37 @@ def ensure_locked_entries(entries):
             entries.insert(insert_at, restored)
             insert_at += 1
             print(f'  [lock] auto-restored: {locked["name"]} ({locked["kind"]})')
+
+def ensure_locked_entries_after_highbility(entries):
+    """
+    确保 LOCKED_ENTRIES_AFTER_HIGHBILITY 里的菜单 (如 寓言故事) 紧跟
+    "高性价比" section 之后. 若 _sidebar.md 已有 (parser 已识别) -> 保留原位;
+    若 _sidebar.md 中位置不正确或缺失, 把它们挪到/补到 高性价比 之后.
+    """
+    hb_idx = None
+    for i, e in enumerate(entries):
+        if e.get('kind') == 'section' and e.get('title') == '高性价比':
+            hb_idx = i; break
+    if hb_idx is None:
+        return  # 找不到高性价比, 不处理 (ensure_locked_entries 兜底)
+
+    # 检查并强制每个 locked_after 的位置紧跟高性价比
+    for locked in LOCKED_ENTRIES_AFTER_HIGHBILITY:
+        cur_idx = None
+        for i, e in enumerate(entries):
+            if e.get('kind') == 'section' and e.get('title') == locked['name']:
+                cur_idx = i; break
+        if cur_idx is None:
+            # 缺失 -> 补到 高性价比 之后
+            entries.insert(hb_idx + 1, {'kind': 'section', 'title': locked['name']})
+            print(f'  [lock-after] auto-inserted after 高性价比: {locked["name"]}')
+        elif cur_idx != hb_idx + 1:
+            # 已存在但位置不对 -> 挪到高性价比之后
+            item = entries.pop(cur_idx)
+            entries.insert(hb_idx + 1, item)
+            print(f'  [lock-after] moved to after 高性价比: {locked["name"]}')
+        # 把 hb_idx 推进一个, 让下一个 locked 跟在它后面
+        hb_idx += 1
 
 def today_files_sort_key(item):
     """
@@ -225,6 +264,8 @@ def parse_existing_sidebar():
 
     # 在解析完成后, 兜底补回锁定菜单 (首页 / 电子资源 / 高性价比)
     ensure_locked_entries(SIDEBAR_ENTRIES)
+    # 紧跟"高性价比"之后的固定菜单 (寓言故事 等)
+    ensure_locked_entries_after_highbility(SIDEBAR_ENTRIES)
 
 def lines_rstrip(s):
     """去掉尾部 \\r (Windows 行尾), 保留内部字符."""
