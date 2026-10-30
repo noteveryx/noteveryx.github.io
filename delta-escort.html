@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>delta escort · 三角洲行动纯绿色陪练</title>
-<meta name="description" content="delta escort —— 三角洲行动纯绿色陪玩：真人手打、零外挂零脚本、不索要账号、全程录屏。烽火地带摸金带飞，全面战场上分陪练。">
+<title>行动突围护航社 · 三角洲行动纯绿色陪玩</title>
+<meta name="description" content="行动突围护航社 —— 三角洲行动纯绿色陪玩：真人手打、零外挂零脚本、不索要账号、全程录屏。烽火地带摸金带飞，全面战场上分陪练，闲鱼平台担保交易。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23070A08'/%3E%3Cpath d='M16 5 27 26H5z' fill='none' stroke='%23B8FF3C' stroke-width='2.5'/%3E%3C/svg%3E">
 <style>
 :root{
@@ -163,29 +163,37 @@ h2{font-size:clamp(26px,3.4vw,36px);line-height:1.28;font-weight:750;letter-spac
 }
 .card .meta b{color:var(--acid-2);font-weight:500}
 
-/* 价格 */
-.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
-.plan{
+/* 服务与规则 */
+.price-hero{
+  display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;
+  background:linear-gradient(120deg,rgba(184,255,60,.09),rgba(184,255,60,.02) 55%);
+  border:1px solid rgba(184,255,60,.35);border-radius:var(--r);
+  padding:20px 24px;margin-bottom:16px;
+}
+.price-hero .big{font-family:var(--mono);font-size:27px;font-weight:600;color:var(--acid);letter-spacing:-.02em;white-space:nowrap}
+.price-hero .big small{font-size:13px;color:var(--muted-2);margin-left:8px;font-weight:400;letter-spacing:.04em}
+.price-hero .tags{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
+.price-hero .tags span{font-size:11.5px;font-family:var(--mono);letter-spacing:.05em;color:var(--muted);border:1px solid var(--line);padding:4px 11px;border-radius:99px}
+.rules-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-items:start}
+.rule-card{
   background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
-  padding:28px 24px;position:relative;transition:border-color .25s,transform .25s;
+  padding:26px 24px;transition:border-color .25s;
 }
-.plan:hover{transform:translateY(-3px);border-color:var(--line)}
-.plan.hot{border-color:rgba(184,255,60,.42);background:linear-gradient(170deg,rgba(184,255,60,.07),var(--surface) 42%)}
-.plan.hot::before{
-  content:"最多人选";position:absolute;top:-1px;right:18px;
-  background:var(--acid);color:#08110A;font-size:10.5px;font-weight:700;letter-spacing:.08em;
-  padding:3px 10px;border-radius:0 0 6px 6px;font-family:var(--mono);
+.rule-card:hover{border-color:var(--line)}
+.rule-card h3{font-size:16px;font-weight:650;margin-bottom:15px;display:flex;align-items:center;gap:10px;letter-spacing:-.01em}
+.rule-card h3 .tag-idx{font-family:var(--mono);font-size:10.5px;color:var(--acid);border:1px solid var(--line);padding:2px 7px;border-radius:3px;letter-spacing:.08em;font-weight:400}
+.rule-card ul{list-style:none;display:grid;gap:9px;font-size:13.5px;color:var(--muted);line-height:1.65}
+.rule-card ul li{display:flex;gap:9px;align-items:flex-start}
+.rule-card ul li::before{content:"";width:5px;height:5px;background:var(--acid);flex:none;margin-top:8px;transform:rotate(45deg)}
+.rule-card ul li b{color:var(--text);font-weight:600}
+.club-strip{
+  margin-top:16px;display:flex;flex-wrap:wrap;gap:10px 30px;
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
+  padding:18px 24px;font-size:12.5px;color:var(--muted-2);
 }
-.plan .pname{font-size:13px;color:var(--muted);font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
-.plan .price{font-family:var(--mono);font-size:40px;font-weight:600;letter-spacing:-.03em;line-height:1;color:var(--text)}
-.plan .price i{font-size:15px;font-style:normal;color:var(--muted-2);margin-right:3px;font-weight:400}
-.plan .price small{font-size:12.5px;color:var(--muted-2);font-family:var(--sans);letter-spacing:0;margin-left:6px}
-.plan .pdesc{font-size:13px;color:var(--muted);margin:12px 0 18px;min-height:2.6em}
-.plan ul{list-style:none;display:grid;gap:9px;font-size:13px;color:var(--muted);margin-bottom:22px}
-.plan ul li{display:flex;gap:8px;align-items:flex-start}
-.plan ul svg{width:13px;height:13px;flex:none;margin-top:5px;stroke:var(--acid-2)}
-.plan .btn{width:100%}
-.price-tip{margin-top:20px;font-size:12px;color:var(--muted-2);font-family:var(--mono);letter-spacing:.03em}
+.club-strip span{display:flex;align-items:center;gap:10px}
+.club-strip b{color:var(--text);font-weight:600;flex:none}
+.club-strip .kw{font-family:var(--mono);letter-spacing:.03em}
 
 /* 流程 */
 .steps{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative}
@@ -269,6 +277,162 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 }
 .chip span{color:var(--muted-2);font-size:11px;letter-spacing:.1em}
 .chip b{color:var(--acid);font-weight:500}
+.chip.locked b{color:var(--muted-2);letter-spacing:.2em}
+.chip.done{border-color:rgba(184,255,60,.42);background:rgba(184,255,60,.07)}
+.chip .copy{
+  margin-left:2px;background:none;border:1px solid var(--line);color:var(--muted);
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;padding:2px 7px;
+  border-radius:4px;cursor:pointer;transition:color .18s,border-color .18s,background .18s;
+}
+.chip .copy:hover{color:var(--acid);border-color:rgba(184,255,60,.45);background:var(--acid-ghost)}
+.contact-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:24px;position:relative;z-index:1}
+.contact-actions .hint{font-family:var(--mono);font-size:11px;color:var(--muted-2);letter-spacing:.03em;line-height:1.7}
+.contact-actions .hint b{color:var(--acid-2);font-weight:500}
+
+/* 验证码弹层 */
+.gate{
+  position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+  padding:20px;background:rgba(4,7,5,.86);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.gate.open{display:flex;animation:gateIn .2s ease-out}
+@keyframes gateIn{from{opacity:0}to{opacity:1}}
+.gate-box{
+  position:relative;width:100%;max-width:392px;padding:30px 30px 24px;
+  background:linear-gradient(160deg,var(--surface-2),var(--surface) 70%);
+  border:1px solid rgba(184,255,60,.22);border-radius:4px 18px 4px 18px;
+  box-shadow:0 30px 80px -30px #000,inset 0 1px 0 rgba(184,255,60,.12);
+  animation:boxIn .26s cubic-bezier(.2,.8,.3,1);
+}
+@keyframes boxIn{from{transform:translateY(14px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+.gate-close{
+  position:absolute;top:10px;right:12px;width:30px;height:30px;border:none;background:none;
+  color:var(--muted-2);font-size:20px;line-height:1;cursor:pointer;border-radius:6px;
+  transition:color .18s,background .18s;
+}
+.gate-close:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.gate-box h3{font-size:19px;margin:10px 0 7px;letter-spacing:-.01em;line-height:1.35}
+.gate-box .sub{font-size:12.5px;color:var(--muted-2);margin-bottom:20px;line-height:1.65}
+.cap-wrap{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+#capCanvas{
+  width:180px;height:60px;flex:none;border-radius:6px;
+  border:1px solid var(--line);background:#0A0F0C;cursor:pointer;
+}
+.cap-tip{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);line-height:1.8}
+.gate-form{display:flex;gap:9px}
+.gate-form input{
+  flex:1;min-width:0;background:rgba(7,10,8,.85);border:1px solid rgba(232,239,230,.14);
+  border-radius:7px;padding:11px 13px;color:var(--text);font-family:var(--mono);
+  font-size:15px;letter-spacing:.3em;text-transform:uppercase;outline:none;
+  transition:border-color .18s,box-shadow .18s;
+}
+.gate-form input::placeholder{letter-spacing:.04em;text-transform:none;font-size:13px;color:var(--muted-2)}
+.gate-form input:focus{border-color:rgba(184,255,60,.5);box-shadow:0 0 0 3px rgba(184,255,60,.08)}
+.gate-msg{min-height:18px;margin-top:12px;font-family:var(--mono);font-size:11.5px;color:#FF7A6B}
+.gate-msg.ok{color:var(--acid)}
+.shake{animation:shake .32s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* 店铺直达 */
+.shop{
+  border:1px solid var(--line);border-radius:18px 4px 18px 4px;
+  background:linear-gradient(150deg,var(--surface-2),var(--surface) 58%,var(--bg) 100%);
+  padding:44px;display:grid;grid-template-columns:1fr 396px;gap:44px;align-items:start;
+  position:relative;overflow:hidden;
+}
+.shop::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:1px;
+  background:linear-gradient(180deg,transparent,var(--acid),transparent);opacity:.55;
+}
+.shop h2{font-size:clamp(23px,2.7vw,30px);margin-bottom:12px}
+.shop .sec-head{margin-bottom:0;max-width:none}
+.shop-desc{color:var(--muted);font-size:14.5px;max-width:36em}
+.shop-points{list-style:none;margin-top:22px;display:grid;gap:11px}
+.shop-points li{display:flex;gap:11px;font-size:13.8px;color:var(--muted);line-height:1.65}
+.shop-points li::before{
+  content:"";flex:none;width:5px;height:5px;margin-top:.66em;
+  background:var(--acid);transform:rotate(45deg);
+}
+.shop-profile{display:flex;align-items:center;gap:14px;margin:0 0 20px}
+.shop-ava{
+  width:50px;height:50px;flex:none;border-radius:11px 3px 11px 3px;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(150deg,rgba(184,255,60,.2),rgba(184,255,60,.05));
+  border:1px solid rgba(184,255,60,.38);color:var(--acid);
+  font-size:19px;font-weight:700;letter-spacing:.02em;
+}
+.shop-id{display:flex;flex-direction:column;gap:4px;min-width:0}
+.shop-id b{font-size:15.5px;line-height:1.3}
+.shop-id span{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);letter-spacing:.05em;line-height:1.5}
+.shop-stats{
+  display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-bottom:14px;
+  background:var(--line-soft);border:1px solid var(--line-soft);border-radius:8px;overflow:hidden;
+}
+.shop-stats div{background:rgba(7,10,8,.6);padding:11px 14px}
+.shop-stats b{display:block;font-family:var(--mono);font-size:17px;line-height:1.35;color:var(--acid);font-weight:600}
+.shop-stats span{font-size:10.5px;color:var(--muted-2);letter-spacing:.08em}
+.shop-quote{
+  margin-top:20px;padding-left:15px;border-left:2px solid rgba(184,255,60,.45);
+  font-size:13.5px;line-height:1.8;color:var(--muted);
+}
+.shop-goods{grid-column:1 / -1;margin-top:4px;padding-top:26px;border-top:1px solid var(--line-soft)}
+.shop-goods-head{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.shop-goods-head h3{font-size:16px;font-weight:650;letter-spacing:.01em}
+.shop-goods-head a{font-family:var(--mono);font-size:11.5px;color:var(--acid);text-decoration:none;letter-spacing:.04em}
+.shop-goods-head a:hover{text-decoration:underline}
+.goods-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.goods{
+  display:block;text-decoration:none;color:var(--text);
+  border:1px solid var(--line-soft);border-radius:9px;padding:16px 18px;
+  background:rgba(7,10,8,.45);
+  transition:border-color .18s,background .18s,transform .18s;
+}
+.goods:hover{border-color:rgba(184,255,60,.4);background:rgba(184,255,60,.045);transform:translateY(-2px)}
+.goods-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px}
+.badge{
+  font-family:var(--mono);font-size:10px;letter-spacing:.08em;font-weight:600;
+  color:#08110A;background:var(--acid);padding:2px 7px;border-radius:3px;
+}
+.goods-top em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--muted-2)}
+.goods h4{font-size:14px;font-weight:600;line-height:1.5;margin-bottom:10px}
+.goods-price{font-family:var(--mono);font-size:20px;line-height:1.2;color:var(--acid);font-weight:600}
+.goods-price span{font-family:var(--sans);font-size:11.5px;font-weight:400;color:var(--muted-2);margin-left:7px}
+.goods-foot{
+  display:flex;justify-content:space-between;gap:10px;margin-top:10px;
+  font-size:11.5px;color:var(--muted-2);
+}
+.kouling{
+  background:rgba(7,10,8,.68);border:1px solid var(--line);border-radius:10px;padding:18px;
+}
+.kouling-head{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--muted-2);
+  text-transform:uppercase;margin-bottom:12px;
+}
+.kouling-head b{color:var(--acid);font-weight:500;letter-spacing:.08em}
+.kouling-text{
+  display:block;font-family:var(--mono);font-size:11.5px;line-height:1.8;color:var(--muted);
+  background:rgba(0,0,0,.4);border:1px solid var(--line-soft);border-radius:6px;
+  padding:10px 12px;margin-bottom:14px;word-break:break-all;
+  user-select:all;-webkit-user-select:all;
+}
+.kouling .btn{width:100%}
+.kouling-note{font-size:11.5px;color:var(--muted-2);margin-top:11px;line-height:1.7}
+.shop-alt{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;
+  padding:13px 16px;border:1px solid var(--line-soft);border-radius:9px;
+  text-decoration:none;color:var(--text);font-size:13.5px;font-weight:500;
+  transition:border-color .18s,background .18s,transform .18s;
+}
+.shop-alt:hover{border-color:rgba(184,255,60,.42);background:rgba(184,255,60,.05);transform:translateY(-1px)}
+.shop-alt em{font-style:normal;color:var(--muted-2);font-family:var(--mono);font-size:11px}
+.toast{
+  position:fixed;left:50%;bottom:34px;transform:translate(-50%,14px);z-index:210;
+  background:var(--acid);color:#08110A;font-size:13px;font-weight:600;
+  padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;
+  transition:opacity .22s,transform .22s;box-shadow:0 12px 30px -14px rgba(184,255,60,.9);
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
 
 /* 页脚 */
 footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5px;color:var(--muted-2)}
@@ -290,12 +454,15 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
 @media (max-width:980px){
   .hero-grid{grid-template-columns:1fr;gap:38px}
   .hero{padding-top:126px}
-  .cards,.plans,.reviews{grid-template-columns:1fr 1fr}
+  .cards,.reviews{grid-template-columns:1fr 1fr}
+  .rules-grid{grid-template-columns:1fr}
+  .price-hero .tags{margin-left:0}
   .steps{grid-template-columns:1fr;gap:26px}
   .steps::before{display:none}
   .step{display:flex;gap:16px;text-align:left;padding:0}
   .step .idx{margin:0;flex:none}
   .split{grid-template-columns:1fr;gap:34px}
+  .shop{grid-template-columns:1fr;gap:30px;padding:34px}
   .promises ul{grid-template-columns:1fr 1fr}
   .promises li:nth-child(2){border-right:none}
   .promises li:nth-child(1),.promises li:nth-child(2){border-bottom:1px solid var(--line-soft)}
@@ -305,13 +472,22 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
   .wrap{padding:0 18px}
   section{padding:62px 0}
   .hero{padding:112px 0 56px}
-  .cards,.plans,.reviews{grid-template-columns:1fr}
+  .cards,.reviews{grid-template-columns:1fr}
+  .price-hero{padding:18px 20px}
+  .price-hero .big{font-size:22px}
   .promises ul{grid-template-columns:1fr}
   .promises li{border-right:none;border-bottom:1px solid var(--line-soft)}
   .promises li:last-child{border-bottom:none}
   .contact{padding:36px 24px;margin-bottom:56px}
   .stat-row{grid-template-columns:1fr 1fr}
   h1{font-size:34px}
+  #capCanvas{width:150px;height:54px}
+  .gate-box{padding:26px 20px 20px}
+  .contact-actions{gap:10px}
+  .shop{padding:26px 22px;gap:26px}
+  .goods-grid{grid-template-columns:1fr}
+  .shop-stats b{font-size:16px}
+  .toast{bottom:22px;font-size:12.5px}
 }
 </style>
 </head>
@@ -326,15 +502,16 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
         <path d="M16 4.5 27.5 27H4.5z" stroke="#B8FF3C" stroke-width="2"/>
         <path d="M16 11.5 22 23H10z" fill="#B8FF3C" fill-opacity=".22"/>
       </svg>
-      <b>纯绿色陪练</b>
-      <span>DELTA</span>
+      <b>行动突围护航社</b>
+      <span>SQUAD</span>
     </a>
     <nav class="navlinks" id="navlinks">
       <a href="#promise">为什么放心</a>
       <a href="#service">服务项目</a>
-      <a href="#price">价格</a>
+      <a href="#rules">服务规则</a>
       <a href="#flow">流程</a>
       <a href="#faq">常见问题</a>
+      <a href="#shop">店铺</a>
     </nav>
     <a class="btn btn-primary btn-sm" href="#contact">立即咨询</a>
   </div>
@@ -357,12 +534,12 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
             添加好友咨询
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
-          <a class="btn btn-ghost" href="#price">查看套餐与价格</a>
+          <a class="btn btn-ghost" href="#rules">查看服务与规则</a>
         </div>
         <div class="hero-note">
-          <span><i></i>支持单局起购</span>
-          <span><i></i>提前 2 小时预约</span>
-          <span><i></i>不满意未开局可退</span>
+          <span><i></i>68 保底 1588W</span>
+          <span><i></i>24h 在线接单</span>
+          <span><i></i>闲鱼担保交易</span>
         </div>
       </div>
 
@@ -372,10 +549,10 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
           <b>ONLINE</b>
         </div>
         <div class="stat-row">
-          <div class="stat"><u>0<small>次</small></u><p>因陪练导致的封号</p></div>
-          <div class="stat"><u>12<small>位</small></u><p>固定签约教练</p></div>
-          <div class="stat"><u>4.9<small>/5</small></u><p>近 300 单评价</p></div>
-          <div class="stat"><u>24<small>h</small></u><p>内响应接单</p></div>
+          <div class="stat"><u>20<small>单</small></u><p>闲鱼已售订单</p></div>
+          <div class="stat"><u>巅峰</u><p>打手段位 · KD 4.0~5.0</p></div>
+          <div class="stat"><u>24<small>h</small></u><p>在线接单</p></div>
+          <div class="stat"><u>双端</u><p>PC / 手游双区有号</p></div>
         </div>
         <ul class="checklist">
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>全程真人手动操作，不使用宏与脚本</li>
@@ -404,95 +581,111 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
       <div class="sec-head reveal">
         <span class="kicker">Services</span>
         <h2>六种带法，按你的需求挑</h2>
-        <p>想上分、想摸金、想学技术，路径不一样。先把目标说清楚，再匹配对应的教练。</p>
+        <p>护航、陪打、带打都能接。先把模式、地图和档位说清楚，再进组开打。</p>
       </div>
       <div class="cards">
         <div class="card reveal">
           <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v6c0 5 3.8 8.4 9 9 5.2-.6 9-4 9-9V7l-9-5Z"/><path d="M9 12l2 2 4-4"/></svg></div>
-          <h3>烽火地带 · 摸金带飞</h3>
-          <p>熟悉刷新点与撤离路线的老手带你进出，物资怎么分、什么时候走，开麦前就说清，不玩套路。</p>
-          <div class="meta"><span>单价 ¥39 起 / 局</span><b>热门</b></div>
+          <h3>烽火地带 · 护航</h3>
+          <p>默认绝密图、纯绿双护。机密单护、机密双护、绝密单护、绝密双护、机密娱乐都能打，保底写进规则。</p>
+          <div class="meta"><span>机密 / 绝密 · 单双护</span><b>热门</b></div>
         </div>
         <div class="card reveal">
           <div class="icon"><svg viewBox="0 0 24 24"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg></div>
-          <h3>烽火地带 · 跑刀入门</h3>
-          <p>背包管理、听声辨位、撤离时机，从第一次进场就养成不亏本的习惯，适合刚入坑的新手。</p>
-          <div class="meta"><span>¥129 / 2 小时</span><b>新手推荐</b></div>
+          <h3>囤物资 · 跑刀</h3>
+          <p>哈夫币、大红、非洲之心、曼德尔超算、显卡、情报、六级甲头，按保底规则稳定带出，物资全归老板。</p>
+          <div class="meta"><span>68 保底 1588W</span><b>新店开业价</b></div>
         </div>
         <div class="card reveal">
           <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></div>
-          <h3>全面战场 · 上分陪练</h3>
+          <h3>全面战场 · 陪打上分</h3>
           <p>兵种配合、载具使用、据点攻防，一边打一边讲决策逻辑，分上去，理解也跟上。</p>
-          <div class="meta"><span>¥69 / 小时</span><b>上分首选</b></div>
+          <div class="meta"><span>语音陪打</span><b>上分首选</b></div>
         </div>
         <div class="card reveal">
           <div class="icon"><svg viewBox="0 0 24 24"><path d="M3 20V9l5-4 5 4v11"/><path d="M13 20V13h6v7"/><path d="M3 20h18"/></svg></div>
-          <h3>枪法与身法特训</h3>
-          <p>压枪节奏、拉枪线、预瞄点位，按你现在的灵敏度做针对性训练，不套通用模板。</p>
-          <div class="meta"><span>¥99 / 90 分钟</span><b>进阶</b></div>
+          <h3>新赛季 3x3 任务</h3>
+          <p>赛季任务、囤物资目标一起推进，按你的进度排单，不浪费一局。</p>
+          <div class="meta"><span>3x3 任务</span><b>新赛季</b></div>
         </div>
         <div class="card reveal">
           <div class="icon"><svg viewBox="0 0 24 24"><path d="M17 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.8"/><path d="M16 3.2a4 4 0 0 1 0 7.6"/></svg></div>
-          <h3>固定车队 · 长期搭子</h3>
-          <p>固定时间、固定队友，不用每次重新磨合。适合想稳定上分、又想有人一起玩的人。</p>
-          <div class="meta"><span>¥299 / 周（10 小时）</span><b>省心</b></div>
+          <h3>手游端护航</h3>
+          <p>PC 端、手游端双区有号（Steam / 国服），手机上也能约，节奏与规则和端游一致。</p>
+          <div class="meta"><span>PC + 手游</span><b>双端可接</b></div>
         </div>
         <div class="card reveal">
           <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M2 14l10 5 10-5"/><path d="M2 11l10 5 10-5"/></svg></div>
           <h3>新手开局指导</h3>
-          <p>赛季机制、经济系统、装备取舍，一节课把该知道的全过一遍，少走一个月弯路。</p>
-          <div class="meta"><span>¥59 / 小时</span><b>入门</b></div>
+          <p>赛季机制、经济系统、装备取舍，一局把该知道的全过一遍，少走弯路。</p>
+          <div class="meta"><span>入门友好</span><b>娱乐局</b></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 价格 -->
-  <section id="price">
+  <!-- 服务与规则 -->
+  <section id="rules">
     <div class="wrap">
       <div class="sec-head reveal">
-        <span class="kicker">Pricing</span>
-        <h2>三档套餐，明码标价</h2>
-        <p>不搞"看人报价"。同样的套餐，谁来都是一个价。超出时段按小时补，提前说清。</p>
+        <span class="kicker">Service &amp; Rules</span>
+        <h2>服务与规则，写在明面上</h2>
+        <p>规则先说清，打起来才不扯皮。所有单子默认绝密图、纯绿双护，老板吃饱是第一位。</p>
       </div>
-      <div class="plans">
-        <div class="plan reveal">
-          <div class="pname">体验局</div>
-          <div class="price"><i>¥</i>39<small>/ 局</small></div>
-          <p class="pdesc">先打一局看看合不合拍，不合适不勉强。</p>
-          <ul>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>烽火地带 1 局（约 25–40 分钟）</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>语音指挥 + 路线讲解</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>结束 5 分钟复盘</li>
-          </ul>
-          <a class="btn btn-ghost" href="#contact">预约体验</a>
-        </div>
-        <div class="plan hot reveal">
-          <div class="pname">上分包段</div>
-          <div class="price"><i>¥</i>199<small>/ 3 小时</small></div>
-          <p class="pdesc">有明确段位目标，按计划推进，打完给结论。</p>
-          <ul>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>全面战场或烽火地带可选</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>开局前定目标，逐局复盘</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>含枪法专项点拨</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>全程录屏留档 7 天</li>
-          </ul>
-          <a class="btn btn-primary" href="#contact">选这个</a>
-        </div>
-        <div class="plan reveal">
-          <div class="pname">包段护航</div>
-          <div class="price"><i>¥</i>599<small>/ 10 小时</small></div>
-          <p class="pdesc">长期跟车，按周排时段，适合固定作息的人。</p>
-          <ul>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>10 小时额度，30 天内用完</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>固定教练，不用反复磨合</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>优先排时段</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>未用完可按比例退</li>
-          </ul>
-          <a class="btn btn-ghost" href="#contact">咨询排期</a>
+      <div class="price-hero reveal">
+        <div class="big">¥68 <small>保底 1588W · 新店开业价</small></div>
+        <div class="tags">
+          <span>纯绿双护</span><span>默认绝密图</span><span>24h 在线</span><span>双区有号</span><span>永久售后</span>
         </div>
       </div>
-      <p class="price-tip">※ 价格为示例，按你实际定价替换；节假日时段可能上浮，预约时会先说明。</p>
+      <div class="rules-grid">
+        <div class="rule-card reveal">
+          <h3><span class="tag-idx">01</span>接单范围</h3>
+          <ul>
+            <li><b>服务类型：</b>护航 / 陪打 / 带打，技术型、教学型、娱乐型均可</li>
+            <li><b>游戏模式：</b>烽火地带｜全面战场</li>
+            <li><b>常规地图：</b>绝密航天、绝密巴克什、潮汐监狱、零号大坝、长弓溪谷、航天基地</li>
+            <li><b>档位：</b>机密单护｜机密双护｜绝密单护｜绝密双护｜机密娱乐</li>
+            <li><b>端区：</b>PC 端 + 手游端，Steam / 国服双区有号，全国可服务</li>
+          </ul>
+        </div>
+        <div class="rule-card reveal">
+          <h3><span class="tag-idx">02</span>物资与关注点</h3>
+          <ul>
+            <li><b>主要产出：</b>哈夫币、大红、非洲之心、曼德尔超算、显卡、情报</li>
+            <li><b>装备：</b>六级甲、六级头、AW 子弹</li>
+            <li><b>可关注：</b>红卡、金卡、门禁卡、钥匙房、保险箱、胸挂、背包</li>
+            <li><b>过程项：</b>战损、撤离、保底全程可查</li>
+          </ul>
+        </div>
+        <div class="rule-card reveal">
+          <h3><span class="tag-idx">03</span>保底规则（写前面）</h3>
+          <ul>
+            <li><b>炸单即加保底：</b>撤离失败 = 炸单，炸单继续加保底，不跑单</li>
+            <li><b>战损补偿：</b>绝密航天 / 绝密巴克什炸一局 +60w；潮汐监狱炸一局 +70w</li>
+            <li><b>保险物资：</b>保险物资 &gt;100w 计入保底，同样 +60w</li>
+            <li><b>不卡保底：</b>差 1w 哈夫币也再开一局，不卡保底撤离</li>
+            <li><b>追缴包赔：</b>漏带追缴，按规则包赔</li>
+            <li><b>六级甲 / 头：</b>老板当假账可不拿，拿了默认接受</li>
+            <li><b>双倒处理：</b>打手双倒，兜底带出物资 &gt;300w 算一半；张姐自救不算双倒</li>
+            <li><b>备注：</b>打手号上有卡有包都会带；体验单要带 AW 子弹，需先经打手同意</li>
+          </ul>
+        </div>
+        <div class="rule-card reveal">
+          <h3><span class="tag-idx">04</span>老板权益与红线</h3>
+          <ul>
+            <li><b>物资归属：</b>物资全归老板，不压力老板</li>
+            <li><b>三个不：</b>不卡保底、不塞假账、物资无上限</li>
+            <li><b>免费重排：</b>打手私藏、卡战备、消极游戏，直接免费重排</li>
+            <li><b>恶意卡保底：</b>反馈客服处理</li>
+          </ul>
+        </div>
+      </div>
+      <div class="club-strip reveal">
+        <span><b>俱乐部承诺</b>线下纯绿工作室 · 培训上岗 · 交押金 · 永久售后</span>
+        <span><b>擅长角色</b>骇爪 · 露娜 · 蜂医 · 红狼 · 威龙</span>
+        <span class="kw"><b>搜索</b>三角洲护航 / 纯绿护航 / 烽火地带 / 绝密双护</span>
+      </div>
     </div>
   </section>
 
@@ -505,11 +698,11 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
         <p>从加好友到结束，每一步都能预期。不想继续，随时可以停。</p>
       </div>
       <div class="steps">
-        <div class="step reveal"><div class="idx">01</div><div><h4>说需求</h4><p>模式、段位、可玩时段，一次讲清</p></div></div>
-        <div class="step reveal"><div class="idx">02</div><div><h4>配教练</h4><p>按你的模式匹配擅长的人</p></div></div>
-        <div class="step reveal"><div class="idx">03</div><div><h4>定目标</h4><p>开局前确认这局要打成什么样</p></div></div>
-        <div class="step reveal"><div class="idx">04</div><div><h4>开麦打</h4><p>全程语音，边打边讲判断</p></div></div>
-        <div class="step reveal"><div class="idx">05</div><div><h4>复盘收尾</h4><p>哪打得对、哪该改，说清楚</p></div></div>
+        <div class="step reveal"><div class="idx">01</div><div><h4>说需求</h4><p>模式、地图、档位，一次讲清</p></div></div>
+        <div class="step reveal"><div class="idx">02</div><div><h4>闲鱼下单</h4><p>平台担保交易，不用私下转账</p></div></div>
+        <div class="step reveal"><div class="idx">03</div><div><h4>进组开打</h4><p>开麦沟通，默认绝密图纯绿双护</p></div></div>
+        <div class="step reveal"><div class="idx">04</div><div><h4>达标结算</h4><p>差 1w 也再开一局，不卡保底</p></div></div>
+        <div class="step reveal"><div class="idx">05</div><div><h4>售后收尾</h4><p>有争议按规则处理，永久售后</p></div></div>
       </div>
     </div>
   </section>
@@ -555,7 +748,7 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
             <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
             <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
           </div>
-          <p>第一次进烽火地带就被人打了黑枪，跟着打了两局才明白听声和路线有多重要。教练不催单，讲得也细，输了也告诉你为什么输。</p>
+          <p>第一次进烽火地带就被人打了黑枪，跟着打了两局才明白听声和路线有多重要。打手不催单，讲得也细，输了也告诉你为什么输。</p>
           <div class="who"><div class="avatar">W</div><div><b>W 先生</b><span>上分包段 · 3 小时</span></div></div>
         </div>
         <div class="review reveal">
@@ -606,16 +799,80 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
         </details>
         <details>
           <summary>物资、装备怎么算？<span class="pm">+</span></summary>
-          <p>开局前说定。默认规则是：你自己捡的归你，教练帮你带出的按约定分配。不存在"打完了东西没了"这种情况，每局都录屏。</p>
+          <p>规则写在明面上：物资全归老板，不压力老板；不卡保底、不塞假账、物资无上限。六级甲、六级头当假账可以不拿，拿了默认接受。打手私藏、卡战备、消极游戏，直接免费重排。</p>
         </details>
         <details>
-          <summary>打得不好能退吗？<span class="pm">+</span></summary>
-          <p>未开局随时全额退。已开局的按实际时长结算，剩余部分退回。服务中觉得不合适，可以直接说停，不会有人劝你续单。</p>
+          <summary>保底没打够能退吗？<span class="pm">+</span></summary>
+          <p>撤离失败算炸单，炸单继续加保底：绝密航天、绝密巴克什炸一局 +60w，潮汐监狱炸一局 +70w。保底差 1w 哈夫币也再开一局，不卡保底撤离，追缴包赔。</p>
         </details>
         <details>
-          <summary>怎么付款？<span class="pm">+</span></summary>
-          <p>先沟通确认模式和时段，开始前付款。支持单局、按小时、包段三种方式，不要求预付大额套餐。</p>
+          <summary>怎么下单付款？<span class="pm"></span></summary>
+          <p>统一走闲鱼店铺「行动突围护航社」下单，平台担保交易，新店开业价 ¥68 保底 1588W。不搞预付大额套餐，页面底部有店铺直达入口。</p>
         </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- 店铺直达 -->
+  <section id="shop">
+    <div class="wrap">
+      <div class="shop reveal">
+        <div>
+          <span class="kicker">Shop</span>
+          <div class="shop-profile">
+            <div class="shop-ava">行</div>
+            <div class="shop-id">
+              <b>行动突围护航社</b>
+              <span>闲鱼店铺 · 辽宁 · 主营三角洲行动护航</span>
+            </div>
+          </div>
+          <h2>下单走闲鱼，平台担保</h2>
+          <p class="shop-desc">所有服务都挂在闲鱼店铺上，走平台担保交易。先看评价和成交记录再决定，钱在平台托管，不满意可以在订单里申请退款——比私下转账多一层保障。</p>
+          <ul class="shop-points">
+            <li>平台担保交易，不要求私下转账</li>
+            <li>商品页公开历史评价与成交记录</li>
+            <li>下单前先聊清楚模式、时段与结算方式</li>
+          </ul>
+          <blockquote class="shop-quote">“博人眼球只是为了吸引你的注意，而我的服务是能够留住你的底气。”</blockquote>
+        </div>
+        <div>
+          <div class="shop-stats">
+            <div><b>27</b><span>粉丝</span></div>
+            <div><b>20</b><span>已售</span></div>
+            <div><b>6</b><span>在售</span></div>
+            <div><b>辽宁</b><span>发货地</span></div>
+          </div>
+          <div class="kouling">
+            <div class="kouling-head"><span>闲鱼口令</span><b>复制即用</b></div>
+            <code class="kouling-text" id="koulingText" data-text="【闲鱼】https://m.tb.cn/h.jUjX68o?tk=xscUTztKIEH CZ028 「行动突围护航社，快来看看吧～」">【闲鱼】https://m.tb.cn/h.jUjX68o?tk=xscUTztKIEH CZ028 「行动突围护航社，快来看看吧～」</code>
+            <button class="btn btn-primary" type="button" id="copyKouling">复制闲鱼口令</button>
+            <div class="kouling-note">复制后打开闲鱼 App，通常会自动跳转到店铺；若没有反应，把口令粘贴到闲鱼搜索框即可。</div>
+          </div>
+          <a class="shop-alt" href="https://www.goofish.com/personal?userId=1662364936" target="_blank" rel="noopener noreferrer">
+            <span>直接打开店铺页面</span>
+            <em>手机端可唤起 App ↗</em>
+          </a>
+        </div>
+        <div class="shop-goods">
+          <div class="shop-goods-head">
+            <h3>在售热销</h3>
+            <a href="https://www.goofish.com/personal?userId=1662364936" target="_blank" rel="noopener noreferrer">查看全部 6 件 ↗</a>
+          </div>
+          <div class="goods-grid">
+            <a class="goods" href="https://www.goofish.com/item?id=1093633855860&amp;categoryId=50023914" target="_blank" rel="noopener noreferrer">
+              <div class="goods-top"><span class="badge">热销第 1 名</span><em>16 人想要</em></div>
+              <h4>三角洲行动游戏 68 / 1588W</h4>
+              <div class="goods-price">¥68<span>1588W 护航</span></div>
+              <div class="goods-foot"><span>闲鱼担保 · 可拍下直接约</span><span>↗</span></div>
+            </a>
+            <a class="goods" href="https://www.goofish.com/item?id=1096721884635&amp;categoryId=50023914" target="_blank" rel="noopener noreferrer">
+              <div class="goods-top"><span class="badge">热销第 2 名</span><em>34 人想要</em></div>
+              <h4>三角洲游戏行动 68 / 1588W</h4>
+              <div class="goods-price">¥68<span>粉丝更优惠</span></div>
+              <div class="goods-foot"><span>闲鱼担保 · 老客复购有折扣</span><span>↗</span></div>
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -627,9 +884,13 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
       <h2>先聊两句，再决定要不要打</h2>
       <p>把你常玩的模式、大概段位、方便的时间发过来，我按你的情况给建议——不合适我会直接说。</p>
       <div class="contact-row">
-        <div class="chip"><span>微信</span><b>your_wechat_id</b></div>
-        <div class="chip"><span>QQ</span><b>000000000</b></div>
+        <div class="chip locked" id="wxChip"><span>微信</span><b id="wxVal">••••••••</b></div>
+        <div class="chip locked" id="qqChip"><span>QQ</span><b id="qqVal">••••••••</b></div>
         <div class="chip"><span>在线</span><b>10:00 – 24:00</b></div>
+      </div>
+      <div class="contact-actions">
+        <button class="btn btn-primary" type="button" id="revealBtn">验证码查看联系方式</button>
+        <span class="hint" id="revealHint">为防机器抓取，需输入 <b>4 位验证码</b> 后显示</span>
       </div>
     </div>
   </div>
@@ -642,7 +903,7 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
         <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <path d="M16 4.5 27.5 27H4.5z" stroke="#B8FF3C" stroke-width="2"/>
         </svg>
-        <b>纯绿色陪练</b>
+        <b>行动突围护航社</b>
       </a>
       <p>
         本站为个人陪玩服务介绍页，与《三角洲行动》开发方、发行方及腾讯公司无任何隶属或合作关系，
@@ -651,11 +912,32 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
       </p>
     </div>
     <div style="font-family:var(--mono);font-size:11px;color:var(--muted-2);text-align:right;line-height:2">
-      <div>© 2026 纯绿色陪练</div>
-      <div>DELTA ESCORT</div>
+      <div>© 2026 行动突围护航社</div>
+      <div>BREAKOUT SQUAD</div>
     </div>
   </div>
 </footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- 联系方式验证码弹层 -->
+<div class="gate" id="gate" aria-hidden="true">
+  <div class="gate-box" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <button class="gate-close" type="button" id="gateClose" aria-label="关闭">×</button>
+    <span class="kicker">Verify</span>
+    <h3 id="gateTitle">输入验证码，查看联系方式</h3>
+    <p class="sub">验证通过后显示微信号与 QQ，可直接点「复制」。<br>这一步只是为了挡住自动采集，人工操作一次就够。</p>
+    <div class="cap-wrap">
+      <canvas id="capCanvas" width="180" height="60" title="点击换一张" aria-label="验证码图片"></canvas>
+      <div class="cap-tip">看不清？<br>点图片换一张</div>
+    </div>
+    <form class="gate-form" id="gateForm" autocomplete="off">
+      <input id="capInput" type="text" maxlength="4" inputmode="latin" placeholder="4 位验证码" aria-label="验证码输入框">
+      <button class="btn btn-primary" type="submit">确认</button>
+    </form>
+    <div class="gate-msg" id="gateMsg"></div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -712,6 +994,197 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
       if (!d.open) return;
       all.forEach(function (o) { if (o !== d) o.open = false; });
     });
+  });
+})();
+</script>
+
+<script>
+/* 联系方式验证码解锁 */
+(function () {
+  var gate = document.getElementById('gate');
+  var box = gate.querySelector('.gate-box');
+  var form = document.getElementById('gateForm');
+  var input = document.getElementById('capInput');
+  var msg = document.getElementById('gateMsg');
+  var canvas = document.getElementById('capCanvas');
+  var ctx = canvas.getContext('2d');
+  var openBtn = document.getElementById('revealBtn');
+  var hint = document.getElementById('revealHint');
+  var wxChip = document.getElementById('wxChip');
+  var qqChip = document.getElementById('qqChip');
+  var CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  var code = '', tries = 0, unlocked = false;
+
+  // 轻量混淆：号码不以明文出现在页面源码中
+  function dec(s) {
+    var v = atob(s), o = '';
+    for (var i = 0; i < v.length; i++) o += String.fromCharCode(v.charCodeAt(i) ^ 13);
+    return o;
+  }
+
+  function gen() {
+    code = '';
+    for (var i = 0; i < 4; i++) code += CHARS[Math.floor(Math.random() * CHARS.length)];
+    draw();
+  }
+
+  function draw() {
+    var w = canvas.clientWidth || 180, h = canvas.clientHeight || 60;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#0A0F0C'; ctx.fillRect(0, 0, w, h);
+
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(184,255,60,.055)';
+    for (var x = 0; x <= w; x += 14) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+
+    for (var d = 0; d < 80; d++) {
+      ctx.fillStyle = 'rgba(184,255,60,' + (Math.random() * .25 + .05).toFixed(2) + ')';
+      ctx.fillRect(Math.random() * w, Math.random() * h, 1.6, 1.6);
+    }
+
+    var pad = w * .1, step = (w - pad * 2) / 4;
+    for (var j = 0; j < 4; j++) {
+      ctx.save();
+      ctx.translate(pad + step * j + step / 2, h / 2 + (Math.random() * 7 - 3.5));
+      ctx.rotate((Math.random() * 26 - 13) * Math.PI / 180);
+      ctx.font = '700 ' + Math.round(h * .52) + 'px ui-monospace,Consolas,monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(184,255,60,.45)'; ctx.shadowBlur = 9;
+      ctx.fillStyle = '#B8FF3C';
+      ctx.fillText(code[j], 0, 0);
+      ctx.restore();
+    }
+
+    ctx.strokeStyle = 'rgba(139,155,141,.4)'; ctx.lineWidth = 1.2;
+    for (var k = 0; k < 2; k++) {
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * w * .25, Math.random() * h);
+      ctx.bezierCurveTo(w * .35, Math.random() * h, w * .65, Math.random() * h, w * (.8 + Math.random() * .2), Math.random() * h);
+      ctx.stroke();
+    }
+  }
+
+  function say(t, ok) {
+    msg.textContent = t || '';
+    msg.className = 'gate-msg' + (ok ? ' ok' : '');
+  }
+
+  function openGate() {
+    gate.classList.add('open');
+    gate.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    input.value = ''; say('', false); tries = 0;
+    requestAnimationFrame(function () { gen(); input.focus(); });
+  }
+
+  function closeGate() {
+    gate.classList.remove('open');
+    gate.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  function copyText(t) {
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).catch(fallback);
+    } else { fallback(); }
+  }
+
+  function setChip(chip, val) {
+    chip.querySelector('b').textContent = val;
+    chip.classList.remove('locked');
+    chip.classList.add('done');
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = '复制';
+    btn.addEventListener('click', function () {
+      copyText(val);
+      btn.textContent = '已复制';
+      setTimeout(function () { btn.textContent = '复制'; }, 1400);
+    });
+    chip.appendChild(btn);
+  }
+
+  function unlock(silent) {
+    if (unlocked) return;
+    unlocked = true;
+    setChip(wxChip, dec('R3hhPFJBVTg/PQ=='));
+    setChip(qqChip, dec('OTw0NT08Ojo5'));
+    openBtn.style.display = 'none';
+    hint.innerHTML = '已解锁，点右侧「复制」直接粘贴到微信 / QQ';
+    try { sessionStorage.setItem('delta_contact_ok', '1'); } catch (e) {}
+    if (!silent) { say('验证通过', true); setTimeout(closeGate, 420); }
+  }
+
+  openBtn.addEventListener('click', openGate);
+  document.getElementById('gateClose').addEventListener('click', closeGate);
+  gate.addEventListener('click', function (e) { if (e.target === gate) closeGate(); });
+  canvas.addEventListener('click', function () { gen(); say('', false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && gate.classList.contains('open')) closeGate();
+  });
+
+  input.addEventListener('input', function () {
+    input.value = input.value.replace(/[^0-9a-zA-Z]/g, '').toUpperCase();
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = input.value.trim().toUpperCase();
+    if (v.length < 4) { say('请输入完整的 4 位验证码'); return; }
+    if (v === code) { unlock(false); return; }
+    tries++;
+    input.value = '';
+    input.classList.add('shake');
+    setTimeout(function () { input.classList.remove('shake'); }, 340);
+    if (tries >= 3) { tries = 0; gen(); say('错误次数较多，已更换验证码'); }
+    else { say('验证码不正确，请重试'); }
+    input.focus();
+  });
+
+  try { if (sessionStorage.getItem('delta_contact_ok') === '1') unlock(true); } catch (e) {}
+})();
+</script>
+
+<script>
+/* 闲鱼口令复制 */
+(function () {
+  var btn = document.getElementById('copyKouling');
+  var src = document.getElementById('koulingText');
+  var toast = document.getElementById('toast');
+  var timer;
+
+  function show(t) {
+    toast.textContent = t;
+    toast.classList.add('on');
+    clearTimeout(timer);
+    timer = setTimeout(function () { toast.classList.remove('on'); }, 1900);
+  }
+
+  function fallback(t) {
+    var ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  btn.addEventListener('click', function () {
+    var t = src.getAttribute('data-text') || src.textContent.trim();
+    var done = function () { show('口令已复制，打开闲鱼 App 即可'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(done, function () { fallback(t); done(); });
+    } else {
+      fallback(t); done();
+    }
   });
 })();
 </script>
