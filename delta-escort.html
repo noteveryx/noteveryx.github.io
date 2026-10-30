@@ -3,6 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* 主题预置：先于样式生效，避免刷新时闪白 */
+(function () {
+  try {
+    var t = localStorage.getItem('delta_theme');
+    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+})();
+</script>
 <title>行动突围护航社 · 三角洲行动纯绿色陪玩</title>
 <meta name="description" content="行动突围护航社 —— 三角洲行动纯绿色陪玩：真人手打、零外挂零脚本、不索要账号、全程录屏。烽火地带摸金带飞，全面战场上分陪练，闲鱼平台担保交易。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23070A08'/%3E%3Cpath d='M16 5 27 26H5z' fill='none' stroke='%23B8FF3C' stroke-width='2.5'/%3E%3C/svg%3E">
@@ -13,18 +22,66 @@
   --surface-2:#121A16;
   --line:rgba(184,255,60,.14);
   --line-soft:rgba(232,239,230,.08);
+  --line-2:rgba(232,239,230,.16);
   --acid:#B8FF3C;
   --acid-2:#7BE03B;
   --acid-ghost:rgba(184,255,60,.08);
+  --on-acid:#08110A;
   --text:#E8EFE6;
   --muted:#8B9B8D;
-  --muted-2:#5E6D60;
+  --muted-2:#74836F;
+  --glass:rgba(7,10,8,.72);
+  --glass-solid:rgba(7,10,8,.92);
+  --chip-bg:rgba(7,10,8,.6);
+  --input-bg:rgba(7,10,8,.85);
+  --input-line:rgba(232,239,230,.14);
+  --focus-ring:rgba(184,255,60,.5);
+  --focus-halo:rgba(184,255,60,.08);
+  --acid-line:rgba(184,255,60,.22);
+  --code-bg:rgba(0,0,0,.22);
+  --code-bg-2:rgba(0,0,0,.4);
+  --strip-bg:rgba(13,20,17,.5);
+  --grid-line:rgba(184,255,60,.035);
+  --glow:0 0 18px rgba(184,255,60,.35);
+  --shadow:0 30px 80px -30px #000,inset 0 1px 0 rgba(184,255,60,.12);
+  --theme-icon:#B8FF3C;
   --mono:ui-monospace,SFMono-Regular,"JetBrains Mono","Cascadia Mono",Consolas,monospace;
   --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
   --r:14px;
 }
+/* 浅色主题 */
+[data-theme="light"]{
+  --bg:#F1F5EE;
+  --surface:#FFFFFF;
+  --surface-2:#F8FBF5;
+  --line:rgba(20,36,26,.15);
+  --line-soft:rgba(20,36,26,.085);
+  --line-2:rgba(20,36,26,.2);
+  --acid:#3F7000;
+  --acid-2:#5C9200;
+  --acid-ghost:rgba(63,112,0,.09);
+  --on-acid:#FFFFFF;
+  --text:#16211A;
+  --muted:#586A5C;
+  --muted-2:#5B6B57;
+  --glass:rgba(255,255,255,.78);
+  --glass-solid:rgba(255,255,255,.94);
+  --chip-bg:rgba(255,255,255,.72);
+  --input-bg:rgba(255,255,255,.92);
+  --input-line:rgba(20,36,26,.18);
+  --focus-ring:rgba(63,112,0,.6);
+  --focus-halo:rgba(63,112,0,.1);
+  --acid-line:rgba(63,112,0,.3);
+  --code-bg:rgba(20,36,26,.05);
+  --code-bg-2:rgba(20,36,26,.04);
+  --strip-bg:rgba(255,255,255,.62);
+  --grid-line:rgba(20,36,26,.04);
+  --glow:0 0 14px rgba(63,112,0,.2);
+  --shadow:0 24px 60px -34px rgba(18,38,24,.4),inset 0 1px 0 rgba(255,255,255,.9);
+  --theme-icon:#3F7000;
+}
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;overflow-x:hidden}
 body{
   background:var(--bg);color:var(--text);font-family:var(--sans);
   line-height:1.7;letter-spacing:.01em;overflow-x:hidden;
@@ -32,7 +89,7 @@ body{
 }
 body::before{
   content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
-  background-image:linear-gradient(rgba(184,255,60,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(184,255,60,.035) 1px,transparent 1px);
+  background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
   background-size:64px 64px;
   mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 20%,transparent 75%);
   -webkit-mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 20%,transparent 75%);
@@ -49,14 +106,15 @@ body::after{
 /* ---------- 导航 ---------- */
 header{
   position:fixed;top:0;left:0;right:0;z-index:90;
-  background:rgba(7,10,8,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
   border-bottom:1px solid var(--line-soft);transition:border-color .3s,background .3s;
 }
-header.solid{border-bottom-color:var(--line);background:rgba(7,10,8,.92)}
-.nav{display:flex;align-items:center;justify-content:space-between;height:66px}
+header.solid{border-bottom-color:var(--line);background:var(--glass-solid)}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:14px;height:66px}
+.nav-right{display:flex;align-items:center;gap:10px}
 .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--text)}
 .brand svg{width:26px;height:26px;flex:none}
-.brand b{font-size:15px;font-weight:700;letter-spacing:.04em}
+.brand b{font-size:15px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
 .brand span{font-family:var(--mono);font-size:10px;color:var(--acid);letter-spacing:.18em;border:1px solid var(--line);padding:2px 7px;border-radius:3px}
 .navlinks{display:flex;gap:4px;align-items:center}
 .navlinks a{
@@ -67,14 +125,14 @@ header.solid{border-bottom-color:var(--line);background:rgba(7,10,8,.92)}
 .navlinks a.on{color:var(--acid);background:var(--acid-ghost)}
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;border:none;
+  font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;border:none;white-space:nowrap;
   padding:11px 20px;border-radius:8px;transition:transform .18s,box-shadow .18s,background .18s;
   font-family:inherit;
 }
-.btn-primary{background:var(--acid);color:#08110A;box-shadow:0 0 0 1px rgba(184,255,60,.4),0 8px 26px -10px rgba(184,255,60,.7)}
+.btn-primary{background:var(--acid);color:var(--on-acid);box-shadow:0 0 0 1px rgba(184,255,60,.4),0 8px 26px -10px rgba(184,255,60,.7)}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(184,255,60,.6),0 14px 34px -12px rgba(184,255,60,.85)}
-.btn-ghost{background:transparent;color:var(--text);border:1px solid rgba(232,239,230,.16)}
-.btn-ghost:hover{background:rgba(255,255,255,.05);border-color:rgba(232,239,230,.3)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line-2)}
+.btn-ghost:hover{background:var(--acid-ghost);border-color:var(--line-2)}
 .btn-sm{padding:8px 15px;font-size:13px}
 
 /* ---------- Hero ---------- */
@@ -89,14 +147,26 @@ header.solid{border-bottom-color:var(--line);background:rgba(7,10,8,.92)}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--acid);box-shadow:0 0 8px var(--acid);animation:pulse 2.4s infinite}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
 
+/* 主题切换按钮 */
+.theme-btn{
+  width:36px;height:36px;flex:none;display:flex;align-items:center;justify-content:center;
+  background:transparent;border:1px solid var(--line-2);border-radius:9px;
+  color:var(--muted);cursor:pointer;transition:color .2s,border-color .2s,background .2s;
+}
+.theme-btn:hover{color:var(--acid);border-color:var(--acid);background:var(--acid-ghost)}
+.theme-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.theme-btn .ico-sun{display:none}
+[data-theme="light"] .theme-btn .ico-sun{display:block}
+[data-theme="light"] .theme-btn .ico-moon{display:none}
+
 /* 移动端底部快捷导航 */
 .mtab{
   display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;
-  background:rgba(9,14,12,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:var(--glass-solid);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border-top:1px solid var(--line-soft);
   padding:6px 4px calc(6px + env(safe-area-inset-bottom));
 }
-.mtab ul{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;max-width:560px;margin:0 auto;list-style:none;padding:0}
+.mtab ul{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;max-width:560px;margin:0 auto;list-style:none;padding:0}
 .mtab li{list-style:none;margin:0;padding:0}
 .mtab a{
   display:flex;flex-direction:column;align-items:center;gap:4px;
@@ -130,7 +200,7 @@ header.solid{border-bottom-color:var(--line);background:rgba(7,10,8,.92)}
 }
 .slogan p b{
   color:var(--acid);font-weight:750;
-  text-shadow:0 0 18px rgba(184,255,60,.35);
+  text-shadow:var(--glow);
 }
 h1{
   font-size:clamp(36px,4.4vw,54px);line-height:1.16;font-weight:800;
@@ -161,7 +231,7 @@ h1 em::after{
 }
 .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--muted-2);text-transform:uppercase}
 .panel-head b{color:var(--acid);font-weight:500}
-.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:8px;overflow:hidden;margin-bottom:16px}
+.stat-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:8px;overflow:hidden;margin-bottom:16px}
 .stat{background:var(--surface);padding:16px 14px}
 .stat u{display:block;font-family:var(--mono);font-size:24px;font-weight:600;color:var(--acid);text-decoration:none;line-height:1.2;letter-spacing:-.02em}
 .stat u small{font-size:12px;color:var(--muted-2);margin-left:2px;letter-spacing:0}
@@ -173,11 +243,11 @@ h1 em::after{
 .panel-kv{margin-bottom:14px}
 .panel-kv:last-child{margin-bottom:0}
 .panel-kv>span{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--muted-2);text-transform:uppercase;margin-bottom:9px}
-.tags-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tags-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .tags-row b{
   font-family:var(--mono);font-size:11px;font-weight:400;letter-spacing:.02em;text-align:center;
   color:var(--muted);border:1px solid var(--line-soft);border-radius:5px;
-  padding:5px 4px;background:rgba(0,0,0,.22);
+  padding:5px 4px;background:var(--code-bg);
 }
 
 /* ---------- 通用分区 ---------- */
@@ -187,7 +257,16 @@ section[id],div[id]{scroll-margin-top:78px}
 #service,#rules{padding:68px 0}
 #reviews,#faq{padding:86px 0}
 /* 区块之间的细分隔线，强化段落衔接 */
-main > section + section{border-top:1px solid rgba(232,239,230,.055)}
+.divider{
+  position:relative;height:1px;margin:0 auto;
+  width:min(1200px,calc(100% - 48px));
+  background:linear-gradient(90deg,transparent,rgba(184,255,60,.16) 26%,rgba(184,255,60,.3) 50%,rgba(184,255,60,.16) 74%,transparent);
+}
+.divider::after{
+  content:"";position:absolute;left:50%;top:50%;
+  width:7px;height:7px;transform:translate(-50%,-50%) rotate(45deg);
+  background:var(--acid);box-shadow:0 0 14px rgba(184,255,60,.55);
+}
 .sec-head{margin-bottom:40px;max-width:640px}
 .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--acid);text-transform:uppercase;display:block;margin-bottom:14px}
 h2{font-size:clamp(26px,3.4vw,36px);line-height:1.28;font-weight:750;letter-spacing:-.018em;margin-bottom:14px;text-wrap:balance}
@@ -195,8 +274,8 @@ p,li{ text-wrap:pretty }
 .sec-head p{color:var(--muted);font-size:15px}
 
 /* 承诺条 */
-.promises{border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);background:rgba(13,20,17,.5)}
-.promises ul{list-style:none;display:grid;grid-template-columns:repeat(4,1fr)}
+.promises{border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);background:var(--strip-bg)}
+.promises ul{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
 .promises li{padding:26px 22px;border-right:1px solid var(--line-soft);display:flex;gap:13px;align-items:flex-start}
 .promises li:last-child{border-right:none}
 .promises b{display:block;font-size:14px;margin-bottom:3px}
@@ -204,7 +283,7 @@ p,li{ text-wrap:pretty }
 .promises .num{font-family:var(--mono);font-size:11px;color:var(--acid);border:1px solid var(--line);padding:2px 6px;border-radius:3px;flex:none;margin-top:2px}
 
 /* 服务卡片 */
-.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .card{
   background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
   padding:26px 24px 24px;position:relative;transition:border-color .25s,transform .25s,background .25s;
@@ -222,7 +301,7 @@ p,li{ text-wrap:pretty }
   font-family:var(--mono);font-size:11px;color:var(--muted-2);letter-spacing:.06em;
   display:flex;justify-content:space-between;
 }
-.card .meta b{color:var(--acid-2);font-weight:500}
+.card .meta b{color:var(--acid);font-weight:600}
 
 /* 服务与规则 */
 .price-hero{
@@ -235,7 +314,7 @@ p,li{ text-wrap:pretty }
 .price-hero .big small{font-size:13px;color:var(--muted-2);margin-left:8px;font-weight:400;letter-spacing:.04em}
 .price-hero .tags{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
 .price-hero .tags span{font-size:11.5px;font-family:var(--mono);letter-spacing:.05em;color:var(--muted);border:1px solid var(--line);padding:4px 11px;border-radius:99px}
-.rules-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-items:start}
+.rules-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 .rule-card{
   background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
   padding:26px 24px;transition:border-color .25s;
@@ -243,10 +322,16 @@ p,li{ text-wrap:pretty }
 .rule-card:hover{border-color:var(--line)}
 .rule-card h3{font-size:16px;font-weight:650;margin-bottom:15px;display:flex;align-items:center;gap:10px;letter-spacing:-.01em}
 .rule-card h3 .tag-idx{font-family:var(--mono);font-size:10.5px;color:var(--acid);border:1px solid var(--line);padding:2px 7px;border-radius:3px;letter-spacing:.08em;font-weight:400}
-.rule-card ul{list-style:none;display:grid;gap:9px;font-size:13.5px;color:var(--muted);line-height:1.65}
-.rule-card ul li{display:flex;gap:9px;align-items:flex-start}
-.rule-card ul li::before{content:"";width:5px;height:5px;background:var(--acid);flex:none;margin-top:8px;transform:rotate(45deg)}
+.rule-card ul{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:9px;font-size:13.5px;color:var(--muted);line-height:1.65;overflow-wrap:break-word;min-width:0}
+.rule-card ul li{min-width:0;max-width:100%;position:relative;padding-left:15px}
+.rule-card ul li::before{content:"";position:absolute;left:0;top:8px;width:5px;height:5px;background:var(--acid);transform:rotate(45deg)}
 .rule-card ul li b{color:var(--text);font-weight:600;white-space:nowrap}
+.rule-card ul li .nw{white-space:nowrap}
+/* 窄屏允许词组内断行，避免撑破布局 */
+@media (max-width:640px){
+  .rule-card ul li .nw{white-space:normal}
+  .rule-card ul li b{white-space:normal}
+}
 .rules-tip{
   margin-top:18px;font-family:var(--mono);font-size:11px;line-height:1.9;
   letter-spacing:.04em;color:var(--muted-2);
@@ -254,7 +339,7 @@ p,li{ text-wrap:pretty }
 }
 
 /* 流程 */
-.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative}
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;position:relative}
 .steps::before{
   content:"";position:absolute;top:19px;left:6%;right:6%;height:1px;
   background:linear-gradient(90deg,var(--line),rgba(184,255,60,.35),var(--line));
@@ -271,7 +356,7 @@ p,li{ text-wrap:pretty }
 .step p{font-size:12.5px;color:var(--muted-2);line-height:1.65}
 
 /* 安全双栏 */
-.split{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:56px;align-items:center}
 .safety-list{list-style:none;display:grid;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:12px;overflow:hidden}
 .safety-list li{background:var(--surface);padding:17px 20px;display:flex;gap:14px;align-items:flex-start;transition:background .2s}
 .safety-list li:hover{background:var(--surface-2)}
@@ -285,7 +370,7 @@ p,li{ text-wrap:pretty }
 .quote b{color:var(--acid);font-weight:600}
 
 /* 评价 */
-.reviews{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.reviews{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .review{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);padding:24px;display:flex;flex-direction:column;gap:14px}
 .stars{display:flex;gap:3px}
 .stars svg{width:13px;height:13px;fill:var(--acid)}
@@ -330,7 +415,7 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 .contact-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;position:relative;z-index:1}
 .contact-row .chip{min-width:210px}
 .chip{
-  display:inline-flex;align-items:center;gap:10px;background:rgba(7,10,8,.6);
+  display:inline-flex;align-items:center;gap:10px;background:var(--chip-bg);
   border:1px solid var(--line);border-radius:8px;padding:11px 16px;
   font-family:var(--mono);font-size:13px;color:var(--text);letter-spacing:.02em;
 }
@@ -359,8 +444,8 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 .gate-box{
   position:relative;width:100%;max-width:392px;padding:30px 30px 24px;
   background:linear-gradient(160deg,var(--surface-2),var(--surface) 70%);
-  border:1px solid rgba(184,255,60,.22);border-radius:4px 18px 4px 18px;
-  box-shadow:0 30px 80px -30px #000,inset 0 1px 0 rgba(184,255,60,.12);
+  border:1px solid var(--acid-line);border-radius:4px 18px 4px 18px;
+  box-shadow:var(--shadow);
   animation:boxIn .26s cubic-bezier(.2,.8,.3,1);
 }
 @keyframes boxIn{from{transform:translateY(14px) scale(.98);opacity:0}to{transform:none;opacity:1}}
@@ -375,18 +460,18 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 .cap-wrap{display:flex;gap:12px;align-items:center;margin-bottom:14px}
 #capCanvas{
   width:180px;height:60px;flex:none;border-radius:6px;
-  border:1px solid var(--line);background:#0A0F0C;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);cursor:pointer;
 }
 .cap-tip{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);line-height:1.8}
 .gate-form{display:flex;gap:9px}
 .gate-form input{
-  flex:1;min-width:0;background:rgba(7,10,8,.85);border:1px solid rgba(232,239,230,.14);
+  flex:1;min-width:0;background:var(--input-bg);border:1px solid var(--input-line);
   border-radius:7px;padding:11px 13px;color:var(--text);font-family:var(--mono);
   font-size:15px;letter-spacing:.3em;text-transform:uppercase;outline:none;
   transition:border-color .18s,box-shadow .18s;
 }
-.gate-form input::placeholder{letter-spacing:.04em;text-transform:none;font-size:13px;color:var(--muted-2)}
-.gate-form input:focus{border-color:rgba(184,255,60,.5);box-shadow:0 0 0 3px rgba(184,255,60,.08)}
+.gate-form input::placeholder{letter-spacing:.04em;text-transform:none;font-size:13px;color:var(--muted)}
+.gate-form input:focus{border-color:var(--focus-ring);box-shadow:0 0 0 3px var(--focus-halo)}
 .gate-msg{min-height:18px;margin-top:12px;font-family:var(--mono);font-size:11.5px;color:#FF7A6B}
 .gate-msg.ok{color:var(--acid)}
 .shake{animation:shake .32s}
@@ -396,7 +481,7 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 .shop{
   border:1px solid var(--line);border-radius:18px 4px 18px 4px;
   background:linear-gradient(150deg,var(--surface-2),var(--surface) 58%,var(--bg) 100%);
-  padding:44px;display:grid;grid-template-columns:1fr 396px;gap:44px;align-items:start;
+  padding:44px;display:grid;grid-template-columns:minmax(0,1fr) 396px;gap:44px;align-items:start;
   position:relative;overflow:hidden;
 }
 .shop::before{
@@ -424,10 +509,10 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 .shop-id b{font-size:15.5px;line-height:1.3}
 .shop-id span{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);letter-spacing:.05em;line-height:1.5}
 .shop-stats{
-  display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-bottom:14px;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1px;margin-bottom:14px;
   background:var(--line-soft);border:1px solid var(--line-soft);border-radius:8px;overflow:hidden;
 }
-.shop-stats div{background:rgba(7,10,8,.6);padding:11px 14px}
+.shop-stats div{background:var(--surface);padding:11px 14px}
 .shop-stats b{display:block;font-family:var(--mono);font-size:17px;line-height:1.35;color:var(--acid);font-weight:600}
 .shop-stats span{font-size:10.5px;color:var(--muted-2);letter-spacing:.08em}
 .shop-quote{
@@ -439,18 +524,18 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 .shop-goods-head h3{font-size:16px;font-weight:650;letter-spacing:.01em}
 .shop-goods-head a{font-family:var(--mono);font-size:11.5px;color:var(--acid);text-decoration:none;letter-spacing:.04em}
 .shop-goods-head a:hover{text-decoration:underline}
-.goods-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.goods-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
 .goods{
   display:block;text-decoration:none;color:var(--text);
   border:1px solid var(--line-soft);border-radius:9px;padding:16px 18px;
-  background:rgba(7,10,8,.45);
+  background:var(--code-bg-2);
   transition:border-color .18s,background .18s,transform .18s;
 }
 .goods:hover{border-color:rgba(184,255,60,.4);background:rgba(184,255,60,.045);transform:translateY(-2px)}
 .goods-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px}
 .badge{
   font-family:var(--mono);font-size:10px;letter-spacing:.08em;font-weight:600;
-  color:#08110A;background:var(--acid);padding:2px 7px;border-radius:3px;
+  color:var(--on-acid);background:var(--acid);padding:2px 7px;border-radius:3px;
 }
 .goods-top em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--muted-2)}
 .goods h4{font-size:14px;font-weight:600;line-height:1.5;margin-bottom:10px}
@@ -461,7 +546,7 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
   font-size:11.5px;color:var(--muted-2);
 }
 .kouling{
-  background:rgba(7,10,8,.68);border:1px solid var(--line);border-radius:10px;padding:18px;
+  background:var(--chip-bg);border:1px solid var(--line);border-radius:10px;padding:18px;
 }
 .kouling-head{
   display:flex;justify-content:space-between;align-items:center;gap:10px;
@@ -471,7 +556,7 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 .kouling-head b{color:var(--acid);font-weight:500;letter-spacing:.08em}
 .kouling-text{
   display:block;font-family:var(--mono);font-size:11.5px;line-height:1.8;color:var(--muted);
-  background:rgba(0,0,0,.4);border:1px solid var(--line-soft);border-radius:6px;
+  background:var(--code-bg-2);border:1px solid var(--line-soft);border-radius:6px;
   padding:10px 12px;margin-bottom:14px;word-break:break-all;
   user-select:all;-webkit-user-select:all;
 }
@@ -487,7 +572,7 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 .shop-alt em{font-style:normal;color:var(--muted-2);font-family:var(--mono);font-size:11px}
 .toast{
   position:fixed;left:50%;bottom:34px;transform:translate(-50%,14px);z-index:210;
-  background:var(--acid);color:#08110A;font-size:13px;font-weight:600;
+  background:var(--acid);color:var(--on-acid);font-size:13px;font-weight:600;
   padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;
   transition:opacity .22s,transform .22s;box-shadow:0 12px 30px -14px rgba(184,255,60,.9);
 }
@@ -511,18 +596,18 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
 
 /* 响应式 */
 @media (max-width:980px){
-  .hero-grid{grid-template-columns:1fr;gap:38px}
+  .hero-grid{grid-template-columns:minmax(0,1fr);gap:38px}
   .hero{padding-top:126px}
-  .cards,.reviews{grid-template-columns:1fr 1fr}
-  .rules-grid{grid-template-columns:1fr}
+  .cards,.reviews{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .rules-grid{grid-template-columns:minmax(0,1fr)}
   .price-hero .tags{margin-left:0}
-  .steps{grid-template-columns:1fr;gap:26px}
+  .steps{grid-template-columns:minmax(0,1fr);gap:26px}
   .steps::before{display:none}
   .step{display:flex;gap:16px;text-align:left;padding:0}
   .step .idx{margin:0;flex:none}
-  .split{grid-template-columns:1fr;gap:34px}
-  .shop{grid-template-columns:1fr;gap:30px;padding:34px}
-  .promises ul{grid-template-columns:1fr 1fr}
+  .split{grid-template-columns:minmax(0,1fr);gap:34px}
+  .shop{grid-template-columns:minmax(0,1fr);gap:30px;padding:34px}
+  .promises ul{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .promises li:nth-child(2){border-right:none}
   .promises li:nth-child(1),.promises li:nth-child(2){border-bottom:1px solid var(--line-soft)}
   .navlinks{display:none}
@@ -535,23 +620,24 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
   #service,#rules{padding:52px 0}
   #reviews,#faq{padding:66px 0}
   .hero{padding:104px 0 48px}
-  .cards,.reviews{grid-template-columns:1fr}
+  .cards,.reviews{grid-template-columns:minmax(0,1fr)}
   .price-hero{padding:18px 20px}
   .price-hero .big{font-size:22px}
-  .promises ul{grid-template-columns:1fr}
+  .promises ul{grid-template-columns:minmax(0,1fr)}
   .promises li{border-right:none;border-bottom:1px solid var(--line-soft)}
   .promises li:last-child{border-bottom:none}
+  .brand span{display:none}
   .contact{padding:36px 24px;margin-bottom:44px}
-  .contact-row{display:grid;grid-template-columns:1fr;gap:10px}
+  .contact-row{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
   .contact-row .chip{width:100%;min-width:0}
   .chip .copy{margin-left:auto}
-  .stat-row{grid-template-columns:1fr 1fr}
+  .stat-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   h1{font-size:34px}
   #capCanvas{width:150px;height:54px}
   .gate-box{padding:26px 20px 20px}
   .contact-actions{gap:10px}
   .shop{padding:26px 22px;gap:26px}
-  .goods-grid{grid-template-columns:1fr}
+  .goods-grid{grid-template-columns:minmax(0,1fr)}
   .shop-stats b{font-size:16px}
   .toast{bottom:22px;font-size:12.5px}
 }
@@ -565,8 +651,8 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
   <div class="wrap nav">
     <a class="brand" href="#top">
       <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <path d="M16 4.5 27.5 27H4.5z" stroke="#B8FF3C" stroke-width="2"/>
-        <path d="M16 11.5 22 23H10z" fill="#B8FF3C" fill-opacity=".22"/>
+        <path d="M16 4.5 27.5 27H4.5z" stroke="var(--theme-icon)" stroke-width="2"/>
+        <path d="M16 11.5 22 23H10z" fill="var(--theme-icon)" fill-opacity=".22"/>
       </svg>
       <b>行动突围护航社</b>
       <span>SQUAD</span>
@@ -578,7 +664,13 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
       <a href="#shop">店铺信息</a>
       <a href="#contact">联系方式</a>
     </nav>
-    <a class="btn btn-primary btn-sm" href="#contact">立即咨询</a>
+    <div class="nav-right">
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="切换深色/浅色主题" title="切换主题">
+        <svg class="ico-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+        <svg class="ico-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2 12h2.2M19.8 12H22M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+      </button>
+      <a class="btn btn-primary btn-sm" href="#contact">立即咨询</a>
+    </div>
   </div>
 </header>
 
@@ -657,6 +749,8 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
     </div>
   </div>
 
+  <div class="divider" aria-hidden="true"></div>
+
   <!-- 服务项目 -->
   <section id="service">
     <div class="wrap">
@@ -706,6 +800,8 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
     </div>
   </section>
 
+  <div class="divider" aria-hidden="true"></div>
+
   <!-- 服务与规则 -->
   <section id="rules">
     <div class="wrap">
@@ -724,26 +820,26 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
         <div class="rule-card reveal">
           <h3><span class="tag-idx">01</span>接单范围</h3>
           <ul>
-            <li><b>服务类型：</b>护航 / 陪打 / 带打，技术型、教学型、娱乐型均可</li>
-            <li><b>游戏模式：</b>烽火地带｜全面战场</li>
-            <li><b>档位：</b>机密单护｜机密双护｜绝密单护｜绝密双护｜机密娱乐</li>
-            <li><b>端区：</b>PC 端 + 手游端，Steam / 国服双区有号，全国可服务</li>
+            <li><b>服务类型：</b><span class="nw">护航</span>/<span class="nw">陪打</span>/<span class="nw">带打</span>，<span class="nw">技术型</span>、<span class="nw">教学型</span>、<span class="nw">娱乐型均可</span></li>
+            <li><b>游戏模式：</b><span class="nw">烽火地带</span>｜<span class="nw">全面战场</span></li>
+            <li><b>档位：</b><span class="nw">机密单护</span>｜<span class="nw">机密双护</span>｜<span class="nw">绝密单护</span>｜<span class="nw">绝密双护</span>｜<span class="nw">机密娱乐</span></li>
+            <li><b>端区：</b>PC 端 + 手游端，Steam/国服双区有号，全国可服务</li>
           </ul>
         </div>
         <div class="rule-card reveal">
           <h3><span class="tag-idx">02</span>常规地图与物资</h3>
           <ul>
-            <li><b>常规地图：</b>绝密航天、绝密巴克什、潮汐监狱、零号大坝、长弓溪谷、航天基地</li>
-            <li><b>主要产出：</b>哈夫币、大红、非洲之心、曼德尔超算、显卡、情报</li>
-            <li><b>装备：</b>六级甲、六级头、AW 子弹</li>
-            <li><b>可关注：</b>红卡、金卡、门禁卡、钥匙房、保险箱、胸挂、背包</li>
+            <li><b>常规地图：</b><span class="nw">绝密航天</span>、<span class="nw">绝密巴克什</span>、<span class="nw">潮汐监狱</span>、<span class="nw">零号大坝</span>、<span class="nw">长弓溪谷</span>、<span class="nw">航天基地</span></li>
+            <li><b>主要产出：</b><span class="nw">哈夫币</span>、<span class="nw">大红</span>、<span class="nw">非洲之心</span>、<span class="nw">曼德尔超算</span>、<span class="nw">显卡</span>、<span class="nw">情报</span></li>
+            <li><b>装备：</b><span class="nw">六级甲</span>、<span class="nw">六级头</span>、<span class="nw">AW 子弹</span></li>
+            <li><b>可关注：</b><span class="nw">红卡</span>、<span class="nw">金卡</span>、<span class="nw">门禁卡</span>、<span class="nw">钥匙房</span>、<span class="nw">保险箱</span>、<span class="nw">胸挂</span>、<span class="nw">背包</span></li>
           </ul>
         </div>
         <div class="rule-card reveal">
           <h3><span class="tag-idx">03</span>保底规则</h3>
           <ul>
             <li><b>炸单即加保底：</b>撤离失败 = 炸单，炸单继续加保底，不跑单</li>
-            <li><b>战损补偿：</b>绝密航天 / 绝密巴克什炸一局 +60w；潮汐监狱炸一局 +70w</li>
+            <li><b>战损补偿：</b><span class="nw">绝密航天</span>/绝密巴克什炸一局 +60w；潮汐监狱炸一局 +70w</li>
             <li><b>保险物资：</b>保险物资 &gt;100w 计入保底，同样 +60w</li>
             <li><b>不卡保底：</b>差 1w 哈夫币也再开一局，不卡保底撤离</li>
           </ul>
@@ -761,8 +857,8 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
           <h3><span class="tag-idx">05</span>老板权益与红线</h3>
           <ul>
             <li><b>物资归属：</b>物资全归老板，不压力老板</li>
-            <li><b>三个不：</b>不卡保底、不塞假账、物资无上限</li>
-            <li><b>免费重排：</b>打手私藏、卡战备、消极游戏，直接免费重排</li>
+            <li><b>三个不：</b><span class="nw">不卡保底</span>、<span class="nw">不塞假账</span>、<span class="nw">物资无上限</span></li>
+            <li><b>免费重排：</b><span class="nw">打手私藏</span>、<span class="nw">卡战备</span>、消极游戏，直接免费重排</li>
             <li><b>恶意卡保底：</b>反馈客服处理</li>
           </ul>
         </div>
@@ -773,13 +869,15 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
             <li><b>交押金：</b>打手交押金上岗，违规扣押金</li>
             <li><b>下单有保障：</b>全程闲鱼平台担保交易</li>
             <li><b>永久售后：</b>老板开心下单，是本店宗旨</li>
-            <li><b>擅长角色：</b>骇爪、露娜、蜂医、红狼、威龙</li>
+            <li><b>擅长角色：</b><span class="nw">骇爪</span>、<span class="nw">露娜</span>、<span class="nw">蜂医</span>、<span class="nw">红狼</span>、<span class="nw">威龙</span></li>
           </ul>
         </div>
       </div>
       <p class="rules-tip reveal">搜索关键词：三角洲行动 / 三角洲护航 / 三角洲纯绿护航 / 绝密双护 / 烽火地带 / 全面战场 / 潮汐监狱 / 绝密航天 / 绝密巴克什 / 机密单护 / 哈夫币 / 大红 / 六级甲</p>
     </div>
   </section>
+
+  <div class="divider" aria-hidden="true"></div>
 
   <!-- 流程 -->
   <section id="flow">
@@ -798,6 +896,8 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
       </div>
     </div>
   </section>
+
+  <div class="divider" aria-hidden="true"></div>
 
   <!-- 安全 -->
   <section id="safety">
@@ -822,6 +922,8 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
       </ul>
     </div>
   </section>
+
+  <div class="divider" aria-hidden="true"></div>
 
   <!-- 评价 -->
   <section id="reviews">
@@ -869,6 +971,8 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
     </div>
   </section>
 
+  <div class="divider" aria-hidden="true"></div>
+
   <!-- FAQ -->
   <section id="faq">
     <div class="wrap">
@@ -904,6 +1008,8 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
       </div>
     </div>
   </section>
+
+  <div class="divider" aria-hidden="true"></div>
 
   <!-- 店铺直达 -->
   <section id="shop">
@@ -970,6 +1076,8 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
   </section>
 
   <!-- 联系 -->
+  <div class="divider" aria-hidden="true"></div>
+
   <div class="wrap">
     <div class="contact reveal" id="contact">
       <span class="kicker">Contact</span>
@@ -993,7 +1101,7 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
     <div>
       <a class="brand" href="#top">
         <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <path d="M16 4.5 27.5 27H4.5z" stroke="#B8FF3C" stroke-width="2"/>
+          <path d="M16 4.5 27.5 27H4.5z" stroke="var(--theme-icon)" stroke-width="2"/>
         </svg>
         <b>行动突围护航社</b>
       </a>
@@ -1040,7 +1148,9 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
       <div class="cap-tip">看不清？<br>点图片换一张</div>
     </div>
     <form class="gate-form" id="gateForm" autocomplete="off">
-      <input id="capInput" type="text" maxlength="4" inputmode="latin" placeholder="4 位验证码" aria-label="验证码输入框">
+      <input id="capInput" type="text" maxlength="4" inputmode="numeric" pattern="[0-9]*"
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+             placeholder="4 位数字" aria-label="验证码输入框">
       <button class="btn btn-primary" type="submit">确认</button>
     </form>
     <div class="gate-msg" id="gateMsg"></div>
@@ -1119,6 +1229,11 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
     document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
   }
 
+  // 主题切换后重绘画布（保持当前验证码不变，仅换配色）
+  document.addEventListener('themechange', function () {
+    if (code) draw();
+  });
+
   // 移动端底部导航：平滑跳转并避开底部固定栏
   mLinks.forEach(function (a) {
     a.addEventListener('click', function (e) {
@@ -1143,6 +1258,34 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
 </script>
 
 <script>
+/* 主题切换：默认深色，用户选择后记忆 */
+(function () {
+  var root = document.documentElement;
+  var btn = document.getElementById('themeBtn');
+  var KEY = 'delta_theme';
+
+  function current() {
+    return root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  }
+  function apply(theme, save) {
+    root.setAttribute('data-theme', theme);
+    if (save) { try { localStorage.setItem(KEY, theme); } catch (e) {} }
+    document.dispatchEvent(new CustomEvent('themechange', { detail: theme }));
+  }
+
+  if (btn) {
+    btn.addEventListener('click', function () {
+      apply(current() === 'light' ? 'dark' : 'light', true);
+    });
+  }
+  // 跨标签页同步
+  window.addEventListener('storage', function (e) {
+    if (e.key === KEY && (e.newValue === 'light' || e.newValue === 'dark')) apply(e.newValue, false);
+  });
+})();
+</script>
+
+<script>
 /* 联系方式验证码解锁 */
 (function () {
   var gate = document.getElementById('gate');
@@ -1156,8 +1299,16 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
   var hint = document.getElementById('revealHint');
   var wxChip = document.getElementById('wxChip');
   var qqChip = document.getElementById('qqChip');
-  var CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  var CHARS = '0123456789';
   var code = '', tries = 0, unlocked = false;
+
+  // 主题配色：验证码画布需要跟随主题重绘
+  function palette() {
+    var light = document.documentElement.getAttribute('data-theme') === 'light';
+    return light
+      ? { bg: '#FFFFFF', fg: '#4C8700', fg2: '#2F6600', grid: 'rgba(20,36,26,.05)', noise: 'rgba(20,36,26,.16)', line: 'rgba(20,36,26,.26)' }
+      : { bg: '#0A0F0C', fg: '#B8FF3C', fg2: '#D6FF8C', grid: 'rgba(184,255,60,.055)', noise: 'rgba(184,255,60,.3)', line: 'rgba(139,155,141,.4)' };
+  }
 
   // 轻量混淆：号码不以明文出现在页面源码中
   function dec(s) {
@@ -1173,18 +1324,19 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
   }
 
   function draw() {
+    var c = palette();
     var w = canvas.clientWidth || 180, h = canvas.clientHeight || 60;
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = w * dpr; canvas.height = h * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#0A0F0C'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = c.bg; ctx.fillRect(0, 0, w, h);
 
-    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(184,255,60,.055)';
+    ctx.lineWidth = 1; ctx.strokeStyle = c.grid;
     for (var x = 0; x <= w; x += 14) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
 
     for (var d = 0; d < 80; d++) {
-      ctx.fillStyle = 'rgba(184,255,60,' + (Math.random() * .25 + .05).toFixed(2) + ')';
+      ctx.fillStyle = c.noise;
       ctx.fillRect(Math.random() * w, Math.random() * h, 1.6, 1.6);
     }
 
@@ -1192,22 +1344,33 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
     for (var j = 0; j < 4; j++) {
       ctx.save();
       ctx.translate(pad + step * j + step / 2, h / 2 + (Math.random() * 7 - 3.5));
-      ctx.rotate((Math.random() * 26 - 13) * Math.PI / 180);
-      ctx.font = '700 ' + Math.round(h * .52) + 'px ui-monospace,Consolas,monospace';
+      ctx.rotate((Math.random() * 30 - 15) * Math.PI / 180);
+      // 字号与色相轻微变化，降低 0/8、1/7、2/5 的混淆
+      ctx.font = '700 ' + Math.round(h * (0.5 + Math.random() * .12)) + 'px ui-monospace,Consolas,monospace';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(184,255,60,.45)'; ctx.shadowBlur = 9;
-      ctx.fillStyle = '#B8FF3C';
+      ctx.shadowColor = c.fg; ctx.shadowBlur = 9;
+      ctx.fillStyle = Math.random() > .45 ? c.fg : c.fg2;
       ctx.fillText(code[j], 0, 0);
       ctx.restore();
     }
 
-    ctx.strokeStyle = 'rgba(139,155,141,.4)'; ctx.lineWidth = 1.2;
-    for (var k = 0; k < 2; k++) {
+    ctx.strokeStyle = c.line; ctx.lineWidth = 1.2;
+    for (var k = 0; k < 3; k++) {
       ctx.beginPath();
       ctx.moveTo(Math.random() * w * .25, Math.random() * h);
       ctx.bezierCurveTo(w * .35, Math.random() * h, w * .65, Math.random() * h, w * (.8 + Math.random() * .2), Math.random() * h);
       ctx.stroke();
     }
+    // 少量划线打散字形，避免干扰过多
+    ctx.strokeStyle = c.fg; ctx.globalAlpha = .22; ctx.lineWidth = 1;
+    for (var m = 0; m < 2; m++) {
+      var x0 = pad + step * Math.floor(Math.random() * 3) + step * .12;
+      ctx.beginPath();
+      ctx.moveTo(x0, Math.random() * h);
+      ctx.lineTo(x0 + step * .76, Math.random() * h);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
   }
 
   function say(t, ok) {
@@ -1274,14 +1437,29 @@ footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5p
     if (e.key === 'Escape' && gate.classList.contains('open')) closeGate();
   });
 
-  input.addEventListener('input', function () {
-    input.value = input.value.replace(/[^0-9a-zA-Z]/g, '').toUpperCase();
+  // 只保留数字；处理手机输入法联想补全造成的粘连
+  function sanitize() {
+    var v = input.value.replace(/[^0-9]/g, '');
+    if (v.length > 4) v = v.slice(-4);
+    if (v !== input.value) input.value = v;
+    return v;
+  }
+  input.addEventListener('input', sanitize);
+  // 输入法组合输入结束后再统一清洗，避免中途破坏候选
+  input.addEventListener('compositionend', function () { setTimeout(sanitize, 0); });
+  // 粘贴时强制只取数字
+  input.addEventListener('paste', function (e) {
+    e.preventDefault();
+    var t = (e.clipboardData || window.clipboardData).getData('text') || '';
+    var d = t.replace(/[^0-9]/g, '').slice(0, 4);
+    if (d) input.value = d;
+    input.focus();
   });
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
-    var v = input.value.trim().toUpperCase();
-    if (v.length < 4) { say('请输入完整的 4 位验证码'); return; }
+    var v = sanitize();
+    if (v.length < 4) { say('请输入完整的 4 位数字'); return; }
     if (v === code) { unlock(false); return; }
     tries++;
     input.value = '';
