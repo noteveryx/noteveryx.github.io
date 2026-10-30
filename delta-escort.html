@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>delta escort · 三角洲行动纯绿色陪练</title>
+<meta name="description" content="delta escort —— 三角洲行动纯绿色陪玩：真人手打、零外挂零脚本、不索要账号、全程录屏。烽火地带摸金带飞，全面战场上分陪练。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23070A08'/%3E%3Cpath d='M16 5 27 26H5z' fill='none' stroke='%23B8FF3C' stroke-width='2.5'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#070A08;
+  --surface:#0D1411;
+  --surface-2:#121A16;
+  --line:rgba(184,255,60,.14);
+  --line-soft:rgba(232,239,230,.08);
+  --acid:#B8FF3C;
+  --acid-2:#7BE03B;
+  --acid-ghost:rgba(184,255,60,.08);
+  --text:#E8EFE6;
+  --muted:#8B9B8D;
+  --muted-2:#5E6D60;
+  --mono:ui-monospace,SFMono-Regular,"JetBrains Mono","Cascadia Mono",Consolas,monospace;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --r:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--sans);
+  line-height:1.7;letter-spacing:.01em;overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(184,255,60,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(184,255,60,.035) 1px,transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 20%,transparent 75%);
+  -webkit-mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 20%,transparent 75%);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.55;
+  background:radial-gradient(ellipse 70% 45% at 50% -10%,rgba(123,224,59,.16),transparent 60%);
+}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px;position:relative;z-index:2}
+
+/* ---------- 顶部进度 ---------- */
+.progress{position:fixed;top:0;left:0;height:2px;width:0;background:var(--acid);z-index:100;box-shadow:0 0 12px rgba(184,255,60,.6)}
+
+/* ---------- 导航 ---------- */
+header{
+  position:fixed;top:0;left:0;right:0;z-index:90;
+  background:rgba(7,10,8,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--line-soft);transition:border-color .3s,background .3s;
+}
+header.solid{border-bottom-color:var(--line);background:rgba(7,10,8,.92)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:66px}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--text)}
+.brand svg{width:26px;height:26px;flex:none}
+.brand b{font-size:15px;font-weight:700;letter-spacing:.04em}
+.brand span{font-family:var(--mono);font-size:10px;color:var(--acid);letter-spacing:.18em;border:1px solid var(--line);padding:2px 7px;border-radius:3px}
+.navlinks{display:flex;gap:4px;align-items:center}
+.navlinks a{
+  color:var(--muted);text-decoration:none;font-size:13.5px;padding:7px 13px;border-radius:7px;
+  transition:color .18s,background .18s;white-space:nowrap;
+}
+.navlinks a:hover{color:var(--text);background:rgba(255,255,255,.045)}
+.navlinks a.on{color:var(--acid);background:var(--acid-ghost)}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;border:none;
+  padding:11px 20px;border-radius:8px;transition:transform .18s,box-shadow .18s,background .18s;
+  font-family:inherit;
+}
+.btn-primary{background:var(--acid);color:#08110A;box-shadow:0 0 0 1px rgba(184,255,60,.4),0 8px 26px -10px rgba(184,255,60,.7)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(184,255,60,.6),0 14px 34px -12px rgba(184,255,60,.85)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid rgba(232,239,230,.16)}
+.btn-ghost:hover{background:rgba(255,255,255,.05);border-color:rgba(232,239,230,.3)}
+.btn-sm{padding:8px 15px;font-size:13px}
+
+/* ---------- Hero ---------- */
+.hero{padding:150px 0 76px;position:relative}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
+.tag{
+  display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11px;
+  letter-spacing:.16em;color:var(--acid);text-transform:uppercase;
+  border:1px solid var(--line);background:rgba(184,255,60,.05);
+  padding:6px 12px;border-radius:100px;margin-bottom:26px;
+}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--acid);box-shadow:0 0 8px var(--acid);animation:pulse 2.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+h1{
+  font-size:clamp(38px,5.2vw,62px);line-height:1.14;font-weight:800;
+  letter-spacing:-.025em;margin-bottom:22px;
+}
+h1 em{font-style:normal;color:var(--acid);position:relative;white-space:nowrap}
+h1 em::after{
+  content:"";position:absolute;left:0;right:0;bottom:.06em;height:.09em;
+  background:linear-gradient(90deg,rgba(184,255,60,.55),rgba(184,255,60,0));
+}
+.lede{font-size:16.5px;color:var(--muted);max-width:30em;margin-bottom:34px}
+.lede b{color:var(--text);font-weight:600}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:30px}
+.hero-note{display:flex;gap:22px;flex-wrap:wrap;font-size:12.5px;color:var(--muted-2);font-family:var(--mono);letter-spacing:.04em}
+.hero-note span{display:flex;align-items:center;gap:6px}
+.hero-note i{width:12px;height:1px;background:var(--acid-2);display:inline-block}
+
+/* 右侧面板 */
+.panel{
+  background:linear-gradient(160deg,var(--surface-2),var(--surface) 65%);
+  border:1px solid var(--line);border-radius:4px 18px 4px 18px;
+  padding:26px;position:relative;overflow:hidden;
+}
+.panel::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--acid),transparent);opacity:.55;
+}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--muted-2);text-transform:uppercase}
+.panel-head b{color:var(--acid);font-weight:500}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:8px;overflow:hidden;margin-bottom:16px}
+.stat{background:var(--surface);padding:16px 14px}
+.stat u{display:block;font-family:var(--mono);font-size:24px;font-weight:600;color:var(--acid);text-decoration:none;line-height:1.2;letter-spacing:-.02em}
+.stat u small{font-size:12px;color:var(--muted-2);margin-left:2px;letter-spacing:0}
+.stat p{font-size:11.5px;color:var(--muted-2);margin-top:3px}
+.checklist{list-style:none;font-size:13px;color:var(--muted);display:grid;gap:9px}
+.checklist li{display:flex;gap:9px;align-items:flex-start}
+.checklist svg{width:14px;height:14px;flex:none;margin-top:4px;stroke:var(--acid-2)}
+
+/* ---------- 通用分区 ---------- */
+section{padding:84px 0;position:relative}
+section[id],div[id]{scroll-margin-top:84px}
+.sec-head{margin-bottom:44px;max-width:640px}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--acid);text-transform:uppercase;display:block;margin-bottom:14px}
+h2{font-size:clamp(26px,3.4vw,36px);line-height:1.28;font-weight:750;letter-spacing:-.018em;margin-bottom:14px}
+.sec-head p{color:var(--muted);font-size:15px}
+
+/* 承诺条 */
+.promises{border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);background:rgba(13,20,17,.5)}
+.promises ul{list-style:none;display:grid;grid-template-columns:repeat(4,1fr)}
+.promises li{padding:26px 22px;border-right:1px solid var(--line-soft);display:flex;gap:13px;align-items:flex-start}
+.promises li:last-child{border-right:none}
+.promises b{display:block;font-size:14px;margin-bottom:3px}
+.promises p{font-size:12.5px;color:var(--muted-2);line-height:1.6}
+.promises .num{font-family:var(--mono);font-size:11px;color:var(--acid);border:1px solid var(--line);padding:2px 6px;border-radius:3px;flex:none;margin-top:2px}
+
+/* 服务卡片 */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
+  padding:26px 24px 24px;position:relative;transition:border-color .25s,transform .25s,background .25s;
+}
+.card:hover{border-color:var(--line);transform:translateY(-3px);background:var(--surface-2)}
+.card .icon{
+  width:38px;height:38px;border-radius:9px;background:var(--acid-ghost);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;margin-bottom:17px;
+}
+.card .icon svg{width:18px;height:18px;stroke:var(--acid);fill:none;stroke-width:1.6}
+.card h3{font-size:16px;font-weight:650;margin-bottom:9px;letter-spacing:-.01em}
+.card p{font-size:13.5px;color:var(--muted);line-height:1.72}
+.card .meta{
+  margin-top:16px;padding-top:13px;border-top:1px dashed var(--line-soft);
+  font-family:var(--mono);font-size:11px;color:var(--muted-2);letter-spacing:.06em;
+  display:flex;justify-content:space-between;
+}
+.card .meta b{color:var(--acid-2);font-weight:500}
+
+/* 价格 */
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+.plan{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
+  padding:28px 24px;position:relative;transition:border-color .25s,transform .25s;
+}
+.plan:hover{transform:translateY(-3px);border-color:var(--line)}
+.plan.hot{border-color:rgba(184,255,60,.42);background:linear-gradient(170deg,rgba(184,255,60,.07),var(--surface) 42%)}
+.plan.hot::before{
+  content:"最多人选";position:absolute;top:-1px;right:18px;
+  background:var(--acid);color:#08110A;font-size:10.5px;font-weight:700;letter-spacing:.08em;
+  padding:3px 10px;border-radius:0 0 6px 6px;font-family:var(--mono);
+}
+.plan .pname{font-size:13px;color:var(--muted);font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+.plan .price{font-family:var(--mono);font-size:40px;font-weight:600;letter-spacing:-.03em;line-height:1;color:var(--text)}
+.plan .price i{font-size:15px;font-style:normal;color:var(--muted-2);margin-right:3px;font-weight:400}
+.plan .price small{font-size:12.5px;color:var(--muted-2);font-family:var(--sans);letter-spacing:0;margin-left:6px}
+.plan .pdesc{font-size:13px;color:var(--muted);margin:12px 0 18px;min-height:2.6em}
+.plan ul{list-style:none;display:grid;gap:9px;font-size:13px;color:var(--muted);margin-bottom:22px}
+.plan ul li{display:flex;gap:8px;align-items:flex-start}
+.plan ul svg{width:13px;height:13px;flex:none;margin-top:5px;stroke:var(--acid-2)}
+.plan .btn{width:100%}
+.price-tip{margin-top:20px;font-size:12px;color:var(--muted-2);font-family:var(--mono);letter-spacing:.03em}
+
+/* 流程 */
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative}
+.steps::before{
+  content:"";position:absolute;top:19px;left:6%;right:6%;height:1px;
+  background:linear-gradient(90deg,var(--line),rgba(184,255,60,.35),var(--line));
+}
+.step{position:relative;padding:0 14px;text-align:center}
+.step .idx{
+  width:38px;height:38px;margin:0 auto 16px;border-radius:50%;
+  background:var(--bg);border:1px solid var(--line);color:var(--acid);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12.5px;
+  position:relative;z-index:1;transition:background .25s,box-shadow .25s;
+}
+.step:hover .idx{background:var(--acid-ghost);box-shadow:0 0 0 4px rgba(184,255,60,.07)}
+.step h4{font-size:14.5px;font-weight:620;margin-bottom:7px}
+.step p{font-size:12.5px;color:var(--muted-2);line-height:1.65}
+
+/* 安全双栏 */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.safety-list{list-style:none;display:grid;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:12px;overflow:hidden}
+.safety-list li{background:var(--surface);padding:17px 20px;display:flex;gap:14px;align-items:flex-start;transition:background .2s}
+.safety-list li:hover{background:var(--surface-2)}
+.safety-list .n{font-family:var(--mono);font-size:11px;color:var(--acid);padding-top:3px;flex:none}
+.safety-list b{display:block;font-size:14px;margin-bottom:2px;font-weight:620}
+.safety-list p{font-size:12.5px;color:var(--muted-2);line-height:1.62}
+.quote{
+  border-left:2px solid var(--acid);padding:4px 0 4px 20px;margin-top:26px;
+  font-size:14.5px;color:var(--muted);font-style:normal;
+}
+.quote b{color:var(--acid);font-weight:600}
+
+/* 评价 */
+.reviews{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.review{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);padding:24px;display:flex;flex-direction:column;gap:14px}
+.stars{display:flex;gap:3px}
+.stars svg{width:13px;height:13px;fill:var(--acid)}
+.review p{font-size:13.5px;color:var(--muted);line-height:1.75;flex:1}
+.who{display:flex;align-items:center;gap:10px;padding-top:14px;border-top:1px solid var(--line-soft)}
+.avatar{
+  width:30px;height:30px;border-radius:50%;background:var(--acid-ghost);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--acid);
+}
+.who b{font-size:12.5px;font-weight:600;display:block}
+.who span{font-size:11px;color:var(--muted-2);font-family:var(--mono)}
+
+/* FAQ */
+.faq{max-width:820px}
+details{border-bottom:1px solid var(--line-soft);padding:18px 0}
+details summary{
+  list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:20px;align-items:center;
+  font-size:15px;font-weight:560;color:var(--text);transition:color .18s;
+}
+details summary::-webkit-details-marker{display:none}
+details summary:hover{color:var(--acid)}
+details summary .pm{
+  flex:none;width:20px;height:20px;border:1px solid var(--line);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:var(--acid);font-size:14px;line-height:1;
+  transition:transform .25s,background .25s;
+}
+details[open] summary .pm{transform:rotate(45deg);background:var(--acid-ghost)}
+details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;line-height:1.78}
+
+/* 联系 */
+.contact{
+  margin:0 0 84px;border:1px solid var(--line);border-radius:4px 22px 4px 22px;
+  background:linear-gradient(150deg,rgba(184,255,60,.09),var(--surface) 45%,var(--bg) 100%);
+  padding:56px 48px;position:relative;overflow:hidden;
+}
+.contact::after{
+  content:"";position:absolute;right:-100px;top:-100px;width:340px;height:340px;
+  background:radial-gradient(circle,rgba(184,255,60,.14),transparent 68%);
+}
+.contact h2{margin-bottom:12px}
+.contact p{color:var(--muted);font-size:14.5px;margin-bottom:30px;max-width:34em}
+.contact-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;position:relative;z-index:1}
+.chip{
+  display:inline-flex;align-items:center;gap:10px;background:rgba(7,10,8,.6);
+  border:1px solid var(--line);border-radius:8px;padding:11px 16px;
+  font-family:var(--mono);font-size:13px;color:var(--text);letter-spacing:.02em;
+}
+.chip span{color:var(--muted-2);font-size:11px;letter-spacing:.1em}
+.chip b{color:var(--acid);font-weight:500}
+
+/* 页脚 */
+footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5px;color:var(--muted-2)}
+.foot{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.foot p{max-width:56em;line-height:1.8}
+.foot .brand{margin-bottom:10px}
+.foot .brand b{color:var(--text);font-size:13px}
+
+/* 动画 */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  .reveal{opacity:1;transform:none;transition:none}
+  html{scroll-behavior:auto}
+  .dot{animation:none}
+}
+
+/* 响应式 */
+@media (max-width:980px){
+  .hero-grid{grid-template-columns:1fr;gap:38px}
+  .hero{padding-top:126px}
+  .cards,.plans,.reviews{grid-template-columns:1fr 1fr}
+  .steps{grid-template-columns:1fr;gap:26px}
+  .steps::before{display:none}
+  .step{display:flex;gap:16px;text-align:left;padding:0}
+  .step .idx{margin:0;flex:none}
+  .split{grid-template-columns:1fr;gap:34px}
+  .promises ul{grid-template-columns:1fr 1fr}
+  .promises li:nth-child(2){border-right:none}
+  .promises li:nth-child(1),.promises li:nth-child(2){border-bottom:1px solid var(--line-soft)}
+  .navlinks{display:none}
+}
+@media (max-width:640px){
+  .wrap{padding:0 18px}
+  section{padding:62px 0}
+  .hero{padding:112px 0 56px}
+  .cards,.plans,.reviews{grid-template-columns:1fr}
+  .promises ul{grid-template-columns:1fr}
+  .promises li{border-right:none;border-bottom:1px solid var(--line-soft)}
+  .promises li:last-child{border-bottom:none}
+  .contact{padding:36px 24px;margin-bottom:56px}
+  .stat-row{grid-template-columns:1fr 1fr}
+  h1{font-size:34px}
+}
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<header id="hdr">
+  <div class="wrap nav">
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M16 4.5 27.5 27H4.5z" stroke="#B8FF3C" stroke-width="2"/>
+        <path d="M16 11.5 22 23H10z" fill="#B8FF3C" fill-opacity=".22"/>
+      </svg>
+      <b>纯绿色陪练</b>
+      <span>DELTA</span>
+    </a>
+    <nav class="navlinks" id="navlinks">
+      <a href="#promise">为什么放心</a>
+      <a href="#service">服务项目</a>
+      <a href="#price">价格</a>
+      <a href="#flow">流程</a>
+      <a href="#faq">常见问题</a>
+    </nav>
+    <a class="btn btn-primary btn-sm" href="#contact">立即咨询</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="tag"><i class="dot"></i>真人手打 · 零外挂 · 全程可查</div>
+        <h1>带你打，<br>但不<em>替你打</em></h1>
+        <p class="lede">
+          三角洲行动纯绿色陪练。老手带你进出<strong>烽火地带</strong>，陪你在<strong>全面战场</strong>上分，
+          枪法、意识、路线一样一样讲清楚。<b>不开任何辅助，不碰你的账号</b>，你上号，我们语音带。
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#contact">
+            添加好友咨询
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="btn btn-ghost" href="#price">查看套餐与价格</a>
+        </div>
+        <div class="hero-note">
+          <span><i></i>支持单局起购</span>
+          <span><i></i>提前 2 小时预约</span>
+          <span><i></i>不满意未开局可退</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span>服务面板 / SERVICE</span>
+          <b>ONLINE</b>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><u>0<small>次</small></u><p>因陪练导致的封号</p></div>
+          <div class="stat"><u>12<small>位</small></u><p>固定签约教练</p></div>
+          <div class="stat"><u>4.9<small>/5</small></u><p>近 300 单评价</p></div>
+          <div class="stat"><u>24<small>h</small></u><p>内响应接单</p></div>
+        </div>
+        <ul class="checklist">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>全程真人手动操作，不使用宏与脚本</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>不索要账号密码，设备与登录环境不变</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>开局前确认目标，结束当场复盘</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 承诺条 -->
+  <div class="promises" id="promise">
+    <div class="wrap">
+      <ul>
+        <li><span class="num">01</span><div><b>纯手动</b><p>每一枪都是人按出来的，键鼠轨迹与正常玩家无差别</p></div></li>
+        <li><span class="num">02</span><div><b>零辅助</b><p>不用透视、不用自瞄、不用压枪宏，一次都不用</p></div></li>
+        <li><span class="num">03</span><div><b>不代练</b><p>账号始终在你自己手里，我们只做语音指挥与陪打</p></div></li>
+        <li><span class="num">04</span><div><b>可留档</b><p>每局录屏保存 7 天，争议时随时调取</p></div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 服务项目 -->
+  <section id="service">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker">Services</span>
+        <h2>六种带法，按你的需求挑</h2>
+        <p>想上分、想摸金、想学技术，路径不一样。先把目标说清楚，再匹配对应的教练。</p>
+      </div>
+      <div class="cards">
+        <div class="card reveal">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v6c0 5 3.8 8.4 9 9 5.2-.6 9-4 9-9V7l-9-5Z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <h3>烽火地带 · 摸金带飞</h3>
+          <p>熟悉刷新点与撤离路线的老手带你进出，物资怎么分、什么时候走，开麦前就说清，不玩套路。</p>
+          <div class="meta"><span>单价 ¥39 起 / 局</span><b>热门</b></div>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg></div>
+          <h3>烽火地带 · 跑刀入门</h3>
+          <p>背包管理、听声辨位、撤离时机，从第一次进场就养成不亏本的习惯，适合刚入坑的新手。</p>
+          <div class="meta"><span>¥129 / 2 小时</span><b>新手推荐</b></div>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></div>
+          <h3>全面战场 · 上分陪练</h3>
+          <p>兵种配合、载具使用、据点攻防，一边打一边讲决策逻辑，分上去，理解也跟上。</p>
+          <div class="meta"><span>¥69 / 小时</span><b>上分首选</b></div>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M3 20V9l5-4 5 4v11"/><path d="M13 20V13h6v7"/><path d="M3 20h18"/></svg></div>
+          <h3>枪法与身法特训</h3>
+          <p>压枪节奏、拉枪线、预瞄点位，按你现在的灵敏度做针对性训练，不套通用模板。</p>
+          <div class="meta"><span>¥99 / 90 分钟</span><b>进阶</b></div>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M17 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.8"/><path d="M16 3.2a4 4 0 0 1 0 7.6"/></svg></div>
+          <h3>固定车队 · 长期搭子</h3>
+          <p>固定时间、固定队友，不用每次重新磨合。适合想稳定上分、又想有人一起玩的人。</p>
+          <div class="meta"><span>¥299 / 周（10 小时）</span><b>省心</b></div>
+        </div>
+        <div class="card reveal">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M2 14l10 5 10-5"/><path d="M2 11l10 5 10-5"/></svg></div>
+          <h3>新手开局指导</h3>
+          <p>赛季机制、经济系统、装备取舍，一节课把该知道的全过一遍，少走一个月弯路。</p>
+          <div class="meta"><span>¥59 / 小时</span><b>入门</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 价格 -->
+  <section id="price">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker">Pricing</span>
+        <h2>三档套餐，明码标价</h2>
+        <p>不搞"看人报价"。同样的套餐，谁来都是一个价。超出时段按小时补，提前说清。</p>
+      </div>
+      <div class="plans">
+        <div class="plan reveal">
+          <div class="pname">体验局</div>
+          <div class="price"><i>¥</i>39<small>/ 局</small></div>
+          <p class="pdesc">先打一局看看合不合拍，不合适不勉强。</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>烽火地带 1 局（约 25–40 分钟）</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>语音指挥 + 路线讲解</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>结束 5 分钟复盘</li>
+          </ul>
+          <a class="btn btn-ghost" href="#contact">预约体验</a>
+        </div>
+        <div class="plan hot reveal">
+          <div class="pname">上分包段</div>
+          <div class="price"><i>¥</i>199<small>/ 3 小时</small></div>
+          <p class="pdesc">有明确段位目标，按计划推进，打完给结论。</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>全面战场或烽火地带可选</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>开局前定目标，逐局复盘</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>含枪法专项点拨</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>全程录屏留档 7 天</li>
+          </ul>
+          <a class="btn btn-primary" href="#contact">选这个</a>
+        </div>
+        <div class="plan reveal">
+          <div class="pname">包段护航</div>
+          <div class="price"><i>¥</i>599<small>/ 10 小时</small></div>
+          <p class="pdesc">长期跟车，按周排时段，适合固定作息的人。</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>10 小时额度，30 天内用完</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>固定教练，不用反复磨合</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>优先排时段</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>未用完可按比例退</li>
+          </ul>
+          <a class="btn btn-ghost" href="#contact">咨询排期</a>
+        </div>
+      </div>
+      <p class="price-tip">※ 价格为示例，按你实际定价替换；节假日时段可能上浮，预约时会先说明。</p>
+    </div>
+  </section>
+
+  <!-- 流程 -->
+  <section id="flow">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker">Process</span>
+        <h2>五步走完，中间没有套路</h2>
+        <p>从加好友到结束，每一步都能预期。不想继续，随时可以停。</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal"><div class="idx">01</div><div><h4>说需求</h4><p>模式、段位、可玩时段，一次讲清</p></div></div>
+        <div class="step reveal"><div class="idx">02</div><div><h4>配教练</h4><p>按你的模式匹配擅长的人</p></div></div>
+        <div class="step reveal"><div class="idx">03</div><div><h4>定目标</h4><p>开局前确认这局要打成什么样</p></div></div>
+        <div class="step reveal"><div class="idx">04</div><div><h4>开麦打</h4><p>全程语音，边打边讲判断</p></div></div>
+        <div class="step reveal"><div class="idx">05</div><div><h4>复盘收尾</h4><p>哪打得对、哪该改，说清楚</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 安全 -->
+  <section id="safety">
+    <div class="wrap split">
+      <div class="reveal">
+        <span class="kicker">Safety</span>
+        <h2>为什么敢说是"纯绿色"</h2>
+        <p style="color:var(--muted);font-size:15px;margin-bottom:0">
+          "绿色"不是口号，是能被检查的行为。外挂、宏、脚本、代练，这四样我们一样不碰——
+          因为一旦碰了，风险全落在你的账号上，这买卖不成立。
+        </p>
+        <div class="quote">
+          我们卖的是<b>时间和经验</b>，不是<b>一个不属于你的段位</b>。
+        </div>
+      </div>
+      <ul class="safety-list reveal">
+        <li><span class="n">01</span><div><b>全程真人手动</b><p>不使用透视、自瞄、压枪宏、任何第三方软件</p></div></li>
+        <li><span class="n">02</span><div><b>不索要账号密码</b><p>你自己登录、自己操作鼠标键盘，我们只出声音</p></div></li>
+        <li><span class="n">03</span><div><b>不动你的资产</b><p>物资归属开局前说定，绝不私拿、不转移</p></div></li>
+        <li><span class="n">04</span><div><b>全程录屏留档</b><p>每局保存 7 天，有争议直接调片段</p></div></li>
+        <li><span class="n">05</span><div><b>不满意可退</b><p>未开局全额退；已开局按实际时长结算</p></div></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 评价 -->
+  <section id="reviews">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker">Reviews</span>
+        <h2>他们怎么说</h2>
+        <p>来自近期订单的真实反馈，隐去昵称，保留原话。</p>
+      </div>
+      <div class="reviews">
+        <div class="review reveal">
+          <div class="stars">
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+          </div>
+          <p>第一次进烽火地带就被人打了黑枪，跟着打了两局才明白听声和路线有多重要。教练不催单，讲得也细，输了也告诉你为什么输。</p>
+          <div class="who"><div class="avatar">W</div><div><b>W 先生</b><span>上分包段 · 3 小时</span></div></div>
+        </div>
+        <div class="review reveal">
+          <div class="stars">
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+          </div>
+          <p>最看重的一点是不要账号。以前找过代练，心里一直不踏实。这边全程我自己上号，他就在语音里报点、喊撤退，踏实多了。</p>
+          <div class="who"><div class="avatar">L</div><div><b>L 小姐</b><span>体验局 · 复购 4 次</span></div></div>
+        </div>
+        <div class="review reveal">
+          <div class="stars">
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21 7 14.3 2 9.4l7-.9L12 2Z"/></svg>
+          </div>
+          <p>包段买了 10 小时，排时段很配合。枪法特训那节最有用，压枪节奏改了以后中远距离明显稳了。</p>
+          <div class="who"><div class="avatar">Z</div><div><b>Z 同学</b><span>包段护航 · 10 小时</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker">FAQ</span>
+        <h2>你可能想问的</h2>
+      </div>
+      <div class="faq">
+        <details open>
+          <summary>需要把账号交给你们吗？<span class="pm">+</span></summary>
+          <p>不需要，这是我们的底线。你自己登录、自己操作，我们只通过语音给你报点、指挥、讲解。账号密码任何时候都不用给。</p>
+        </details>
+        <details>
+          <summary>纯手动会不会被系统误判？<span class="pm">+</span></summary>
+          <p>不会。我们所有的操作都是人手动完成的，键鼠输入轨迹、反应时间、走位习惯与正常玩家完全一致，没有异常数据特征。真正容易触发风控的是外挂、宏和脚本，这些我们不做。</p>
+        </details>
+        <details>
+          <summary>可以指定模式和时段吗？<span class="pm">+</span></summary>
+          <p>可以。烽火地带、全面战场都能约，时段按你的作息排。建议提前 2 小时说，节假日最好提前一天。</p>
+        </details>
+        <details>
+          <summary>物资、装备怎么算？<span class="pm">+</span></summary>
+          <p>开局前说定。默认规则是：你自己捡的归你，教练帮你带出的按约定分配。不存在"打完了东西没了"这种情况，每局都录屏。</p>
+        </details>
+        <details>
+          <summary>打得不好能退吗？<span class="pm">+</span></summary>
+          <p>未开局随时全额退。已开局的按实际时长结算，剩余部分退回。服务中觉得不合适，可以直接说停，不会有人劝你续单。</p>
+        </details>
+        <details>
+          <summary>怎么付款？<span class="pm">+</span></summary>
+          <p>先沟通确认模式和时段，开始前付款。支持单局、按小时、包段三种方式，不要求预付大额套餐。</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- 联系 -->
+  <div class="wrap">
+    <div class="contact reveal" id="contact">
+      <span class="kicker">Contact</span>
+      <h2>先聊两句，再决定要不要打</h2>
+      <p>把你常玩的模式、大概段位、方便的时间发过来，我按你的情况给建议——不合适我会直接说。</p>
+      <div class="contact-row">
+        <div class="chip"><span>微信</span><b>your_wechat_id</b></div>
+        <div class="chip"><span>QQ</span><b>000000000</b></div>
+        <div class="chip"><span>在线</span><b>10:00 – 24:00</b></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <a class="brand" href="#top">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M16 4.5 27.5 27H4.5z" stroke="#B8FF3C" stroke-width="2"/>
+        </svg>
+        <b>纯绿色陪练</b>
+      </a>
+      <p>
+        本站为个人陪玩服务介绍页，与《三角洲行动》开发方、发行方及腾讯公司无任何隶属或合作关系，
+        相关游戏名称仅用于说明服务内容，商标权归权利人所有。<br>
+        本服务不提供、不涉及任何外挂、辅助、代练或账号交易，全部为真人手动陪打。
+      </p>
+    </div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted-2);text-align:right;line-height:2">
+      <div>© 2026 纯绿色陪练</div>
+      <div>DELTA ESCORT</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var hdr = document.getElementById('hdr');
+  var bar = document.getElementById('progress');
+  var links = Array.prototype.slice.call(document.querySelectorAll('#navlinks a'));
+  var sections = links.map(function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  }).filter(Boolean);
+
+  function onScroll() {
+    var y = window.scrollY || document.documentElement.scrollTop;
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (h > 0 ? (y / h) * 100 : 0) + '%';
+    hdr.classList.toggle('solid', y > 12);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // 导航高亮
+  if ('IntersectionObserver' in window) {
+    var navObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var id = '#' + e.target.id;
+        links.forEach(function (a) {
+          a.classList.toggle('on', a.getAttribute('href') === id);
+        });
+      });
+    }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+    sections.forEach(function (s) { navObs.observe(s); });
+
+    // 滚动渐显
+    var revObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          revObs.unobserve(e.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(function (el, i) {
+      el.style.transitionDelay = (i % 3) * 70 + 'ms';
+      revObs.observe(el);
+    });
+  } else {
+    document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
+  }
+
+  // 点击 FAQ 时收起其它（可选，保留可多开的话删掉这段）
+  var all = document.querySelectorAll('details');
+  all.forEach(function (d) {
+    d.addEventListener('toggle', function () {
+      if (!d.open) return;
+      all.forEach(function (o) { if (o !== d) o.open = false; });
+    });
+  });
+})();
+</script>
+</body>
+</html>
