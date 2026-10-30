@@ -78,29 +78,74 @@ header.solid{border-bottom-color:var(--line);background:rgba(7,10,8,.92)}
 .btn-sm{padding:8px 15px;font-size:13px}
 
 /* ---------- Hero ---------- */
-.hero{padding:150px 0 76px;position:relative}
-.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
+.hero{padding:126px 0 64px;position:relative}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:52px;align-items:start}
 .tag{
   display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11px;
   letter-spacing:.16em;color:var(--acid);text-transform:uppercase;
   border:1px solid var(--line);background:rgba(184,255,60,.05);
-  padding:6px 12px;border-radius:100px;margin-bottom:26px;
+  padding:6px 12px;border-radius:100px;margin-bottom:18px;
 }
 .dot{width:6px;height:6px;border-radius:50%;background:var(--acid);box-shadow:0 0 8px var(--acid);animation:pulse 2.4s infinite}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+
+/* 移动端底部快捷导航 */
+.mtab{
+  display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;
+  background:rgba(9,14,12,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--line-soft);
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+.mtab ul{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;max-width:560px;margin:0 auto;list-style:none;padding:0}
+.mtab li{list-style:none;margin:0;padding:0}
+.mtab a{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:7px 2px 6px;border-radius:9px;
+  font-size:11px;color:var(--muted);letter-spacing:.06em;text-decoration:none;
+  font-family:var(--mono);transition:color .2s,background .2s;
+}
+.mtab a svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.mtab a.on{color:var(--acid);background:var(--acid-ghost)}
+.mtab a.on svg{filter:drop-shadow(0 0 6px rgba(184,255,60,.45))}
+.mtab a:active{background:rgba(255,255,255,.05)}
+
+/* 首屏标语 */
+.slogan{
+  position:relative;margin:0 0 20px;padding:15px 20px 15px 24px;max-width:452px;
+  border:1px solid rgba(184,255,60,.3);border-left:3px solid var(--acid);
+  border-radius:var(--r);
+  background:linear-gradient(115deg,rgba(184,255,60,.11),rgba(184,255,60,.02) 62%);
+}
+.slogan::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--acid);box-shadow:0 0 12px rgba(184,255,60,.5);
+}
+.slogan-label{
+  display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.22em;
+  color:var(--acid);text-transform:uppercase;margin-bottom:7px;
+}
+.slogan p{
+  font-size:16px;line-height:1.58;font-weight:600;color:var(--text);
+  letter-spacing:-.005em;text-wrap:pretty;
+}
+.slogan p b{
+  color:var(--acid);font-weight:750;
+  text-shadow:0 0 18px rgba(184,255,60,.35);
+}
 h1{
-  font-size:clamp(38px,5.2vw,62px);line-height:1.14;font-weight:800;
-  letter-spacing:-.025em;margin-bottom:22px;
+  font-size:clamp(36px,4.4vw,54px);line-height:1.16;font-weight:800;
+  letter-spacing:-.025em;margin-bottom:18px;text-wrap:balance;
 }
 h1 em{font-style:normal;color:var(--acid);position:relative;white-space:nowrap}
 h1 em::after{
   content:"";position:absolute;left:0;right:0;bottom:.06em;height:.09em;
   background:linear-gradient(90deg,rgba(184,255,60,.55),rgba(184,255,60,0));
 }
-.lede{font-size:16.5px;color:var(--muted);max-width:30em;margin-bottom:34px}
+.lede{font-size:15.5px;color:var(--muted);max-width:30em;margin-bottom:26px}
 .lede b{color:var(--text);font-weight:600}
-.cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:30px}
-.hero-note{display:flex;gap:22px;flex-wrap:wrap;font-size:12.5px;color:var(--muted-2);font-family:var(--mono);letter-spacing:.04em}
+.lede strong{white-space:nowrap}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.hero-note{display:flex;gap:12px 22px;flex-wrap:wrap;font-size:12.5px;color:var(--muted-2);font-family:var(--mono);letter-spacing:.04em}
 .hero-note span{display:flex;align-items:center;gap:6px}
 .hero-note i{width:12px;height:1px;background:var(--acid-2);display:inline-block}
 
@@ -124,13 +169,29 @@ h1 em::after{
 .checklist{list-style:none;font-size:13px;color:var(--muted);display:grid;gap:9px}
 .checklist li{display:flex;gap:9px;align-items:flex-start}
 .checklist svg{width:14px;height:14px;flex:none;margin-top:4px;stroke:var(--acid-2)}
+.panel-div{height:1px;background:var(--line-soft);margin:20px 0 18px}
+.panel-kv{margin-bottom:14px}
+.panel-kv:last-child{margin-bottom:0}
+.panel-kv>span{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--muted-2);text-transform:uppercase;margin-bottom:9px}
+.tags-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tags-row b{
+  font-family:var(--mono);font-size:11px;font-weight:400;letter-spacing:.02em;text-align:center;
+  color:var(--muted);border:1px solid var(--line-soft);border-radius:5px;
+  padding:5px 4px;background:rgba(0,0,0,.22);
+}
 
 /* ---------- 通用分区 ---------- */
-section{padding:84px 0;position:relative}
-section[id],div[id]{scroll-margin-top:84px}
-.sec-head{margin-bottom:44px;max-width:640px}
+section{padding:72px 0;position:relative}
+section[id],div[id]{scroll-margin-top:78px}
+/* 疏密节奏：信息密度高的区块收紧，轻量区块留白 */
+#service,#rules{padding:68px 0}
+#reviews,#faq{padding:86px 0}
+/* 区块之间的细分隔线，强化段落衔接 */
+main > section + section{border-top:1px solid rgba(232,239,230,.055)}
+.sec-head{margin-bottom:40px;max-width:640px}
 .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--acid);text-transform:uppercase;display:block;margin-bottom:14px}
-h2{font-size:clamp(26px,3.4vw,36px);line-height:1.28;font-weight:750;letter-spacing:-.018em;margin-bottom:14px}
+h2{font-size:clamp(26px,3.4vw,36px);line-height:1.28;font-weight:750;letter-spacing:-.018em;margin-bottom:14px;text-wrap:balance}
+p,li{ text-wrap:pretty }
 .sec-head p{color:var(--muted);font-size:15px}
 
 /* 承诺条 */
@@ -185,15 +246,12 @@ h2{font-size:clamp(26px,3.4vw,36px);line-height:1.28;font-weight:750;letter-spac
 .rule-card ul{list-style:none;display:grid;gap:9px;font-size:13.5px;color:var(--muted);line-height:1.65}
 .rule-card ul li{display:flex;gap:9px;align-items:flex-start}
 .rule-card ul li::before{content:"";width:5px;height:5px;background:var(--acid);flex:none;margin-top:8px;transform:rotate(45deg)}
-.rule-card ul li b{color:var(--text);font-weight:600}
-.club-strip{
-  margin-top:16px;display:flex;flex-wrap:wrap;gap:10px 30px;
-  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
-  padding:18px 24px;font-size:12.5px;color:var(--muted-2);
+.rule-card ul li b{color:var(--text);font-weight:600;white-space:nowrap}
+.rules-tip{
+  margin-top:18px;font-family:var(--mono);font-size:11px;line-height:1.9;
+  letter-spacing:.04em;color:var(--muted-2);
+  border-top:1px dashed var(--line-soft);padding-top:14px;
 }
-.club-strip span{display:flex;align-items:center;gap:10px}
-.club-strip b{color:var(--text);font-weight:600;flex:none}
-.club-strip .kw{font-family:var(--mono);letter-spacing:.03em}
 
 /* 流程 */
 .steps{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative}
@@ -259,9 +317,9 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 
 /* 联系 */
 .contact{
-  margin:0 0 84px;border:1px solid var(--line);border-radius:4px 22px 4px 22px;
+  margin:0 0 68px;border:1px solid var(--line);border-radius:4px 22px 4px 22px;
   background:linear-gradient(150deg,rgba(184,255,60,.09),var(--surface) 45%,var(--bg) 100%);
-  padding:56px 48px;position:relative;overflow:hidden;
+  padding:52px 44px;position:relative;overflow:hidden;
 }
 .contact::after{
   content:"";position:absolute;right:-100px;top:-100px;width:340px;height:340px;
@@ -270,14 +328,15 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 .contact h2{margin-bottom:12px}
 .contact p{color:var(--muted);font-size:14.5px;margin-bottom:30px;max-width:34em}
 .contact-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;position:relative;z-index:1}
+.contact-row .chip{min-width:210px}
 .chip{
   display:inline-flex;align-items:center;gap:10px;background:rgba(7,10,8,.6);
   border:1px solid var(--line);border-radius:8px;padding:11px 16px;
   font-family:var(--mono);font-size:13px;color:var(--text);letter-spacing:.02em;
 }
-.chip span{color:var(--muted-2);font-size:11px;letter-spacing:.1em}
-.chip b{color:var(--acid);font-weight:500}
-.chip.locked b{color:var(--muted-2);letter-spacing:.2em}
+.chip span{color:var(--muted-2);font-size:11px;letter-spacing:.1em;min-width:2.6em}
+.chip b{color:var(--acid);font-weight:500;min-width:11.5ch;display:inline-block;text-align:left}
+.chip.locked b{color:var(--muted-2);letter-spacing:.2em;min-width:11.5ch}
 .chip.done{border-color:rgba(184,255,60,.42);background:rgba(184,255,60,.07)}
 .chip .copy{
   margin-left:2px;background:none;border:1px solid var(--line);color:var(--muted);
@@ -435,7 +494,7 @@ details p{font-size:13.5px;color:var(--muted);padding-top:12px;max-width:62em;li
 .toast.on{opacity:1;transform:translate(-50%,0)}
 
 /* 页脚 */
-footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5px;color:var(--muted-2)}
+footer{border-top:1px solid var(--line-soft);padding:40px 0 40px;font-size:12.5px;color:var(--muted-2)}
 .foot{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:flex-start}
 .foot p{max-width:56em;line-height:1.8}
 .foot .brand{margin-bottom:10px}
@@ -467,18 +526,25 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
   .promises li:nth-child(2){border-right:none}
   .promises li:nth-child(1),.promises li:nth-child(2){border-bottom:1px solid var(--line-soft)}
   .navlinks{display:none}
+  .mtab{display:block}
+  body{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
 }
 @media (max-width:640px){
   .wrap{padding:0 18px}
-  section{padding:62px 0}
-  .hero{padding:112px 0 56px}
+  section{padding:56px 0}
+  #service,#rules{padding:52px 0}
+  #reviews,#faq{padding:66px 0}
+  .hero{padding:104px 0 48px}
   .cards,.reviews{grid-template-columns:1fr}
   .price-hero{padding:18px 20px}
   .price-hero .big{font-size:22px}
   .promises ul{grid-template-columns:1fr}
   .promises li{border-right:none;border-bottom:1px solid var(--line-soft)}
   .promises li:last-child{border-bottom:none}
-  .contact{padding:36px 24px;margin-bottom:56px}
+  .contact{padding:36px 24px;margin-bottom:44px}
+  .contact-row{display:grid;grid-template-columns:1fr;gap:10px}
+  .contact-row .chip{width:100%;min-width:0}
+  .chip .copy{margin-left:auto}
   .stat-row{grid-template-columns:1fr 1fr}
   h1{font-size:34px}
   #capCanvas{width:150px;height:54px}
@@ -506,12 +572,11 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
       <span>SQUAD</span>
     </a>
     <nav class="navlinks" id="navlinks">
-      <a href="#promise">为什么放心</a>
-      <a href="#service">服务项目</a>
+      <a href="#promise">服务放心</a>
       <a href="#rules">服务规则</a>
-      <a href="#flow">流程</a>
-      <a href="#faq">常见问题</a>
-      <a href="#shop">店铺</a>
+      <a href="#flow">服务流程</a>
+      <a href="#shop">店铺信息</a>
+      <a href="#contact">联系方式</a>
     </nav>
     <a class="btn btn-primary btn-sm" href="#contact">立即咨询</a>
   </div>
@@ -524,6 +589,10 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
     <div class="wrap hero-grid">
       <div>
         <div class="tag"><i class="dot"></i>真人手打 · 零外挂 · 全程可查</div>
+        <div class="slogan">
+          <span class="slogan-label">三角洲护航</span>
+          <p>博人眼球只是为了吸引你的注意，<br>而我的服务是能够留住你的<b>底气</b>。</p>
+        </div>
         <h1>带你打，<br>但不<em>替你打</em></h1>
         <p class="lede">
           三角洲行动纯绿色陪练。老手带你进出<strong>烽火地带</strong>，陪你在<strong>全面战场</strong>上分，
@@ -559,6 +628,19 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>不索要账号密码，设备与登录环境不变</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>开局前确认目标，结束当场复盘</li>
         </ul>
+        <div class="panel-div"></div>
+        <div class="panel-kv">
+          <span>服务类型</span>
+          <div class="tags-row">
+            <b>技术型</b><b>教学型</b><b>娱乐型</b>
+          </div>
+        </div>
+        <div class="panel-kv">
+          <span>常驻地图</span>
+          <div class="tags-row">
+            <b>绝密航天</b><b>绝密巴克什</b><b>潮汐监狱</b><b>零号大坝</b><b>长弓溪谷</b><b>航天基地</b>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -644,35 +726,39 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
           <ul>
             <li><b>服务类型：</b>护航 / 陪打 / 带打，技术型、教学型、娱乐型均可</li>
             <li><b>游戏模式：</b>烽火地带｜全面战场</li>
-            <li><b>常规地图：</b>绝密航天、绝密巴克什、潮汐监狱、零号大坝、长弓溪谷、航天基地</li>
             <li><b>档位：</b>机密单护｜机密双护｜绝密单护｜绝密双护｜机密娱乐</li>
             <li><b>端区：</b>PC 端 + 手游端，Steam / 国服双区有号，全国可服务</li>
           </ul>
         </div>
         <div class="rule-card reveal">
-          <h3><span class="tag-idx">02</span>物资与关注点</h3>
+          <h3><span class="tag-idx">02</span>常规地图与物资</h3>
           <ul>
+            <li><b>常规地图：</b>绝密航天、绝密巴克什、潮汐监狱、零号大坝、长弓溪谷、航天基地</li>
             <li><b>主要产出：</b>哈夫币、大红、非洲之心、曼德尔超算、显卡、情报</li>
             <li><b>装备：</b>六级甲、六级头、AW 子弹</li>
             <li><b>可关注：</b>红卡、金卡、门禁卡、钥匙房、保险箱、胸挂、背包</li>
-            <li><b>过程项：</b>战损、撤离、保底全程可查</li>
           </ul>
         </div>
         <div class="rule-card reveal">
-          <h3><span class="tag-idx">03</span>保底规则（写前面）</h3>
+          <h3><span class="tag-idx">03</span>保底规则</h3>
           <ul>
             <li><b>炸单即加保底：</b>撤离失败 = 炸单，炸单继续加保底，不跑单</li>
             <li><b>战损补偿：</b>绝密航天 / 绝密巴克什炸一局 +60w；潮汐监狱炸一局 +70w</li>
             <li><b>保险物资：</b>保险物资 &gt;100w 计入保底，同样 +60w</li>
             <li><b>不卡保底：</b>差 1w 哈夫币也再开一局，不卡保底撤离</li>
-            <li><b>追缴包赔：</b>漏带追缴，按规则包赔</li>
-            <li><b>六级甲 / 头：</b>老板当假账可不拿，拿了默认接受</li>
-            <li><b>双倒处理：</b>打手双倒，兜底带出物资 &gt;300w 算一半；张姐自救不算双倒</li>
-            <li><b>备注：</b>打手号上有卡有包都会带；体验单要带 AW 子弹，需先经打手同意</li>
           </ul>
         </div>
         <div class="rule-card reveal">
-          <h3><span class="tag-idx">04</span>老板权益与红线</h3>
+          <h3><span class="tag-idx">04</span>特殊约定</h3>
+          <ul>
+            <li><b>追缴包赔：</b>漏带追缴，按规则包赔</li>
+            <li><b>六级甲 / 头：</b>老板当假账可不拿，拿了默认接受</li>
+            <li><b>双倒处理：</b>打手双倒，兜底带出物资 &gt;300w 算一半；张姐自救不算双倒</li>
+            <li><b>卡包与 AW：</b>打手号上有卡有包都会带；体验单要带 AW 子弹，需先经打手同意</li>
+          </ul>
+        </div>
+        <div class="rule-card reveal">
+          <h3><span class="tag-idx">05</span>老板权益与红线</h3>
           <ul>
             <li><b>物资归属：</b>物资全归老板，不压力老板</li>
             <li><b>三个不：</b>不卡保底、不塞假账、物资无上限</li>
@@ -680,12 +766,18 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
             <li><b>恶意卡保底：</b>反馈客服处理</li>
           </ul>
         </div>
+        <div class="rule-card reveal">
+          <h3><span class="tag-idx">06</span>俱乐部承诺</h3>
+          <ul>
+            <li><b>线下工作室：</b>线下纯绿工作室，打手培训上岗</li>
+            <li><b>交押金：</b>打手交押金上岗，违规扣押金</li>
+            <li><b>下单有保障：</b>全程闲鱼平台担保交易</li>
+            <li><b>永久售后：</b>老板开心下单，是本店宗旨</li>
+            <li><b>擅长角色：</b>骇爪、露娜、蜂医、红狼、威龙</li>
+          </ul>
+        </div>
       </div>
-      <div class="club-strip reveal">
-        <span><b>俱乐部承诺</b>线下纯绿工作室 · 培训上岗 · 交押金 · 永久售后</span>
-        <span><b>擅长角色</b>骇爪 · 露娜 · 蜂医 · 红狼 · 威龙</span>
-        <span class="kw"><b>搜索</b>三角洲护航 / 纯绿护航 / 烽火地带 / 绝密双护</span>
-      </div>
+      <p class="rules-tip reveal">搜索关键词：三角洲行动 / 三角洲护航 / 三角洲纯绿护航 / 绝密双护 / 烽火地带 / 全面战场 / 潮汐监狱 / 绝密航天 / 绝密巴克什 / 机密单护 / 哈夫币 / 大红 / 六级甲</p>
     </div>
   </section>
 
@@ -918,6 +1010,22 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
   </div>
 </footer>
 
+<!-- 移动端底部快捷导航 -->
+<nav class="mtab" id="mtab" aria-label="快捷导航">
+  <ul>
+    <li><a href="#service">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>服务</a></li>
+    <li><a href="#rules">
+      <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>规则</a></li>
+    <li><a href="#flow">
+      <svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 7l3.5 3.5M14 13l3.5 3.5"/></svg>流程</a></li>
+    <li><a href="#shop">
+      <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>店铺</a></li>
+    <li><a href="#contact">
+      <svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg>联系</a></li>
+  </ul>
+</nav>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <!-- 联系方式验证码弹层 -->
@@ -944,7 +1052,12 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
   var hdr = document.getElementById('hdr');
   var bar = document.getElementById('progress');
   var links = Array.prototype.slice.call(document.querySelectorAll('#navlinks a'));
+  var mLinks = Array.prototype.slice.call(document.querySelectorAll('#mtab a'));
   var sections = links.map(function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  }).filter(Boolean);
+  // 移动端底部导航对应的区块（含未在桌面导航中出现的区块）
+  var mSections = mLinks.map(function (a) {
     return document.querySelector(a.getAttribute('href'));
   }).filter(Boolean);
 
@@ -957,19 +1070,38 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  // 导航高亮
-  if ('IntersectionObserver' in window) {
-    var navObs = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (!e.isIntersecting) return;
-        var id = '#' + e.target.id;
-        links.forEach(function (a) {
-          a.classList.toggle('on', a.getAttribute('href') === id);
-        });
-      });
-    }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
-    sections.forEach(function (s) { navObs.observe(s); });
+  // 导航高亮：以离视口中线最近的区块为准，桌面顶部导航与移动底部导航共用
+  function nearestSection(list) {
+    if (!list.length) return null;
+    var mid = window.innerHeight / 2, best = null, bestD = Infinity;
+    list.forEach(function (s) {
+      var r = s.getBoundingClientRect();
+      var d = Math.abs(r.top + r.height / 2 - mid);
+      if (d < bestD) { bestD = d; best = s; }
+    });
+    return best;
+  }
+  function syncNav() {
+    var s = nearestSection(sections);
+    if (s) {
+      var id = '#' + s.id;
+      links.forEach(function (a) { a.classList.toggle('on', a.getAttribute('href') === id); });
+    }
+    var m = nearestSection(mSections);
+    if (m) {
+      var mid2 = '#' + m.id;
+      mLinks.forEach(function (a) { a.classList.toggle('on', a.getAttribute('href') === mid2); });
+    }
+  }
+  var navTick = false;
+  window.addEventListener('scroll', function () {
+    if (navTick) return;
+    navTick = true;
+    requestAnimationFrame(function () { navTick = false; syncNav(); });
+  }, { passive: true });
+  syncNav();
 
+  if ('IntersectionObserver' in window) {
     // 滚动渐显
     var revObs = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
@@ -986,6 +1118,18 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
   } else {
     document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
   }
+
+  // 移动端底部导航：平滑跳转并避开底部固定栏
+  mLinks.forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      var target = document.querySelector(a.getAttribute('href'));
+      if (!target) return;
+      e.preventDefault();
+      var top = target.getBoundingClientRect().top + window.scrollY - 76;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+      history.replaceState(null, '', a.getAttribute('href'));
+    });
+  });
 
   // 点击 FAQ 时收起其它（可选，保留可多开的话删掉这段）
   var all = document.querySelectorAll('details');
@@ -1119,7 +1263,6 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
     setChip(qqChip, dec('OTw0NT08Ojo5'));
     openBtn.style.display = 'none';
     hint.innerHTML = '已解锁，点右侧「复制」直接粘贴到微信 / QQ';
-    try { sessionStorage.setItem('delta_contact_ok', '1'); } catch (e) {}
     if (!silent) { say('验证通过', true); setTimeout(closeGate, 420); }
   }
 
@@ -1149,7 +1292,7 @@ footer{border-top:1px solid var(--line-soft);padding:34px 0 46px;font-size:12.5p
     input.focus();
   });
 
-  try { if (sessionStorage.getItem('delta_contact_ok') === '1') unlock(true); } catch (e) {}
+  // 不做持久化：每次刷新页面都需重新验证，联系方式不会跨会话残留
 })();
 </script>
 
