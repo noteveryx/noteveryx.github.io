@@ -27,6 +27,14 @@ SOFT_EXAM_MIDDLE_ORDER = [
     '（中级）信息系统管理工程师',      # 第三
 ]
 
+# 侧边栏隐藏目录 (2026-10-29 用户要求)
+# 这些目录的 md 文件仍然保留在磁盘上, README 的统计照常计算,
+# 但不在 docsify 侧边栏导航中展示.
+# 注意: 直接手动删 _sidebar.md 里的条目无效 —— 下次跑脚本会被重新扫描加回来.
+HIDDEN_SIDEBAR_DIRS = {
+    '（高级）网络规划设计师',
+}
+
 def soft_exam_sort_key(name):
     """
     自定义排序键:
@@ -285,6 +293,8 @@ def build_directory_map():
         top_path = os.path.join(DOCS_DIR, top_item)
         if not os.path.isdir(top_path) or top_item.startswith('.') or top_item == '软考':
             continue
+        if top_item in HIDDEN_SIDEBAR_DIRS:
+            continue
         files = scan_folder(top_path)
         if files:
             dir_map[top_item] = (files, f'docs/{top_item}')
@@ -295,6 +305,8 @@ def build_directory_map():
         for sub_item in sorted(os.listdir(ruankao_dir), key=soft_exam_sort_key):
             sub_path = os.path.join(ruankao_dir, sub_item)
             if os.path.isdir(sub_path) and not sub_item.startswith('.'):
+                if sub_item in HIDDEN_SIDEBAR_DIRS:
+                    continue
                 files = scan_folder(sub_path)
                 if files:
                     dir_map[sub_item] = (files, f'docs/软考/{sub_item}')
