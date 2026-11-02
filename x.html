@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>独立页面</title>
-  <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="apple-touch-icon" href="assets/logo.png">
   <style>
     :root {
       --theme: #42b983;
@@ -32,6 +32,17 @@
     }
     /* 页头 */
     .page-head { margin-bottom: 8px; }
+    /* 品牌行（logo + 标题） */
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-logo {
+      flex: 0 0 auto; width: 54px; height: 54px; border-radius: 14px; display: block;
+      border: 1px solid var(--line);
+      box-shadow: 0 4px 14px rgba(22, 25, 43, .14);
+      background: #0b0e2a;
+    }
+    .brand-text { min-width: 0; }
+    .brand-text h1 { margin-bottom: 4px; }
+    .brand-text .page-sub { margin: 0; }
     .page-head h1 {
       margin: 0 0 8px;
       font-size: 1.9rem;
@@ -150,6 +161,8 @@
     @media (max-width: 640px) {
       .page { padding: 32px 16px 48px; }
       .page-head h1 { font-size: 1.5rem; }
+      .brand { gap: 12px; }
+      .brand-logo { width: 44px; height: 44px; border-radius: 12px; }
       .sp-section { margin: 32px 0 8px; }
       .sp-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
       .sp-card { padding: 13px 14px 12px; }
@@ -160,8 +173,13 @@
 <body>
   <main class="page">
     <header class="page-head">
-      <h1>独立页面</h1>
-      <p class="page-sub">不经过文档渲染的独立 HTML 页面，点击后在新标签页打开。</p>
+      <div class="brand">
+        <img class="brand-logo" src="assets/logo.png" alt="X">
+        <div class="brand-text">
+          <h1>独立页面</h1>
+          <p class="page-sub">不经过文档渲染的独立 HTML 页面，点击后在新标签页打开。</p>
+        </div>
+      </div>
     </header>
 
     <!-- ============ 板块一：工具 ============ -->

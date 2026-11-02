@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="assets/logo.png">
+<link rel="apple-touch-icon" href="assets/logo.png">
 <title>快捷复制 · 10 条</title>
 <style>
   :root{
@@ -38,6 +40,17 @@
     background:radial-gradient(circle at 30% 30%,rgba(99,91,255,.22),rgba(0,184,217,0) 70%);pointer-events:none;}
   header::after{content:"";position:absolute;right:-70px;top:-20px;width:220px;height:220px;border-radius:50%;
     background:radial-gradient(circle at 60% 40%,rgba(0,184,217,.20),rgba(99,91,255,0) 70%);pointer-events:none;}
+  /* 品牌行（logo + 标题） */
+  .brand{display:flex;align-items:center;gap:12px;position:relative;}
+  .brand-logo{
+    flex:0 0 auto;width:48px;height:48px;border-radius:13px;display:block;
+    border:1px solid rgba(255,255,255,.16);
+    box-shadow:0 4px 14px rgba(22,25,43,.18);
+    background:#0b0e2a;
+  }
+  .brand-text{min-width:0;}
+  .brand-text .eyebrow{margin-bottom:2px;}
+  .brand-text h1{margin:0;}
   .eyebrow{display:inline-block;font-size:12px;letter-spacing:.14em;color:var(--accent);font-weight:700;margin-bottom:8px;position:relative;}
   h1{margin:0 0 6px;font-size:25px;line-height:1.35;font-weight:800;letter-spacing:-.01em;position:relative;}
   .sub{margin:0;font-size:13.5px;color:var(--muted);position:relative;}
@@ -139,6 +152,8 @@
     .toolbar{gap:8px;}
     .btn-all{font-size:14px;padding:12px 10px;}
     .btn-ghost{font-size:13px;padding:12px 10px;}
+    .brand{gap:10px;}
+    .brand-logo{width:40px;height:40px;border-radius:11px;}
   }
   /* 超窄屏（如 320px）：工具栏改为上下排列，彻底避免挤压溢出 */
   @media (max-width:340px){
@@ -154,8 +169,13 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">QUICK COPY</div>
-    <h1>快捷复制</h1>
+    <div class="brand">
+      <img class="brand-logo" src="assets/logo.png" alt="X">
+      <div class="brand-text">
+        <div class="eyebrow">QUICK COPY</div>
+        <h1>快捷复制</h1>
+      </div>
+    </div>
     <p class="sub">需求给<b>我</b> · 方便给<b>你</b> </p>
     <div class="contact">
       <span class="contact-label">咨询微信</span>
