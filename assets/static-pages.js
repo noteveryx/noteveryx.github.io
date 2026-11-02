@@ -25,7 +25,7 @@
     {
       file: 'delta-escort.html',
       tag: 'V1',
-      name: '行动突围护航社',
+      name: '行动突围护航社 V1',
       desc: '原始版落地页，荧光战术风，深色高对比。'
     },
     {
