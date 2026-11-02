@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<title>文案快捷复制 · 10 条</title>
+<style>
+  :root{
+    --bg1:#f7f9fd; --bg2:#eef1f9; --card:#fff; --text:#16192b; --muted:#6b7590;
+    --line:rgba(22,25,43,.08); --accent:#635bff; --accent2:#00b8d9; --ok:#0e9f6e;
+    --shadow:0 1px 2px rgba(22,25,43,.04),0 8px 24px rgba(22,25,43,.06);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    color:var(--text);
+    background:linear-gradient(180deg,var(--bg1) 0%,var(--bg2) 100%);
+    background-attachment:fixed; min-height:100vh; padding:0 0 40px;
+    -webkit-font-smoothing:antialiased; line-height:1.7;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:0 14px;}
+  header{position:relative;padding:34px 0 20px;}
+  header::before{content:"";position:absolute;left:-60px;top:-70px;width:260px;height:260px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,rgba(99,91,255,.22),rgba(0,184,217,0) 70%);pointer-events:none;}
+  header::after{content:"";position:absolute;right:-70px;top:-20px;width:220px;height:220px;border-radius:50%;
+    background:radial-gradient(circle at 60% 40%,rgba(0,184,217,.20),rgba(99,91,255,0) 70%);pointer-events:none;}
+  .eyebrow{display:inline-block;font-size:12px;letter-spacing:.14em;color:var(--accent);font-weight:700;margin-bottom:8px;position:relative;}
+  h1{margin:0 0 6px;font-size:25px;line-height:1.35;font-weight:800;letter-spacing:-.01em;position:relative;}
+  .sub{margin:0;font-size:13.5px;color:var(--muted);position:relative;}
+  .sub b{color:var(--text);font-weight:700;}
+  .toolbar{display:flex;gap:10px;margin:4px 0 16px;}
+  .btn-all{flex:1;border:none;border-radius:12px;
+    background:linear-gradient(135deg,var(--accent),#8b7bff 60%,var(--accent2));
+    color:#fff;font-size:15px;font-weight:700;padding:13px 14px;cursor:pointer;
+    box-shadow:0 6px 18px rgba(99,91,255,.28);transition:transform .12s ease;}
+  .btn-all:active{transform:translateY(1px);}
+  .btn-ghost{border:1px solid var(--line);background:var(--card);color:var(--text);
+    border-radius:12px;padding:13px 12px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .btn-ghost:active{background:#f2f4fa;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+    padding:14px 14px 12px;margin-bottom:12px;position:relative;overflow:hidden;}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:linear-gradient(180deg,var(--accent),var(--accent2));opacity:.85;}
+  .card-head{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+  .no{flex:none;width:24px;height:24px;border-radius:8px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+    font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .tag{font-size:11.5px;font-weight:700;color:var(--accent);background:rgba(99,91,255,.09);
+    border:1px solid rgba(99,91,255,.14);padding:2.5px 8px;border-radius:999px;white-space:nowrap;}
+  .len{margin-left:auto;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .text{font-size:15px;line-height:1.78;white-space:pre-wrap;word-break:break-word;
+    user-select:text;-webkit-user-select:text;outline:none;border-radius:8px;padding:2px 0;}
+  .text:focus{background:#f8f9ff;box-shadow:0 0 0 6px #f8f9ff;}
+  .card-foot{display:flex;gap:8px;margin-top:11px;}
+  .btn-copy{flex:1;border:none;border-radius:11px;background:linear-gradient(135deg,var(--accent),#7d6dff);
+    color:#fff;font-size:14.5px;font-weight:700;padding:11px 12px;cursor:pointer;transition:transform .12s ease,filter .12s ease;}
+  .btn-copy:active{transform:translateY(1px);filter:brightness(.94);}
+  .btn-copy.done{background:linear-gradient(135deg,var(--ok),#26c48a);}
+  .btn-edit{border:1px solid var(--line);background:#fbfbfe;color:var(--muted);border-radius:11px;
+    padding:11px 12px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .hint{font-size:12px;color:var(--muted);text-align:center;margin:2px 0 18px;}
+  #toast{position:fixed;left:50%;bottom:28px;transform:translate(--50%,20px);background:rgba(22,25,43,.94);
+    color:#fff;font-size:14px;font-weight:600;padding:11px 20px;border-radius:12px;opacity:0;pointer-events:none;
+    transition:opacity .2s ease,transform .2s ease;max-width:82vw;text-align:center;z-index:99;}
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+  @media (max-width:360px){h1{font-size:22px;}.text{font-size:14.5px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">QUICK COPY</div>
+    <h1>文案快捷复制</h1>
+    <p class="sub">共 <b>10</b> 条 · 序号与你的标注 <b>1-10</b> 完全一致 · 原文一字未改</p>
+  </header>
+  <div class="toolbar">
+    <button class="btn-all" id="copyAll">按顺序复制全部 10 条</button>
+    <button class="btn-ghost" id="copyNum">带序号版</button>
+  </div>
+  <div id="list"></div>
+  <p class="hint">长按文字也可直接选中复制</p>
+</div>
+<div id="toast"></div>
+<script>
+const QUOTES = ["在的板板~请问是端游手游？", "68r是手游保底最少700w到1288w绝航很多板板都是吃1000w以上的。", "端游体验单88r绝密双护基础保底最少700w，不卡上限，尽量带你多吃！很多板板都是吃一千多万撤离的！出心出泪都归您！您只需要卡战备进即可！合适直接拍，下单秒安排！", "老板权益须知:\n撤离失败绝航绝巴+60w保底\n监狱+70 w保底！带出保险大于100算保底！\n打手双倒老板成功兜底，带出物资大于三百万算一半！张姐自救不算双倒！\n板板认为六头六甲为假账可以不拿，拿了则默认！\n如果体验不佳请及时找客服，更换打手！不要等打完再找客服！\n体验单打手号上有卡都会包开，有包也会帮带的！\n有诉求的请不要扣结单，及时跟客服沟通，如果扣了结单再来诉求，那诉求本店不处理。", "现在有一组猛男打手哦，板板需要安排吗？", "需要的话可以拍下，我为您安排优质的打手。", "绝密双护首单体验一小时120，机密双护一小时80，双护小时单结单标准是一小时保底撤离一局！绝密单护一小时65，机密单护一小时55，单护结单标准是一小时五个人头以上，包含五个人头！不包撤离！", "丢包撤离物资大于500W算一半物资；\n监狱加20；\n正常起装五套；", "板板，现在为您安排打手了，祝您游戏愉快，如果打手要私加您和您脱离平台交易，请注意不要脱离平台交易，若脱离平台交易出现问题，恕本店概不负责\n需要的话可以拍下，我为您安排优质的打手。", "也有其他特惠单可以下哟！\npc138/1080w；\npc208/1688w；\npc308/2688w；\n绝密双护！纯绿！追缴赔付！欢迎板板体验！"];
+const TAGS = ["开场询问", "手游 68r", "端游 88r 体验单", "老板权益须知", "猛男打手 · 可安排", "可拍下 · 安排打手", "双护 / 单护 报价", "丢包 / 监狱 / 起装", "已安排 · 勿脱离平台", "特惠单 · PC"];
+const RAW = "在的板板~请问是端游手游？\n68r是手游保底最少700w到1288w绝航很多板板都是吃1000w以上的。\n端游体验单88r绝密双护基础保底最少700w，不卡上限，尽量带你多吃！很多板板都是吃一千多万撤离的！出心出泪都归您！您只需要卡战备进即可！合适直接拍，下单秒安排！\n老板权益须知:\n撤离失败绝航绝巴+60w保底\n监狱+70 w保底！带出保险大于100算保底！\n打手双倒老板成功兜底，带出物资大于三百万算一半！张姐自救不算双倒！\n板板认为六头六甲为假账可以不拿，拿了则默认！\n如果体验不佳请及时找客服，更换打手！不要等打完再找客服！\n体验单打手号上有卡都会包开，有包也会帮带的！\n有诉求的请不要扣结单，及时跟客服沟通，如果扣了结单再来诉求，那诉求本店不处理。\n现在有一组猛男打手哦，板板需要安排吗？\n需要的话可以拍下，我为您安排优质的打手。\n绝密双护首单体验一小时120，机密双护一小时80，双护小时单结单标准是一小时保底撤离一局！绝密单护一小时65，机密单护一小时55，单护结单标准是一小时五个人头以上，包含五个人头！不包撤离！\n丢包撤离物资大于500W算一半物资；\n监狱加20；\n正常起装五套；\n板板，现在为您安排打手了，祝您游戏愉快，如果打手要私加您和您脱离平台交易，请注意不要脱离平台交易，若脱离平台交易出现问题，恕本店概不负责\n需要的话可以拍下，我为您安排优质的打手。\n也有其他特惠单可以下哟！\npc138/1080w；\npc208/1688w；\npc308/2688w；\n绝密双护！纯绿！追缴赔付！欢迎板板体验！";
+
+const listEl = document.getElementById('list');
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>toastEl.classList.remove('show'), 1600);
+}
+function copy(text){
+  const fallback = ()=>{
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly','');
+      ta.style.cssText='position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e){ return false; }
+  };
+  if(navigator.clipboard && window.isSecureContext){
+    return navigator.clipboard.writeText(text).then(()=>true).catch(()=>fallback());
+  }
+  return Promise.resolve(fallback());
+}
+QUOTES.forEach((q,i)=>{
+  const card = document.createElement('div');
+  card.className='card';
+  card.innerHTML =
+    '<div class="card-head"><div class="no">'+(i+1)+'</div>'+
+    '<div class="tag"></div><div class="len"></div></div>'+
+    '<div class="text" contenteditable="plaintext-only" spellcheck="false"></div>'+
+    '<div class="card-foot"><button class="btn-copy">复制</button>'+
+    '<button class="btn-edit">编辑</button></div>';
+  card.querySelector('.tag').textContent = TAGS[i];
+  const textEl = card.querySelector('.text');
+  textEl.textContent = q;
+  const lenEl = card.querySelector('.len');
+  let dirty = false;
+  lenEl.textContent = q.length + ' 字';
+  textEl.addEventListener('input', ()=>{ dirty = true; });
+  const btn = card.querySelector('.btn-copy');
+  btn.addEventListener('click', ()=>{
+    // 未编辑 -> 复制原始字符串（逐字节等于原文）；编辑过 -> 复制编辑后内容
+    const payload = dirty ? textEl.innerText : q;
+    copy(payload).then(ok=>{
+      if(ok){
+        btn.classList.add('done'); btn.textContent='已复制 ✓';
+        toast('第 '+(i+1)+' 条已复制');
+        setTimeout(()=>{btn.classList.remove('done');btn.textContent='复制';},1400);
+      }else{ toast('复制失败，请长按手动选择'); }
+    });
+  });
+  card.querySelector('.btn-edit').addEventListener('click', ()=>{
+    textEl.focus();
+    const r=document.createRange(); r.selectNodeContents(textEl);
+    const s=getSelection(); s.removeAllRanges(); s.addRange(r);
+    toast('已选中文字，可直接修改');
+  });
+  listEl.appendChild(card);
+});
+document.getElementById('copyAll').addEventListener('click', ()=>{
+  // 10 条按顺序拼起来 === 原文，直接用 RAW，原始换行一字不改
+  copy(RAW).then(ok=>toast(ok?'已按顺序复制 10 条（原文原始换行）':'复制失败，请长按手动选择'));
+});
+document.getElementById('copyNum').addEventListener('click', ()=>{
+  const arr = Array.from(listEl.querySelectorAll('.text')).map(el=>el.innerText);
+  const joined = arr.map((t,i)=>(i+1)+'.'+t).join('\n');
+  copy(joined).then(ok=>toast(ok?'已复制带序号版（1. 2. 3. …）':'复制失败，请长按手动选择'));
+});
+</script>
+</body>
+</html>
