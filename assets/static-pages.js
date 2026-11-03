@@ -20,43 +20,13 @@
       file: 'game-service-quotes.html',
       tag: '工具',
       name: '文案快捷复制',
-      desc: '10 条接单常用话术，按序号一键复制，手机端直接发给客户。'
+      desc: '10 条接单常用话术，一键复制，手机端直接转发给客户。'
     },
     {
       file: 'delta-escort.html',
-      tag: 'V1',
-      name: '行动突围护航社 V1',
-      desc: '原始版落地页，荧光战术风，深色高对比。'
-    },
-    {
-      file: 'delta-escort-v2.html',
-      tag: 'V2',
-      name: '行动突围护航社 V2',
-      desc: '墨黑香槟金，衬线标题质感，偏商务沉稳。'
-    },
-    {
-      file: 'delta-escort-v3.html',
-      tag: 'V3',
-      name: '行动突围护航社 V3',
-      desc: '瑞士编辑杂志风，浅色报刊排版，跑马灯信息条。'
-    },
-    {
-      file: 'delta-escort-v4.html',
-      tag: 'V4',
-      name: '行动突围护航社 V4',
-      desc: '暖白松石绿，大圆角柔光卡片，阅读最友好。'
-    },
-    {
-      file: 'delta-escort-v5.html',
-      tag: 'V5',
-      name: '行动突围护航社 V5',
-      desc: '深蓝夜色配琥珀金，游戏官网质感，权益模块最全。'
-    },
-    {
-      file: 'delta-escort-v6.html',
-      tag: 'V6',
-      name: '行动突围护航社 V6',
-      desc: '按 12 段接单话术重排，价格与权益全量落地版。'
+      tag: '落地页',
+      name: '行动突围护航社',
+      desc: '纯绿双护护航落地页，正文以 V6 定稿，5 套主题一键切换。'
     }
   ];
 

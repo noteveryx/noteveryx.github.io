@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#f7f9fd">
-<link rel="icon" type="image/png" href="assets/logo.png">
+<link rel="icon" type="image/png" href="assets/favicon-round.png">
 <link rel="apple-touch-icon" href="assets/logo.png">
 <title>快捷复制 · 10 条</title>
 <style>
@@ -14,18 +14,26 @@
     --shadow:0 1px 2px rgba(22,25,43,.04),0 8px 24px rgba(22,25,43,.06);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{
+  html{
     margin:0;padding:0;
     width:100%;max-width:100%;
-    overflow-x:hidden;              /* 禁止横向滚动（关键） */
-    overscroll-behavior-x:none;     /* 禁止 iOS 横向橡皮筋 */
+    overflow-x:hidden;              /* 兜底：老 Safari */
+    overflow-x:clip;                /* iOS16+ / Chrome90+：彻底切断横向滚动，且不生成滚动容器 */
+    overscroll-behavior-x:none;     /* 支持该属性的浏览器直接禁掉横向橡皮筋 */
     -webkit-text-size-adjust:100%;
   }
   body{
+    margin:0;
+    width:100%;max-width:100%;
+    overflow-x:hidden;
+    overflow-x:clip;
+    overscroll-behavior-x:none;
     font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
     color:var(--text);
     background:linear-gradient(180deg,var(--bg1) 0%,var(--bg2) 100%);
-    background-attachment:fixed; min-height:100vh;
+    /* 注意：不要用 background-attachment:fixed —— iOS Safari 上它会把背景层按 body 宽度铺开，
+       造成视觉溢出、真机可左右拖动。渐变随文档高度铺满，观感不受影响。 */
+    min-height:100vh;
     padding:0 0 calc(40px + env(safe-area-inset-bottom));
     -webkit-font-smoothing:antialiased; line-height:1.7;
     position:relative;
@@ -43,7 +51,7 @@
   /* 品牌行（logo + 标题） */
   .brand{display:flex;align-items:center;gap:12px;position:relative;}
   .brand-logo{
-    flex:0 0 auto;width:48px;height:48px;border-radius:13px;display:block;
+    flex:0 0 auto;width:48px;height:48px;border-radius:21%;display:block; /* logo.png 自带 20% 圆角 */
     border:1px solid rgba(255,255,255,.16);
     box-shadow:0 4px 14px rgba(22,25,43,.18);
     background:#0b0e2a;
@@ -107,7 +115,9 @@
     overflow:hidden;text-overflow:ellipsis;max-width:100%;}
   .len{flex:0 0 auto;margin-left:auto;font-size:11.5px;color:var(--muted);
     font-variant-numeric:tabular-nums;white-space:nowrap;}
-  .text{font-size:15px;line-height:1.78;white-space:pre-wrap;
+  /* font-size 必须 >= 16px：iOS Safari 对小于 16px 的可编辑元素聚焦时会自动放大整页，
+     放大后视口宽度大于布局宽度，页面就能被横向拖动。 */
+  .text{font-size:16px;line-height:1.78;white-space:pre-wrap;
     word-break:break-word;overflow-wrap:anywhere;
     max-width:100%;user-select:text;-webkit-user-select:text;
     outline:none;border-radius:8px;padding:2px 0;}
@@ -148,12 +158,12 @@
   @media (max-width:360px){
     h1{font-size:21px;}
     .sub{font-size:12.5px;}
-    .text{font-size:14.5px;}
+    /* .text 保持 16px：小于 16px 会触发 iOS 聚焦自动缩放，进而导致整页可横滑 */
     .toolbar{gap:8px;}
     .btn-all{font-size:14px;padding:12px 10px;}
     .btn-ghost{font-size:13px;padding:12px 10px;}
     .brand{gap:10px;}
-    .brand-logo{width:40px;height:40px;border-radius:11px;}
+    .brand-logo{width:40px;height:40px;border-radius:21%;}
   }
   /* 超窄屏（如 320px）：工具栏改为上下排列，彻底避免挤压溢出 */
   @media (max-width:340px){
@@ -301,6 +311,64 @@ function bindCopyId(btnId, idId, value, tip){
 }
 bindCopyId('copyWx', 'wxId', 'Jul1_LX520', '咨询微信已复制');
 bindCopyId('copyTech', 'techWx', 'not_every', '技术支持微信已复制');
+</script>
+<script>
+/* ---------- 真机横向滑动拦截 ----------
+   iOS Safari 会忽略 viewport 上的 overflow-x:hidden，横向手势依然能拖动整页（橡皮筋）。
+   这里用三层兜底：
+     1) touchmove 横向手势直接吞掉（正在编辑/选中文字时放行，保住「长按选中复制」）
+     2) body 宽度锁死为布局视口宽度，防止地址栏收放 / 缩放造成视口偏移
+     3) 任何时刻把 scrollX 归零
+*/
+(function(){
+  function editing(){
+    var ae = document.activeElement;
+    if (ae && ae.isContentEditable) return true;
+    var s = window.getSelection && window.getSelection();
+    return !!(s && s.rangeCount && !s.isCollapsed);
+  }
+  function lockWidth(){
+    var w = document.documentElement.clientWidth;
+    if (w && document.body.style.width !== w + 'px'){
+      document.body.style.width = w + 'px';
+    }
+  }
+  function zeroX(){
+    if (window.pageXOffset) window.scrollTo(0, window.pageYOffset);
+  }
+
+  lockWidth();
+  window.addEventListener('resize', lockWidth);
+  window.addEventListener('orientationchange', function(){ setTimeout(lockWidth, 260); });
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', function(){ lockWidth(); zeroX(); });
+  }
+
+  var sx = 0, sy = 0, stop = false, wasEditing = false;
+  document.addEventListener('touchstart', function(e){
+    var t = e.touches && e.touches[0];
+    if (!t) return;
+    sx = t.clientX; sy = t.clientY; stop = false;
+    wasEditing = editing();
+  }, {passive:true});
+
+  document.addEventListener('touchmove', function(e){
+    var t = e.touches && e.touches[0];
+    if (!t) return;
+    var dx = Math.abs(t.clientX - sx);
+    var dy = Math.abs(t.clientY - sy);
+    // 横向位移占主导 => 判定为横向拖动，直接吞掉（纵向滚动不受影响）
+    if (!stop && !wasEditing && dx > 6 && dx > dy * 1.1){
+      stop = true;
+      if (e.cancelable) e.preventDefault();
+    }
+    zeroX();
+  }, {passive:false});
+
+  window.addEventListener('scroll', zeroX, {passive:true});
+  window.addEventListener('orientationchange', function(){ setTimeout(zeroX, 260); });
+})();
+</script>
 </script>
 </body>
 </html>
