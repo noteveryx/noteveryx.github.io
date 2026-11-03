@@ -242,7 +242,8 @@ html[data-theme="amber"]{
    2. 基础
    ========================================================== */
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;overflow-x:hidden}
+/* overflow-x:clip —— iOS Safari 会忽略 hidden，clip 才能真正切断横向拖动（不生成滚动容器） */
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;overflow-x:hidden;overflow-x:clip}
 body{
   background:var(--bg);color:var(--text);font-family:var(--sans);
   line-height:1.7;letter-spacing:.01em;overflow-x:hidden;
@@ -653,11 +654,16 @@ p,li{text-wrap:pretty}
   position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
   padding:20px;background:rgba(4,7,5,.86);
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  /* 键盘弹出后可视高度只剩一半，允许弹层内部滚动，避免内容被裁掉 */
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
 }
 .gate.open{display:flex;animation:gateIn .2s ease-out}
 @keyframes gateIn{from{opacity:0}to{opacity:1}}
 .gate-box{
   position:relative;width:100%;max-width:392px;padding:30px 30px 24px;
+  /* margin:auto 替代父级的 justify/align 居中：内容高于视口（键盘弹出）时可从顶部开始滚动，不会被裁掉上沿 */
+  margin:auto;
   background:linear-gradient(160deg,var(--surface-2),var(--surface) 70%);
   border:1px solid var(--acid-line);border-radius:var(--r-asym);
   box-shadow:var(--shadow);animation:boxIn .26s cubic-bezier(.2,.8,.3,1);
@@ -678,7 +684,9 @@ p,li{text-wrap:pretty}
 .gate-form input{
   flex:1;min-width:0;background:var(--input-bg);border:1px solid var(--input-line);
   border-radius:var(--r-sm);padding:11px 13px;color:var(--text);font-family:var(--mono);
-  font-size:15px;letter-spacing:.3em;text-transform:uppercase;outline:none;
+  /* 必须 >= 16px：iOS Safari 对字号小于 16px 的输入框聚焦时会自动放大整页，
+     放大后视口宽于布局，页面就显示不全且关弹层也不会自动恢复。 */
+  font-size:16px;line-height:1.4;letter-spacing:.3em;text-transform:uppercase;outline:none;
   transition:border-color .18s,box-shadow .18s;
 }
 .gate-form input::placeholder{letter-spacing:.04em;text-transform:none;font-size:13px;color:var(--muted)}
@@ -1546,6 +1554,8 @@ html[data-theme="amber"] .h-price{color:var(--acid-2)}
     gate.classList.remove('open');
     gate.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    // 主动失焦：iOS 的「聚焦自动放大」只有失焦才会回退，键盘也才会收起
+    if (document.activeElement === input) input.blur();
   }
 
   function copyText(t) {
