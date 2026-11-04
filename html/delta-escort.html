@@ -1243,6 +1243,8 @@ html[data-theme="amber"] .h-price{color:var(--acid-2)}
       <div style="margin-top:8px;font-family:inherit">技术支持 · 微信
         <span id="techWx" role="button" tabindex="0" title="点击复制微信号"
               style="color:var(--acid);font-weight:700;cursor:pointer;user-select:all;-webkit-user-select:all">not_every</span>
+        <button id="techCopyBtn" type="button" title="复制微信号"
+                style="margin-left:6px;border:none;border-radius:999px;background:var(--acid);color:#0b0f10;font-family:inherit;font-size:10.5px;font-weight:700;padding:2px 9px;cursor:pointer;vertical-align:1px;transition:transform .12s ease,filter .15s ease">复制</button>
       </div>
     </div>
   </div>
@@ -1575,11 +1577,14 @@ html[data-theme="amber"] .h-price{color:var(--acid-2)}
     } else { fallback(); }
   }
 
-  /* 页脚技术支持微信：点击复制（复用 copyText；toast 元素为全局 #toast，类名 on） */
+  /* 页脚技术支持微信：微信号文字与「复制」按钮均可复制，按钮带成功/失败反馈 */
   var techWx = document.getElementById('techWx');
-  if (techWx) {
+  var techBtn = document.getElementById('techCopyBtn');
+  if (techWx || techBtn) {
+    var TECH_WX_VALUE = 'not_every';
     var toastGlobal = document.getElementById('toast');
     var techToastTimer = null;
+    var techBtnTimer = null;
     var techShowToast = function (t) {
       if (!toastGlobal) return;
       toastGlobal.textContent = t;
@@ -1587,11 +1592,40 @@ html[data-theme="amber"] .h-price{color:var(--acid-2)}
       clearTimeout(techToastTimer);
       techToastTimer = setTimeout(function () { toastGlobal.classList.remove('on'); }, 1900);
     };
-    var techCopyHandler = function () { copyText('not_every'); techShowToast('技术支持微信已复制'); };
-    techWx.addEventListener('click', techCopyHandler);
-    techWx.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); techCopyHandler(); }
-    });
+    var techBtnState = function (ok) {
+      if (!techBtn) return;
+      techBtn.textContent = ok ? '已复制 ✓' : '长按复制';
+      clearTimeout(techBtnTimer);
+      techBtnTimer = setTimeout(function () { techBtn.textContent = '复制'; }, 1600);
+    };
+    var fallbackTechCopy = function () {
+      var ta = document.createElement('textarea');
+      ta.value = TECH_WX_VALUE;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { /* 忽略 */ }
+      document.body.removeChild(ta);
+      return ok;
+    };
+    var techCopyHandler = function () {
+      var done = function (ok) {
+        techBtnState(ok);
+        techShowToast(ok ? '技术支持微信已复制' : '复制失败，请长按微信号手动复制');
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(TECH_WX_VALUE).then(function () { done(true); }, function () { done(fallbackTechCopy()); });
+      } else { done(fallbackTechCopy()); }
+    };
+    if (techWx) {
+      techWx.addEventListener('click', techCopyHandler);
+      techWx.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); techCopyHandler(); }
+      });
+    }
+    if (techBtn) techBtn.addEventListener('click', techCopyHandler);
   }
 
   function setChip(chip, val) {

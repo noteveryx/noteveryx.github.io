@@ -566,6 +566,15 @@
           <span class="size-val" id="styleSizeVal">自定义</span>
         </div>
         <div class="style-row">
+          <span class="style-label">速度</span>
+          <div class="size-seg" id="styleSpeedSeg">
+            <button type="button" data-v="30">慢</button>
+            <button type="button" data-v="55">标准</button>
+            <button type="button" data-v="90">快</button>
+            <button type="button" data-v="140">极快</button>
+          </div>
+        </div>
+        <div class="style-row">
           <span class="style-label">颜色</span>
           <div class="swatches" id="styleSwatches">
             <span class="sw theme" data-c="" title="跟随主题"></span>
@@ -612,18 +621,21 @@
     mono: '"SF Mono", "Roboto Mono", Menlo, Consolas, monospace',
     round: '"Yuanti SC", YouYuan, "幼圆", "PingFang SC", "Microsoft YaHei", sans-serif'
   };
-  var style = { font: '', size: 0, color: '' };
+  var style = { font: '', size: 0, color: '', speed: 55 };
+  var SPEEDS = [30, 55, 90, 140]; // 慢 / 标准 / 快 / 极快，单位 px/s
   try {
     var savedStyle = JSON.parse(localStorage.getItem(STYLE_KEY) || '{}') || {};
     if (FONTS[savedStyle.font]) style.font = savedStyle.font;
     if (savedStyle.size === 'half' || savedStyle.size === 'full') style.size = savedStyle.size;
     else if (savedStyle.size >= 20 && savedStyle.size <= 60) style.size = Math.round(savedStyle.size / 2) * 2;
     if (typeof savedStyle.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(savedStyle.color)) style.color = savedStyle.color;
+    if (SPEEDS.indexOf(savedStyle.speed) > -1) style.speed = savedStyle.speed;
   } catch (e) { /* 忽略 */ }
   var selFont = document.getElementById('styleFont');
   var rngSize = document.getElementById('styleSize');
   var sizeVal = document.getElementById('styleSizeVal');
   var sizeSeg = document.getElementById('styleSizeSeg');
+  var speedSeg = document.getElementById('styleSpeedSeg');
   var colorInput = document.getElementById('styleColor');
   var swWrap = document.getElementById('styleSwatches');
   /* 字号值 → CSS 值：0=默认跟随主题；'half'/'full'=视口档位；数字=px 微调 */
@@ -639,6 +651,9 @@
     selFont.value = style.font;
     Array.prototype.forEach.call(sizeSeg.querySelectorAll('button'), function (b) {
       b.classList.toggle('on', b.getAttribute('data-s') === String(style.size));
+    });
+    Array.prototype.forEach.call(speedSeg.querySelectorAll('button'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-v') === String(style.speed));
     });
     if (typeof style.size === 'number' && style.size) {
       rngSize.value = String(style.size);
@@ -725,9 +740,10 @@
     }
     mqTrack.appendChild(frag);
 
-    // 速度恒定 55px/s：按单份内容宽度换算时长，长内容滚得久
+    // 速度恒定（默认 55px/s，可在编辑面板调节）：按单份内容宽度换算时长，长内容滚得久
+    var pxPerSec = style.speed || 55;
     var half = mqTrack.scrollWidth / 2;
-    var dur = Math.max(9000, Math.round(half / 55 * 1000));
+    var dur = Math.max(1500, Math.round(half / pxPerSec * 1000));
     mqAnim = mqTrack.animate(
       [{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }],
       { duration: dur, iterations: Infinity }
@@ -796,6 +812,13 @@
     syncStyleUI();
     previewMarquee();
   });
+  speedSeg.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    style.speed = +b.getAttribute('data-v');
+    syncStyleUI();
+    previewMarquee();
+  });
   colorInput.addEventListener('input', function () {
     style.color = colorInput.value;
     syncStyleUI();
@@ -809,7 +832,7 @@
     previewMarquee();
   });
   document.getElementById('styleReset').addEventListener('click', function () {
-    style = { font: '', size: 0, color: '' };
+    style = { font: '', size: 0, color: '', speed: 55 };
     persistStyle(); // 恢复默认立即生效并持久化，避免“点了没反应”
     syncStyleUI();
     previewMarquee();
