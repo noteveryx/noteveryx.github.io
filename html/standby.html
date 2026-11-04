@@ -266,6 +266,31 @@
   }
   @keyframes sideIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
+  /* 手机竖屏双屏切换的指示点（桌面/横屏不显示） */
+  .view-dots {
+    display: none;
+    position: fixed;
+    left: 50%;
+    bottom: calc(54px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    gap: 8px;
+    z-index: 6;
+  }
+  .view-dots button {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: var(--line);
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: width .26s cubic-bezier(.3, .8, .3, 1), background-color .26s ease;
+  }
+  .view-dots button.on { width: 22px; background: var(--brand); }
+  .view-dots button:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+
   /* ---------- 循环文字（跑马灯态） ---------- */
   .type-wrap {
     position: fixed;
@@ -375,53 +400,72 @@
     .tech { padding: 5px 10px; gap: 6px; }
   }
 
-  /* ---------- 手机竖屏：月历放在时钟下方（隐藏进度条，格子紧凑） ---------- */
+  /* ---------- 手机竖屏：时间 / 月历分两屏，上下滑动或点击切换 ---------- */
   @media (max-width: 1023px) and (orientation: portrait) {
-    .stage {
-      gap: 14px;
-      justify-content: center;
-      padding: 18px 16px calc(62px + env(safe-area-inset-bottom));
-    }
+    .stage { display: block; padding: 0; }
+    .stage-main,
     .stage-side {
+      position: absolute;
+      inset: 0;
       display: flex;
       flex-direction: column;
-      align-items: stretch;
-      width: min(340px, 92vw);
-      animation: sideIn .6s cubic-bezier(.2, .7, .3, 1) both;
+      align-items: center;
+      justify-content: center;
+      padding: 18px 16px calc(70px + env(safe-area-inset-bottom));
+      transition: transform .42s cubic-bezier(.22, .75, .25, 1), opacity .3s ease;
+      will-change: transform;
     }
+    .stage-main { gap: 14px; }
+    .stage-side {
+      width: auto;
+      gap: 0;
+      transform: translateY(104%);
+      opacity: 0;
+      pointer-events: none;
+      animation: none;
+    }
+    body.m-cal .stage-main { transform: translateY(-104%); opacity: 0; pointer-events: none; }
+    body.m-cal .stage-side { transform: translateY(0); opacity: 1; pointer-events: auto; }
+
     .stage-side .stat-list { display: none; } /* 进度条留给 PC 宽屏 */
-    .cal-card { padding: 12px 12px 10px; border-radius: 16px; }
-    .cal-head { margin-bottom: 6px; }
-    .cal-title { font-size: .88rem; }
-    .cal-nav button { width: 24px; height: 24px; font-size: .82rem; }
-    .cal-wd { font-size: .56rem; padding: 0 0 3px; }
-    .cal-d { min-height: 33px; }
-    .cal-d-num { font-size: .72rem; }
-    .cal-d-sub { font-size: .5rem; }
+    .cal-card { width: min(370px, 94vw); padding: 14px 14px 12px; border-radius: 18px; }
+    .cal-head { margin-bottom: 8px; }
+    .cal-title { font-size: .92rem; }
+    .cal-nav button { width: 26px; height: 26px; font-size: .86rem; }
+    .cal-wd { font-size: .58rem; padding: 0 0 4px; }
+    .cal-d { min-height: 36px; }
+    .cal-d-num { font-size: .74rem; }
+    .cal-d-sub { font-size: .52rem; }
     .cal-d.first-mark::after { top: 3px; left: 4px; }
+
+    .view-dots { display: flex; }
   }
   /* 竖屏但屏幕矮（老机型）：进一步压缩 */
   @media (max-width: 1023px) and (orientation: portrait) and (max-height: 700px) {
-    .stage { gap: 10px; padding: 12px 14px calc(56px + env(safe-area-inset-bottom)); }
-    .cal-card { padding: 9px 10px 7px; border-radius: 14px; }
-    .cal-d { min-height: 26px; }
-    .cal-d-num { font-size: .66rem; }
-    .cal-d-sub { font-size: .44rem; }
+    .stage-main,
+    .stage-side { padding: 12px 14px calc(62px + env(safe-area-inset-bottom)); }
+    .stage-main { gap: 10px; }
+    .cal-card { width: min(344px, 94vw); padding: 10px 10px 8px; border-radius: 15px; }
+    .cal-d { min-height: 28px; }
+    .cal-d-num { font-size: .68rem; }
+    .cal-d-sub { font-size: .46rem; }
     .cal-nav button { width: 22px; height: 22px; }
   }
   /* 超矮竖屏（320×568 一类）：收掉 logo、缩表盘、月历再压扁 */
   @media (max-width: 1023px) and (orientation: portrait) and (max-height: 620px) {
-    .stage { gap: 8px; padding: 8px 12px calc(50px + env(safe-area-inset-bottom)); }
+    .stage-main,
+    .stage-side { padding: 8px 12px calc(56px + env(safe-area-inset-bottom)); }
+    .stage-main { gap: 8px; }
     .stage .logo { display: none; }
     .clock-wrap { width: min(52vmin, 150px); }
     .clock-wrap::before { inset: -8%; }
     .stage .clock { font-size: clamp(1.6rem, 9vmin, 2.2rem); }
-    .cal-card { padding: 8px 8px 6px; border-radius: 12px; }
+    .cal-card { width: min(318px, 94vw); padding: 8px 8px 6px; border-radius: 12px; }
     .cal-head { margin-bottom: 2px; }
     .cal-title { font-size: .8rem; }
     .cal-nav button { width: 20px; height: 20px; font-size: .74rem; }
     .cal-wd { font-size: .5rem; padding: 0 0 1px; }
-    .cal-d { min-height: 22px; }
+    .cal-d { min-height: 23px; }
     .cal-d-num { font-size: .62rem; }
     .cal-d-sub { font-size: .4rem; }
     .cal-d.first-mark::after { top: 2px; left: 3px; width: 2.5px; height: 2.5px; }
@@ -762,6 +806,12 @@
         </div>
       </div>
     </aside>
+
+    <!-- 手机竖屏：时间 / 月历 两屏切换指示点 -->
+    <div class="view-dots" id="viewDots" role="group" aria-label="切换时间与月历">
+      <button type="button" data-v="time" class="on" aria-label="时间"></button>
+      <button type="button" data-v="cal" aria-label="月历"></button>
+    </div>
   </div>
 
   <!-- 自定义文字循环展示（无缝跑马灯，点击暂停 / 继续） -->
@@ -1191,6 +1241,60 @@
     buildMarquee();
   }
   render();
+
+  /* ---------- 手机竖屏：时间 / 月历 双屏切换（上下滑动或点击） ---------- */
+  var mqPhonePortrait = window.matchMedia
+    ? window.matchMedia('(max-width: 1023px) and (orientation: portrait)')
+    : { matches: false };
+  var viewDots = document.getElementById('viewDots');
+  var stageEl = document.getElementById('stageDefault');
+  var calViewOn = false;
+
+  function setCalView(on) {
+    calViewOn = !!on;
+    body.classList.toggle('m-cal', calViewOn);
+    if (viewDots) {
+      Array.prototype.forEach.call(viewDots.querySelectorAll('button'), function (b) {
+        b.classList.toggle('on', (b.getAttribute('data-v') === 'cal') === calViewOn);
+      });
+    }
+  }
+
+  if (viewDots) {
+    viewDots.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      setCalView(b.getAttribute('data-v') === 'cal');
+    });
+  }
+
+  if (stageEl) {
+    stageEl.addEventListener('click', function (e) {
+      if (!mqPhonePortrait.matches) return;      // 桌面/横屏不参与
+      if (e.target.closest('button, a, .view-dots')) return;
+      // 月历卡片主体（头部与日期格）不触发切换，避免误触退出
+      if (e.target.closest('.cal-head') || e.target.closest('.cal-grid')) return;
+      setCalView(!calViewOn);
+    });
+
+    var tStartX = 0, tStartY = 0, tTrack = false;
+    stageEl.addEventListener('touchstart', function (e) {
+      if (!mqPhonePortrait.matches || e.touches.length !== 1) { tTrack = false; return; }
+      tTrack = true;
+      tStartX = e.touches[0].clientX;
+      tStartY = e.touches[0].clientY;
+    }, { passive: true });
+    stageEl.addEventListener('touchend', function (e) {
+      if (!tTrack) return;
+      tTrack = false;
+      var t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      var dx = t.clientX - tStartX;
+      var dy = t.clientY - tStartY;
+      if (Math.abs(dy) < 44 || Math.abs(dy) < Math.abs(dx)) return; // 需为明显的纵向滑动
+      setCalView(dy < 0); // 上滑看月历，下滑回时间
+    }, { passive: true });
+  }
 
   /* ---------- 编辑面板 ---------- */
   function openEditor() {
