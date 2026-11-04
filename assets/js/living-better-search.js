@@ -1,12 +1,12 @@
 /*!
  * living-better-search.js — Docsify plugin for 高性价比 页面
- * 用法：在 index.html 末尾追加 <script src="assets/living-better-search.js"></script>
+ * 用法：在 index.html 末尾追加 <script src="assets/js/living-better-search.js"></script>
  * 触发：路由命中 docs/高性价比 (含 URL 编码的路径) 时自动初始化搜索 UI
  * 能力:
  *   - 关键词搜索: 模糊匹配 title / excerpt (AND, 空格分隔)
  *   - 重新计算: 每次输入重新过滤并渲染卡片
  *   - 状态行: 显示当前匹配条数
- *   - 数据源: assets/living-better.json (静态资源)
+ *   - 数据源: assets/json/living-better.json (静态资源)
  *
  * 设计上保持与 ebook-search.js 一致的交互模式, 但 UI 更贴近 HowToLiveBetter
  * 源站的卡片网格风格, 用品牌色 #3451b2 突出章节号.
@@ -18,10 +18,10 @@
   var PAGE_KEY = '高性价比';
   var ENCODED_KEY = encodeURIComponent(PAGE_KEY);
   var DATA_PATHS = [
-    'assets/living-better.json',
-    '../assets/living-better.json',
-    './assets/living-better.json',
-    '/assets/living-better.json'
+    'assets/json/living-better.json',
+    '../assets/json/living-better.json',
+    './assets/json/living-better.json',
+    '/assets/json/living-better.json'
   ];
   var initialized = false;
 

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#42b983">
   <title>独立页面</title>
-  <link rel="icon" type="image/png" href="assets/favicon-round.png">
-  <link rel="apple-touch-icon" href="assets/logo.png">
+  <link rel="icon" type="image/png" href="assets/image/favicon-round.png">
+  <link rel="apple-touch-icon" href="assets/image/logo.png">
   <style>
     /* ==========================================================
        主题变量：所有颜色都走 CSS 变量，切换主题只改 data-theme
@@ -463,6 +463,258 @@
     .sp-card:hover .sp-arrow::after { transform: translateX(4px); }
 
     /* ==========================================================
+       快捷导航（新闻 / 财经 / 门户等常用站点直达）
+       ========================================================== */
+    .nav-groups { display: grid; gap: 14px; }
+    .nav-group {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px 16px;
+      transition: border-color .2s ease, background-color .28s ease;
+    }
+    .nav-group:hover { border-color: var(--brand); }
+    .nav-group h3 {
+      margin: 0 0 10px;
+      font-size: .84rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color .28s ease;
+    }
+    .nav-group h3::before {
+      content: "";
+      width: 3px;
+      height: 13px;
+      border-radius: 2px;
+      background: var(--brand);
+      flex: 0 0 auto;
+    }
+    .nav-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(102px, 1fr));
+      gap: 8px;
+    }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 8px;
+      border-radius: 10px;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--bg-2);
+      border: 1px solid transparent;
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: color .16s, border-color .16s, background-color .16s, transform .12s ease;
+    }
+    .nav-link:hover {
+      color: var(--brand);
+      border-color: var(--brand);
+      background: var(--brand-soft);
+    }
+    .nav-link:active { transform: scale(.97); }
+
+    /* ==========================================================
+       顶部信息区：日期时钟 + 双城天气 + 每日一句
+       ========================================================== */
+    .top-widgets { display: grid; gap: 14px; margin: 8px 0 0; }
+    .info-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 22px;
+      transition: background-color .28s ease, border-color .28s ease;
+    }
+    .datetime-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
+    .dt-text { min-width: 0; }
+    .dt-date {
+      font-size: .88rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 7px;
+      transition: color .28s ease;
+    }
+    .dt-time {
+      font-family: "Roboto Mono", "SF Mono", Monaco, Consolas, monospace;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--brand);
+      letter-spacing: .03em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: color .28s ease;
+    }
+    /* 圆形模拟表盘：指针由 JS 每秒驱动，与数字时钟同步 */
+    .analog-clock {
+      flex: 0 0 auto;
+      width: 72px;
+      height: 72px;
+      display: block;
+    }
+    .analog-clock .ac-face {
+      fill: var(--bg-2);
+      stroke: var(--line);
+      stroke-width: 2;
+      transition: fill .28s ease, stroke .28s ease;
+    }
+    .analog-clock .ac-dots circle { fill: var(--muted); transition: fill .28s ease; }
+    .analog-clock line {
+      stroke-linecap: round;
+      transform-box: view-box;
+      transform-origin: 50px 50px;
+    }
+    .analog-clock .ac-h { stroke: var(--text); stroke-width: 5; transition: stroke .28s ease; }
+    .analog-clock .ac-m { stroke: var(--text); stroke-width: 3.4; transition: stroke .28s ease; }
+    /* 指针不加 transform 过渡：59°→0° 的回绕会播放倒转动画 */
+    .analog-clock .ac-s { stroke: var(--brand); stroke-width: 1.8; }
+    .analog-clock .ac-pin { fill: var(--brand); transition: fill .28s ease; }
+    .weather-cards { display: flex; gap: 12px; }
+    .weather-card {
+      position: relative;
+      min-width: 132px;
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      transition: border-color .2s ease, background-color .28s ease;
+    }
+    .weather-card:hover { border-color: var(--brand); }
+    .weather-city {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--text);
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+      user-select: none;
+      transition: color .28s ease, border-color .28s ease;
+    }
+    .w-city-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .w-arrow { font-size: .68rem; color: var(--muted); flex: 0 0 auto; transition: transform .2s ease; }
+    .weather-card.open .w-arrow { transform: rotate(180deg); }
+    .weather-temp {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+      transition: color .28s ease;
+    }
+    .weather-desc { font-size: .78rem; color: var(--muted); margin: 4px 0 8px; transition: color .28s ease; }
+    .weather-meta { display: flex; flex-direction: column; gap: 2px; font-size: .72rem; color: var(--muted); }
+    .district-list {
+      display: none;
+      margin-top: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+    }
+    .weather-card.open .district-list { display: grid; }
+    .district-item {
+      font-size: .72rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 5px 4px;
+      border-radius: 6px;
+      cursor: pointer;
+      background: var(--card);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: color .14s, border-color .14s, background-color .14s;
+    }
+    .district-item:hover { color: var(--brand); border-color: var(--brand); }
+    .district-item.on { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); font-weight: 700; }
+
+    .quote-card {
+      position: relative;
+      overflow: hidden;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 22px 16px;
+      transition: background-color .28s ease, border-color .28s ease;
+    }
+    .quote-card::before {
+      content: "\201C";
+      position: absolute;
+      top: -26px;
+      left: 14px;
+      font-family: Georgia, serif;
+      font-size: 96px;
+      line-height: 1;
+      color: var(--brand-soft);
+      pointer-events: none;
+    }
+    .quote-title {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .84rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+      transition: color .28s ease;
+    }
+    .quote-title::before {
+      content: "";
+      width: 3px;
+      height: 13px;
+      border-radius: 2px;
+      background: var(--brand);
+      flex: 0 0 auto;
+    }
+    .quote-text {
+      position: relative;
+      margin: 0 0 6px;
+      font-style: italic;
+      font-size: .92rem;
+      line-height: 1.7;
+      color: var(--text);
+      transition: color .28s ease;
+    }
+    .quote-author {
+      position: relative;
+      margin: 0;
+      text-align: right;
+      font-size: .78rem;
+      color: var(--muted);
+      transition: color .28s ease;
+    }
+
+    @media (max-width: 560px) {
+      .top-widgets { gap: 12px; }
+      .info-bar { flex-direction: column; align-items: stretch; gap: 16px; padding: 16px 16px; }
+      .dt-time { font-size: 1.7rem; }
+      .datetime-box { gap: 12px; }
+      .analog-clock { width: 58px; height: 58px; }
+      .weather-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .weather-card { min-width: 0; }
+    }
+
+    /* ==========================================================
        页脚
        ========================================================== */
     .page-foot {
@@ -617,7 +869,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <img class="brand-logo" src="assets/logo.png" alt="X">
+        <img class="brand-logo" src="assets/image/logo.png" alt="X">
         <div class="brand-text">
           <h1>独立页面</h1>
           <p class="page-sub">共 <span id="pageCount">2</span> 个独立页面 · 不经过文档渲染，点击即开</p>
@@ -667,15 +919,69 @@
   </header>
 
   <main class="page">
+    <!-- ============ 顶部：日期时钟 + 双城天气 + 每日一句 ============ -->
+    <div class="top-widgets">
+      <div class="info-bar">
+        <div class="datetime-box">
+          <div class="dt-text">
+            <div class="dt-date" id="dtDate">--</div>
+            <div class="dt-time" id="dtTime">--:--:--</div>
+          </div>
+          <svg class="analog-clock" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="ac-face" cx="50" cy="50" r="47"/>
+            <g class="ac-dots">
+              <circle cx="50" cy="9.5" r="2.6"/><circle cx="90.5" cy="50" r="2.6"/>
+              <circle cx="50" cy="90.5" r="2.6"/><circle cx="9.5" cy="50" r="2.6"/>
+            </g>
+            <line class="ac-h" x1="50" y1="50" x2="50" y2="28"/>
+            <line class="ac-m" x1="50" y1="50" x2="50" y2="18"/>
+            <line class="ac-s" x1="50" y1="56" x2="50" y2="14"/>
+            <circle class="ac-pin" cx="50" cy="50" r="3.4"/>
+          </svg>
+        </div>
+        <div class="weather-cards">
+          <div class="weather-card" id="cardSy">
+            <div class="weather-city" role="button" tabindex="0" title="选择区县">
+              <span class="w-city-name">沈阳市</span><span class="w-arrow">▾</span>
+            </div>
+            <div class="weather-temp w-temp">--</div>
+            <div class="weather-desc w-desc">获取中…</div>
+            <div class="weather-meta"><span class="w-wind">--</span><span class="w-hum">--</span></div>
+            <div class="district-list"></div>
+          </div>
+          <div class="weather-card" id="cardFx">
+            <div class="weather-city" role="button" tabindex="0" title="选择区县">
+              <span class="w-city-name">阜新市</span><span class="w-arrow">▾</span>
+            </div>
+            <div class="weather-temp w-temp">--</div>
+            <div class="weather-desc w-desc">获取中…</div>
+            <div class="weather-meta"><span class="w-wind">--</span><span class="w-hum">--</span></div>
+            <div class="district-list"></div>
+          </div>
+        </div>
+      </div>
+      <div class="quote-card">
+        <div class="quote-title">每日一句</div>
+        <p class="quote-text" id="quoteText">正在获取今日句子…</p>
+        <p class="quote-author" id="quoteAuthor"></p>
+      </div>
+    </div>
+
     <!-- ============ 板块一：工具 ============ -->
     <section class="sp-section">
-      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🧰</span>工具 <span class="sp-count">1</span></h2>
+      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🧰</span>工具 <span class="sp-count">2</span></h2>
       <p class="sp-sub">提升效率的小工具。</p>
       <div class="sp-grid">
-        <a class="sp-card" href="game-service-quotes.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-service-quotes.html" target="_blank" rel="noopener noreferrer">
           <span class="sp-tag">工具</span>
           <span class="sp-name">文案快捷复制</span>
           <p class="sp-desc">10 条接单常用话术，一键复制，手机端直接转发给客户。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/standby.html" target="_blank" rel="noopener noreferrer">
+          <span class="sp-tag">工具</span>
+          <span class="sp-name">待机展示</span>
+          <p class="sp-desc">全屏屏保页，可自定义文字循环展示，默认显示待机时钟。</p>
           <span class="sp-arrow">打开</span>
         </a>
       </div>
@@ -686,12 +992,90 @@
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🛡️</span>行动突围护航社 <span class="sp-count">1</span></h2>
       <p class="sp-sub">内容已合并为统一版，主题风格在页面内一键切换。</p>
       <div class="sp-grid">
-        <a class="sp-card" href="delta-escort.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/delta-escort.html" target="_blank" rel="noopener noreferrer">
           <span class="sp-tag">统一版</span>
           <span class="sp-name">行动突围护航社</span>
           <p class="sp-desc">纯绿双护护航落地页，正文以 V6 定稿，5 套主题一键切换。</p>
           <span class="sp-arrow">打开</span>
         </a>
+      </div>
+    </section>
+
+    <!-- ============ 板块三：快捷导航 ============ -->
+    <section class="sp-section">
+      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🧭</span>快捷导航 <span class="sp-count" id="navCount">30</span></h2>
+      <p class="sp-sub">新闻 · 财经 · 门户常用站点直达，点击在新标签页打开。</p>
+      <div class="nav-groups">
+        <div class="nav-group">
+          <h3>搜索引擎</h3>
+          <div class="nav-grid">
+            <a class="nav-link" href="https://www.baidu.com" target="_blank" rel="noopener noreferrer">百度</a>
+            <a class="nav-link" href="https://top.baidu.com/board" target="_blank" rel="noopener noreferrer">百度热搜</a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <h3>智能助手</h3>
+          <div class="nav-grid">
+            <a class="nav-link" href="https://www.doubao.com/chat/" target="_blank" rel="noopener noreferrer">豆包 AI</a>
+            <a class="nav-link" href="https://chat.baidu.com/" target="_blank" rel="noopener noreferrer">百度 AI</a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <h3>财经资讯</h3>
+          <div class="nav-grid">
+            <a class="nav-link" href="https://m.10jqka.com.cn/" target="_blank" rel="noopener noreferrer">同花顺</a>
+            <a class="nav-link" href="https://wap.eastmoney.com/" target="_blank" rel="noopener noreferrer">东方财富</a>
+            <a class="nav-link" href="https://gushitong.baidu.com/" target="_blank" rel="noopener noreferrer">股市通</a>
+            <a class="nav-link" href="https://ecvncl.smartapps.baidu.com/" target="_blank" rel="noopener noreferrer">FinScope</a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <h3>官方媒体</h3>
+          <div class="nav-grid">
+            <a class="nav-link" href="https://ysxw.cctv.cn/" target="_blank" rel="noopener noreferrer">央视新闻</a>
+            <a class="nav-link" href="https://m.news.cn/" target="_blank" rel="noopener noreferrer">新华网</a>
+            <a class="nav-link" href="https://www.cnr.cn/" target="_blank" rel="noopener noreferrer">央广网</a>
+            <a class="nav-link" href="https://m.huanqiu.com/" target="_blank" rel="noopener noreferrer">环球网</a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <h3>财经媒体</h3>
+          <div class="nav-grid">
+            <a class="nav-link" href="https://wallstreetcn.com/" target="_blank" rel="noopener noreferrer">华尔街见闻</a>
+            <a class="nav-link" href="https://tv.cctv.com/cctv2/" target="_blank" rel="noopener noreferrer">央视财经</a>
+            <a class="nav-link" href="https://www.cnfin.com/" target="_blank" rel="noopener noreferrer">新华财经</a>
+            <a class="nav-link" href="https://www.jin10.com/" target="_blank" rel="noopener noreferrer">金十数据</a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <h3>新闻门户</h3>
+          <div class="nav-grid">
+            <a class="nav-link" href="https://news.sina.com.cn/" target="_blank" rel="noopener noreferrer">新浪新闻</a>
+            <a class="nav-link" href="https://news.163.com/" target="_blank" rel="noopener noreferrer">网易新闻</a>
+            <a class="nav-link" href="https://news.sohu.com/" target="_blank" rel="noopener noreferrer">搜狐新闻</a>
+            <a class="nav-link" href="https://xw.qq.com/" target="_blank" rel="noopener noreferrer">腾讯新闻</a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <h3>报纸媒体</h3>
+          <div class="nav-grid">
+            <a class="nav-link" data-paper="https://paper.people.com.cn/rmrb/pad/layout/" href="https://paper.people.com.cn/rmrb/pad/layout/" target="_blank" rel="noopener noreferrer">人民日报</a>
+            <a class="nav-link" href="https://epaper.lnd.com.cn/padindex.shtml" target="_blank" rel="noopener noreferrer">辽宁日报</a>
+            <a class="nav-link" href="https://epaper.syd.com.cn/syrb/h5/paperindex.htm" target="_blank" rel="noopener noreferrer">沈阳日报</a>
+            <a class="nav-link" data-paper="http://ipaper.ce.cn/pad/layout/" href="http://ipaper.ce.cn/pad/layout/" target="_blank" rel="noopener noreferrer">经济日报</a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <h3>其他网站</h3>
+          <div class="nav-grid">
+            <a class="nav-link" href="https://tianya.im/" target="_blank" rel="noopener noreferrer">天涯社区</a>
+            <a class="nav-link" href="https://www.baidu.com/s?word=%E5%A4%A9%E6%B0%94%E9%A2%84%E6%8A%A5" target="_blank" rel="noopener noreferrer">天气预报</a>
+            <a class="nav-link" href="https://www.baidu.com/s?word=%E4%B8%87%E5%B9%B4%E5%8E%86" target="_blank" rel="noopener noreferrer">万年历</a>
+            <a class="nav-link" href="https://m.douban.com/home_guide" target="_blank" rel="noopener noreferrer">豆瓣</a>
+            <a class="nav-link" href="https://yingjuso.com/" target="_blank" rel="noopener noreferrer">影剧搜</a>
+            <a class="nav-link" href="https://hanyu.baidu.com/" target="_blank" rel="noopener noreferrer">百度汉语</a>
+          </div>
+        </div>
       </div>
     </section>
   </main>
@@ -777,6 +1161,178 @@
         var n = document.querySelectorAll('.sp-card').length;
         countEl.textContent = n;
       }
+
+      /* ---------------- 顶部信息区：时钟 / 天气 / 每日一句 ---------------- */
+      (function () {
+        /* 时钟：每秒刷新 */
+        var dtDate = document.getElementById('dtDate');
+        var dtTime = document.getElementById('dtTime');
+        var WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        function pad(v) { return (v < 10 ? '0' : '') + v; }
+        /* 模拟表盘指针 */
+        var acH = document.querySelector('.analog-clock .ac-h');
+        var acM = document.querySelector('.analog-clock .ac-m');
+        var acS = document.querySelector('.analog-clock .ac-s');
+        function setHands(n) {
+          var h = n.getHours() % 12, m = n.getMinutes(), s = n.getSeconds();
+          if (acH) acH.style.transform = 'rotate(' + (h * 30 + m * 0.5) + 'deg)';
+          if (acM) acM.style.transform = 'rotate(' + (m * 6 + s * 0.1) + 'deg)';
+          if (acS) acS.style.transform = 'rotate(' + (s * 6) + 'deg)';
+        }
+        function tick() {
+          var n = new Date();
+          if (dtDate) dtDate.textContent = n.getFullYear() + '年' + pad(n.getMonth() + 1) + '月' + pad(n.getDate()) + '日 ' + WEEK[n.getDay()];
+          if (dtTime) dtTime.textContent = pad(n.getHours()) + ':' + pad(n.getMinutes()) + ':' + pad(n.getSeconds());
+          setHands(n);
+        }
+        tick();
+        setInterval(tick, 1000);
+
+        /* 天气：高德 REST API（与 App 端同源同参）；任何失败回落默认值，与原逻辑一致 */
+        var AMAP_KEY = 'd9b67f3e5673379195d9ccb3e031f2e8';
+        var WEATHER_MAP = { '晴': '晴朗', '多云': '多云', '阴': '阴天', '小雨': '小雨', '中雨': '中雨', '大雨': '大雨', '暴雨': '暴雨', '雷阵雨': '雷阵雨', '小雪': '小雪', '中雪': '中雪', '大雪': '大雪', '暴雪': '暴雪', '浮尘': '浮尘', '扬沙': '扬沙', '沙尘暴': '沙尘暴', '雾': '雾', '霾': '霾' };
+        function numOr(v, fb) { var n = parseInt(v, 10); return isFinite(n) ? n : fb; }
+        function fallbackWeather() {
+          return { temperature: 18, description: '晴朗', humidity: 45, windSpeed: 3, windDirection: '东北风' };
+        }
+        function fetchWeather(code) {
+          var ctrl = ('AbortController' in window) ? new AbortController() : null;
+          var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 8000) : null;
+          return fetch('https://restapi.amap.com/v3/weather/weatherInfo?city=' + code + '&key=' + AMAP_KEY + '&extensions=base', ctrl ? { signal: ctrl.signal } : undefined)
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              var life = (d && d.lives && d.lives[0]) || null;
+              if (!d || d.status !== '1' || !life) return fallbackWeather();
+              return {
+                temperature: numOr(life.temperature, 18),
+                description: WEATHER_MAP[life.weather] || life.weather || '晴朗',
+                humidity: numOr(life.humidity, 45),
+                windSpeed: numOr(life.windpower, 3),
+                windDirection: life.winddirection || '东北风'
+              };
+            })
+            .catch(function () { return fallbackWeather(); })
+            .finally(function () { if (timer) clearTimeout(timer); });
+        }
+        function renderWeather(card, w) {
+          card.querySelector('.w-temp').textContent = w.temperature + '°C';
+          card.querySelector('.w-desc').textContent = w.description;
+          card.querySelector('.w-wind').textContent = w.windDirection + ' ' + w.windSpeed + '级';
+          card.querySelector('.w-hum').textContent = '湿度 ' + w.humidity + '%';
+        }
+        function weatherCard(id, districts, initialName) {
+          var card = document.getElementById(id);
+          if (!card) return;
+          var current = districts[0];
+          renderWeather(card, fallbackWeather());
+          fetchWeather(current.code).then(function (w) { renderWeather(card, w); });
+
+          var nameEl = card.querySelector('.w-city-name');
+          var listEl = card.querySelector('.district-list');
+          var other = null; // 注册后由 weatherPair 互相引用
+
+          districts.forEach(function (d, i) {
+            var it = document.createElement('span');
+            it.className = 'district-item' + (i === 0 ? ' on' : '');
+            it.textContent = d.name;
+            it.addEventListener('click', function (e) {
+              e.stopPropagation();
+              current = d;
+              card.classList.remove('open');
+              listEl.querySelectorAll('.district-item').forEach(function (x) { x.classList.remove('on'); });
+              it.classList.add('on');
+              nameEl.textContent = d.name;
+              card.querySelector('.w-temp').textContent = '--';
+              card.querySelector('.w-desc').textContent = '获取中…';
+              card.querySelector('.w-wind').textContent = '--';
+              card.querySelector('.w-hum').textContent = '--';
+              fetchWeather(d.code).then(function (w) { renderWeather(card, w); });
+            });
+            listEl.appendChild(it);
+          });
+
+          function toggle() {
+            var open = !card.classList.contains('open');
+            card.classList.toggle('open', open);
+            if (open && other && other.card.classList.contains('open')) other.card.classList.remove('open');
+          }
+          card.querySelector('.weather-city').addEventListener('click', toggle);
+          card.querySelector('.weather-city').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+          });
+
+          return { card: card };
+        }
+        var sy = weatherCard('cardSy', [
+          { name: '沈阳市', code: '210100' }, { name: '和平区', code: '210102' }, { name: '沈河区', code: '210103' },
+          { name: '大东区', code: '210104' }, { name: '皇姑区', code: '210105' }, { name: '铁西区', code: '210106' },
+          { name: '苏家屯区', code: '210111' }, { name: '浑南区', code: '210112' }, { name: '沈北新区', code: '210113' },
+          { name: '于洪区', code: '210114' }, { name: '辽中区', code: '210115' }, { name: '康平县', code: '210123' },
+          { name: '法库县', code: '210124' }, { name: '新民市', code: '210181' }
+        ]);
+        var fx = weatherCard('cardFx', [
+          { name: '阜新市', code: '210900' }, { name: '海州区', code: '210902' }, { name: '新邱区', code: '210903' },
+          { name: '太平区', code: '210904' }, { name: '清河门区', code: '210905' }, { name: '细河区', code: '210911' },
+          { name: '阜新蒙古族自治县', code: '210921' }, { name: '彰武县', code: '210922' }
+        ]);
+        // 互斥展开：打开一张时收起另一张
+        if (sy && fx) { sy.other = fx; fx.other = sy; }
+
+        /* 每日一句：一言 API，5 秒超时；失败用本地句子按日期轮换 */
+        var quoteText = document.getElementById('quoteText');
+        var quoteAuthor = document.getElementById('quoteAuthor');
+        var FALLBACK_QUOTES = [
+          { content: '生活就像骑自行车，要保持平衡就得不断前进。', author: '爱因斯坦' },
+          { content: '成功不是终点，失败也不是终结，唯有勇气才是永恒。', author: '温斯顿·丘吉尔' },
+          { content: '昨天是历史，明天是谜团，今天是礼物。', author: '埃莉诺·罗斯福' },
+          { content: '人生最大的荣耀不在于从不跌倒，而在于每次跌倒后都能重新站起来。', author: '纳尔逊·曼德拉' },
+          { content: '不要等待机会，而要创造机会。', author: '乔治·萧伯纳' }
+        ];
+        function setQuote(content, author) {
+          if (quoteText) quoteText.textContent = '“' + content + '”';
+          if (quoteAuthor) quoteAuthor.textContent = '—— ' + author;
+        }
+        (function () {
+          var q0 = FALLBACK_QUOTES[new Date().getDate() % FALLBACK_QUOTES.length];
+          setQuote(q0.content, q0.author);
+        })();
+        (function () {
+          var done = false;
+          function useDefault() {
+            if (done) return;
+            done = true;
+            var q = FALLBACK_QUOTES[new Date().getDate() % FALLBACK_QUOTES.length];
+            setQuote(q.content, q.author);
+          }
+          setTimeout(useDefault, 5000);
+          fetch('https://v1.hitokoto.cn/?c=i&encode=json')
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (done) return;
+              done = true;
+              if (d && d.hitokoto) {
+                setQuote(d.hitokoto, d.from_who || d.from || '佚名');
+              } else { useDefault(); }
+            })
+            .catch(useDefault);
+        })();
+      })();
+
+      /* ---------------- 快捷导航：数量统计 + 报纸日期版面 ---------------- */
+      var navCountEl = document.getElementById('navCount');
+      if (navCountEl) {
+        navCountEl.textContent = document.querySelectorAll('.nav-link').length;
+      }
+      // 人民日报 / 经济日报的电子版按「当天日期」拼版面链接，与 App 端逻辑一致
+      (function () {
+        var d = new Date();
+        var ym = d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2);
+        var dd = ('0' + d.getDate()).slice(-2);
+        var papers = document.querySelectorAll('a[data-paper]');
+        for (var i = 0; i < papers.length; i++) {
+          papers[i].href = papers[i].getAttribute('data-paper') + ym + '/' + dd + '/node_01.html';
+        }
+      })();
 
       /* ---------------- 复制微信号 ---------------- */
       var WECHAT_ID = 'not_every';

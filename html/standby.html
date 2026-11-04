@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#06090c">
+<title>待机展示</title>
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'midnight')}catch(e){}</script>
+<style>
+  /* 默认 = 深海蓝（屏保感）；其余四套见下方 html[data-theme=…] 覆盖块 */
+  :root {
+    --bg1: #06090c;
+    --bg2: #0b1016;
+    --panel: #0b1016;
+    --line: #1b2530;
+    --text: #dfe9e4;
+    --muted: #5d6f6a;
+    --brand: #42b983;
+    --brand-soft: rgba(66, 185, 131, .12);
+    --glass: rgba(255, 255, 255, .04);
+    --scrim: rgba(3, 5, 7, .88);
+    --glow1: rgba(66, 185, 131, .08);
+    --glow2: rgba(66, 185, 131, .05);
+    --logo-glow: rgba(66, 185, 131, .35);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background:
+      radial-gradient(90% 60% at 50% 110%, var(--glow1), transparent 70%),
+      radial-gradient(70% 50% at 50% -10%, var(--glow2), transparent 70%),
+      var(--bg1);
+    color: var(--text);
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* ---------- 默认待机内容（屏保态） ---------- */
+  .stage {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(12px, 2.4vmin, 20px);
+    padding: 32px 24px calc(70px + env(safe-area-inset-bottom)); /* 底部留出技术支持条的空间 */
+    text-align: center;
+  }
+  .stage .logo {
+    width: 52px; height: 52px;
+    border-radius: 21%;
+    box-shadow: 0 0 0 1px var(--line), 0 8px 30px -12px var(--logo-glow);
+    animation: breathe 5s ease-in-out infinite;
+  }
+  /* 圆形模拟表盘：外圈呼吸光晕 + 缓慢旋转的虚线装饰环，指针由 JS 每秒驱动 */
+  .clock-wrap {
+    position: relative;
+    width: clamp(150px, 36vmin, 216px);
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .clock-wrap::before {
+    content: "";
+    position: absolute;
+    inset: -14%;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--glow1), transparent 68%);
+    animation: breathe 5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .clock-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px dashed var(--brand-soft);
+    animation: spin 40s linear infinite;
+    pointer-events: none;
+  }
+  .analog-clock { position: relative; width: 88%; height: 88%; display: block; }
+  .analog-clock .ac-face {
+    fill: var(--glass);
+    stroke: var(--line);
+    stroke-width: 1.5;
+    transition: fill .28s ease, stroke .28s ease;
+  }
+  .analog-clock .ac-ticks line { stroke: var(--muted); stroke-width: 2; stroke-linecap: round; transition: stroke .28s ease; }
+  .analog-clock .ac-ticks line.major { stroke: var(--text); stroke-width: 3; }
+  .analog-clock line {
+    stroke-linecap: round;
+    transform-box: view-box;
+    transform-origin: 50px 50px;
+  }
+  /* 指针不加 transform 过渡：59°→0° 的回绕会播放倒转动画 */
+  .analog-clock .ac-h { stroke: var(--text); stroke-width: 4.6; transition: stroke .28s ease; }
+  .analog-clock .ac-m { stroke: var(--text); stroke-width: 3; transition: stroke .28s ease; }
+  .analog-clock .ac-s { stroke: var(--brand); stroke-width: 1.6; }
+  .analog-clock .ac-pin { fill: var(--brand); transition: fill .28s ease; }
+  .stage .clock {
+    font-family: "Roboto Mono", "SF Mono", Monaco, Consolas, monospace;
+    font-size: clamp(2.4rem, 10vmin, 4.4rem);
+    font-weight: 700;
+    letter-spacing: .02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--text);
+  }
+  .stage .clock span { color: var(--brand); }
+  .stage .date { font-size: clamp(.85rem, 2.4vmin, 1.05rem); font-weight: 600; color: var(--muted); letter-spacing: .08em; }
+  .stage .hint {
+    margin-top: 6px;
+    font-size: .8rem;
+    color: var(--muted);
+    letter-spacing: .12em;
+    animation: breathe 5s ease-in-out infinite;
+  }
+
+  /* ---------- 循环文字（跑马灯态） ---------- */
+  .type-wrap {
+    position: fixed;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(14px, 3vmin, 26px);
+    padding: 24px 0 calc(70px + env(safe-area-inset-bottom));
+    text-align: center;
+  }
+  .mq-logo {
+    width: clamp(40px, 7vmin, 56px); height: clamp(40px, 7vmin, 56px);
+    border-radius: 21%;
+    box-shadow: 0 0 0 1px var(--line), 0 8px 30px -12px var(--logo-glow);
+    animation: breathe 5s ease-in-out infinite;
+  }
+  .marquee-box {
+    position: relative;
+    width: min(1100px, 94vw); /* 电脑端居中限宽，手机端近全屏 */
+    overflow: hidden;
+    padding: clamp(10px, 2.6vmin, 24px) 0;
+    cursor: pointer;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  }
+  /* 上下渐变装饰线 */
+  .marquee-box::before, .marquee-box::after {
+    content: "";
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line) 30%, var(--line) 70%, transparent);
+    pointer-events: none;
+  }
+  .marquee-box::before { top: 0; }
+  .marquee-box::after { bottom: 0; }
+  .marquee-track {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    will-change: transform; /* 内容由 JS 填充两份，WAAPI 无缝滚动 */
+  }
+  .mq-item {
+    font-size: clamp(1.8rem, 6.5vmin, 3.4rem);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: .02em;
+    padding: 0 .38em;
+    transition: color .28s ease;
+  }
+  .mq-dot {
+    font-style: normal;
+    color: var(--brand);
+    font-size: .5em;
+    padding: 0 .38em;
+    opacity: .85;
+    transition: color .28s ease;
+  }
+  .mq-paused {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--brand);
+    background: var(--panel); /* 实底：暂停时盖住底下的滚动文字，避免透出显脏 */
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 18px;
+    box-shadow: 0 6px 24px -8px rgba(0, 0, 0, .35);
+    pointer-events: none;
+  }
+  .marquee-box.paused .mq-paused { display: block; }
+  .type-idx {
+    font-family: "Roboto Mono", "SF Mono", Monaco, Consolas, monospace;
+    font-size: .74rem;
+    letter-spacing: .22em;
+    color: var(--muted);
+  }
+  .standby-on .stage { display: none; }
+  .standby-on .type-wrap { display: flex; }
+
+  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes breathe { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- 手机横屏：紧凑布局，保证一屏放得下 ---------- */
+  @media (orientation: landscape) and (max-height: 520px) {
+    .stage { gap: 7px; padding: 10px 24px calc(46px + env(safe-area-inset-bottom)); }
+    .stage .logo { display: none; }
+    .clock-wrap { width: min(32vh, 150px); }
+    .clock-wrap::before { inset: -10%; }
+    .stage .clock { font-size: clamp(1.5rem, 11vh, 2.6rem); }
+    .stage .date { font-size: .8rem; }
+    .stage .hint { display: none; }
+    .type-wrap { gap: 8px; padding-bottom: calc(52px + env(safe-area-inset-bottom)); }
+    .mq-logo { width: 34px; height: 34px; }
+    .mq-item { font-size: clamp(1.3rem, 11vmin, 2.4rem); }
+    .marquee-box { padding: 10px 0; }
+    .type-idx { font-size: .66rem; }
+    .tech { padding: 5px 10px; gap: 6px; }
+  }
+
+  /* ---------- 顶部按钮 ---------- */
+  .tools {
+    position: fixed;
+    top: calc(12px + env(safe-area-inset-top));
+    right: 60px; /* 给右侧 theme-kit 主题按钮让位 */
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+  .tool-btn {
+    border: 1px solid var(--line);
+    background: var(--glass);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: .76rem;
+    font-weight: 600;
+    padding: 7px 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color .16s, border-color .16s, background-color .16s;
+  }
+  .tool-btn:hover { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); }
+  .tool-btn:active { transform: scale(.96); }
+
+  /* ---------- 编辑面板 ---------- */
+  .editor {
+    position: fixed;
+    inset: 0;
+    z-index: 200; /* 高于 theme-kit 的按钮层，编辑时不被浮层按钮打扰 */
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--scrim);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .editor.open { display: flex; }
+  .editor-box {
+    width: 100%;
+    max-width: 420px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .editor-box h2 { font-size: .95rem; font-weight: 700; margin-bottom: 6px; }
+  .editor-box .tip { font-size: .76rem; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
+  .editor-box textarea {
+    width: 100%;
+    height: 160px;
+    resize: vertical;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg1);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 16px; /* ≥16px，避免 iOS 聚焦自动放大整页 */
+    line-height: 1.7;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color .18s;
+  }
+  .editor-box textarea:focus { border-color: var(--brand); }
+  /* ---------- 文字样式设置 ---------- */
+  .editor-box { max-height: calc(100vh - 48px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .style-set {
+    margin-top: 14px;
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+    display: grid;
+    gap: 10px;
+  }
+  .style-title { font-size: .76rem; font-weight: 700; color: var(--text); }
+  .style-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .style-label { flex: 0 0 38px; font-size: .76rem; font-weight: 600; color: var(--muted); }
+  .style-row select {
+    flex: 1;
+    min-width: 0;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg1);
+    color: var(--text);
+    font-family: inherit;
+    font-size: .8rem;
+    padding: 0 8px;
+    outline: none;
+  }
+  .style-row select:focus { border-color: var(--brand); }
+  .style-row input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    accent-color: var(--brand);
+  }
+  /* 字号档位：默认 / 大 / 半屏 / 全屏 */
+  .size-seg { flex: 1; display: flex; gap: 6px; }
+  .size-seg button {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--bg1);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: .74rem;
+    font-weight: 600;
+    padding: 7px 0;
+    cursor: pointer;
+    transition: color .14s, border-color .14s, background-color .14s;
+  }
+  .size-seg button:hover { color: var(--brand); }
+  .size-seg button.on { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); }
+
+  /* 全屏字号态：只留滚动大字，其余展示元素全部隐藏 */
+  body.text-full .type-wrap { gap: 0; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  body.text-full .mq-logo,
+  body.text-full .type-idx,
+  body.text-full .tech,
+  body.text-full .tk-btn { display: none; }
+  body.text-full .marquee-box { padding: 0; }
+  body.text-full .marquee-box::before,
+  body.text-full .marquee-box::after { display: none; }
+  body.text-full .mq-item { line-height: 1.08; }
+  body.text-full .mq-dot { font-size: .22em; opacity: .4; }
+  body.text-full .tools { opacity: .3; transition: opacity .25s ease; }
+  body.text-full .tools:hover { opacity: 1; }
+  .size-val {
+    flex: 0 0 44px;
+    text-align: right;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: .72rem;
+    color: var(--muted);
+  }
+  .swatches { flex: 1; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .sw {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--line);
+    cursor: pointer;
+    transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+  }
+  .sw.theme { background: conic-gradient(#ff4d4f, #ffd60a, #34c77b, #4d9bff, #a37bff, #ff4d4f); }
+  .sw:hover { transform: scale(1.12); }
+  .sw.on { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); transform: scale(1.1); }
+  .swatches input[type="color"] {
+    width: 26px; height: 26px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+  }
+  .swatches input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+  .swatches input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+  .style-reset {
+    justify-self: start;
+    border: none;
+    background: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: .72rem;
+    color: var(--muted);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .style-reset:hover { color: var(--brand); }
+
+  .editor-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .editor-actions button {
+    flex: 1;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 0;
+    font-family: inherit;
+    font-size: .84rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter .15s, transform .1s;
+  }
+  .editor-actions button:active { transform: scale(.97); }
+  .btn-save { background: var(--brand); color: #04120b; }
+  .btn-clear { background: transparent; border: 1px solid var(--line) !important; color: var(--muted); }
+  .btn-cancel { background: rgba(255, 255, 255, .06); color: var(--text); }
+  .btn-save:hover, .btn-clear:hover, .btn-cancel:hover { filter: brightness(1.12); }
+
+  /* ---------- 底部技术支持 ---------- */
+  .tech {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    z-index: 8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: var(--glass);
+    border: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  .tech-label { font-size: .7rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .tech-id {
+    font-family: "SF Mono", Menlo, Consolas, Monaco, monospace;
+    font-size: .74rem;
+    font-weight: 700;
+    color: var(--brand);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .tech-copy {
+    flex: 0 0 auto;
+    border: none;
+    border-radius: 999px;
+    background: var(--brand);
+    color: #fff;
+    font-family: inherit;
+    font-size: .68rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform .12s ease, filter .15s ease;
+  }
+  .tech-copy:hover { filter: brightness(1.08); }
+  .tech-copy:active { transform: translateY(1px); }
+  .tech-copy.done { background: var(--brand-soft); color: var(--brand); }
+  .tech-copy.failed { background: var(--muted); color: #fff; }
+
+  /* ---------- 主题（theme-kit）：翡翠绿 / 暖阳橙 / 紫罗兰 / 墨石青，默认深海蓝 ---------- */
+  html[data-theme="emerald"]{
+    --bg1:#f4faf7; --bg2:#e7f1eb; --panel:#ffffff; --line:rgba(22,36,29,.12);
+    --text:#16241d; --muted:#6d8177; --brand:#2f9e6d; --brand-soft:rgba(47,158,109,.14);
+    --glass:rgba(22,36,29,.05); --scrim:rgba(244,250,247,.9);
+    --glow1:rgba(47,158,109,.08); --glow2:rgba(47,158,109,.05); --logo-glow:rgba(47,158,109,.3);
+  }
+  html[data-theme="sunset"]{
+    --bg1:#fdf8f4; --bg2:#f7ece2; --panel:#ffffff; --line:rgba(51,35,26,.12);
+    --text:#33231a; --muted:#96796a; --brand:#f2762e; --brand-soft:rgba(242,118,46,.13);
+    --glass:rgba(51,35,26,.05); --scrim:rgba(253,248,244,.9);
+    --glow1:rgba(242,118,46,.08); --glow2:rgba(242,118,46,.05); --logo-glow:rgba(242,118,46,.3);
+  }
+  html[data-theme="violet"]{
+    --bg1:#f6f7fd; --bg2:#eceef9; --panel:#ffffff; --line:rgba(22,25,43,.12);
+    --text:#16192b; --muted:#6b7590; --brand:#635bff; --brand-soft:rgba(99,91,255,.12);
+    --glass:rgba(22,25,43,.05); --scrim:rgba(246,247,253,.9);
+    --glow1:rgba(99,91,255,.08); --glow2:rgba(99,91,255,.05); --logo-glow:rgba(99,91,255,.3);
+  }
+  html[data-theme="ink"]{
+    --bg1:#0e1517; --bg2:#0a1012; --panel:#131b1e; --line:#212e31;
+    --text:#e2edee; --muted:#7d9194; --brand:#2dd4bf; --brand-soft:rgba(45,212,191,.12);
+    --glass:rgba(255,255,255,.05); --scrim:rgba(3,5,7,.88);
+    --glow1:rgba(45,212,191,.07); --glow2:rgba(45,212,191,.05); --logo-glow:rgba(45,212,191,.3);
+  }
+</style>
+</head>
+<body>
+
+  <!-- 默认待机内容（无自定义文字时展示） -->
+  <div class="stage" id="stageDefault">
+    <img class="logo" src="../assets/image/logo.png" alt="">
+    <div class="clock-wrap">
+      <div class="clock-ring"></div>
+      <svg class="analog-clock" viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="ac-face" cx="50" cy="50" r="47"/>
+        <g class="ac-ticks" id="acTicks"></g>
+        <line class="ac-h" x1="50" y1="50" x2="50" y2="29"/>
+        <line class="ac-m" x1="50" y1="50" x2="50" y2="19"/>
+        <line class="ac-s" x1="50" y1="56" x2="50" y2="15"/>
+        <circle class="ac-pin" cx="50" cy="50" r="3.2"/>
+      </svg>
+    </div>
+    <div class="clock" id="sbClock">--<span>:</span>--</div>
+    <div class="date" id="sbDate">--</div>
+    <div class="hint">特 立 独 行</div>
+  </div>
+
+  <!-- 自定义文字循环展示（无缝跑马灯，点击暂停 / 继续） -->
+  <div class="type-wrap" id="typeWrap">
+    <img class="mq-logo" src="../assets/image/logo.png" alt="">
+    <div class="marquee-box" id="marqueeBox" title="点击暂停 / 继续">
+      <div class="marquee-track" id="marqueeTrack"></div>
+      <span class="mq-paused">已暂停 · 点击继续</span>
+    </div>
+    <div class="type-idx" id="typeIdx"></div>
+  </div>
+
+  <div class="tools">
+    <button class="tool-btn" id="btnFull" type="button">全屏</button>
+    <button class="tool-btn" id="btnEdit" type="button">编辑</button>
+  </div>
+
+  <!-- 底部技术支持 -->
+  <div class="tech">
+    <span class="tech-label">技术支持 · 微信</span>
+    <span class="tech-id" id="techWx" role="button" tabindex="0" title="点击复制微信号">not_every</span>
+    <button class="tech-copy" id="techCopy" type="button">复制</button>
+  </div>
+
+  <!-- 编辑面板 -->
+  <div class="editor" id="editor">
+    <div class="editor-box">
+      <h2>循环展示文字</h2>
+      <p class="tip">每行一条，保存后以跑马灯无缝滚动循环展示；清空保存则回到默认待机内容。修改自动保存在本设备。</p>
+      <textarea id="editorText" placeholder="例如：&#10;特立独行&#10;全陪中 · 请勿打扰&#10;微信 not_every"></textarea>
+
+      <div class="style-set">
+        <div class="style-title">文字样式（调整即时预览）</div>
+        <div class="style-row">
+          <span class="style-label">字体</span>
+          <select id="styleFont">
+            <option value="">默认</option>
+            <option value="serif">衬线 · 宋体</option>
+            <option value="kai">楷体</option>
+            <option value="mono">等宽 · 代码风</option>
+            <option value="round">圆体 · 幼圆</option>
+          </select>
+        </div>
+        <div class="style-row">
+          <span class="style-label">字号</span>
+          <div class="size-seg" id="styleSizeSeg">
+            <button type="button" data-s="0">默认</button>
+            <button type="button" data-s="40">大</button>
+            <button type="button" data-s="half">半屏</button>
+            <button type="button" data-s="full">全屏</button>
+          </div>
+        </div>
+        <div class="style-row">
+          <span class="style-label">微调</span>
+          <input type="range" id="styleSize" min="20" max="60" step="2" value="40">
+          <span class="size-val" id="styleSizeVal">自定义</span>
+        </div>
+        <div class="style-row">
+          <span class="style-label">颜色</span>
+          <div class="swatches" id="styleSwatches">
+            <span class="sw theme" data-c="" title="跟随主题"></span>
+            <span class="sw" data-c="#ffffff" style="background:#ffffff" title="白色"></span>
+            <span class="sw" data-c="#16192b" style="background:#16192b" title="墨黑"></span>
+            <span class="sw" data-c="#ff4d4f" style="background:#ff4d4f" title="红"></span>
+            <span class="sw" data-c="#ff8f4d" style="background:#ff8f4d" title="橙"></span>
+            <span class="sw" data-c="#ffd60a" style="background:#ffd60a" title="金黄"></span>
+            <span class="sw" data-c="#34c77b" style="background:#34c77b" title="绿"></span>
+            <span class="sw" data-c="#4d9bff" style="background:#4d9bff" title="蓝"></span>
+            <span class="sw" data-c="#a37bff" style="background:#a37bff" title="紫"></span>
+            <input type="color" id="styleColor" value="#635bff" title="自定义颜色">
+          </div>
+        </div>
+        <button class="style-reset" id="styleReset" type="button">恢复默认样式</button>
+      </div>
+
+      <div class="editor-actions">
+        <button class="btn-cancel" id="btnCancel" type="button">取消</button>
+        <button class="btn-clear" id="btnClear" type="button">清空</button>
+        <button class="btn-save" id="btnSave" type="button">保存</button>
+      </div>
+    </div>
+  </div>
+
+<script src="../assets/js/theme-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+  var KEY = 'standby_texts';
+  var STYLE_KEY = 'standby_style';
+  var ta = document.getElementById('editorText');
+  var editor = document.getElementById('editor');
+  var body = document.body;
+  var lines = [];
+
+  try { lines = JSON.parse(localStorage.getItem(KEY) || '[]') || []; } catch (e) { lines = []; }
+  lines = lines.filter(function (s) { return typeof s === 'string' && s.trim(); });
+
+  /* ---------- 文字样式（字体 / 字号 / 颜色，随跑马灯保存） ---------- */
+  var FONTS = {
+    serif: 'Georgia, "Times New Roman", "Songti SC", SimSun, serif',
+    kai: '"Kaiti SC", KaiTi, STKaiti, serif',
+    mono: '"SF Mono", "Roboto Mono", Menlo, Consolas, monospace',
+    round: '"Yuanti SC", YouYuan, "幼圆", "PingFang SC", "Microsoft YaHei", sans-serif'
+  };
+  var style = { font: '', size: 0, color: '' };
+  try {
+    var savedStyle = JSON.parse(localStorage.getItem(STYLE_KEY) || '{}') || {};
+    if (FONTS[savedStyle.font]) style.font = savedStyle.font;
+    if (savedStyle.size === 'half' || savedStyle.size === 'full') style.size = savedStyle.size;
+    else if (savedStyle.size >= 20 && savedStyle.size <= 60) style.size = Math.round(savedStyle.size / 2) * 2;
+    if (typeof savedStyle.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(savedStyle.color)) style.color = savedStyle.color;
+  } catch (e) { /* 忽略 */ }
+  var selFont = document.getElementById('styleFont');
+  var rngSize = document.getElementById('styleSize');
+  var sizeVal = document.getElementById('styleSizeVal');
+  var sizeSeg = document.getElementById('styleSizeSeg');
+  var colorInput = document.getElementById('styleColor');
+  var swWrap = document.getElementById('styleSwatches');
+  /* 字号值 → CSS 值：0=默认跟随主题；'half'/'full'=视口档位；数字=px 微调 */
+  function sizeCss(v) {
+    if (v === 'half') return '45vh';
+    if (v === 'full') return '85vh';
+    return v ? v + 'px' : '';
+  }
+  function persistStyle() {
+    try { localStorage.setItem(STYLE_KEY, JSON.stringify(style)); } catch (e) { /* 忽略 */ }
+  }
+  function syncStyleUI() {
+    selFont.value = style.font;
+    Array.prototype.forEach.call(sizeSeg.querySelectorAll('button'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-s') === String(style.size));
+    });
+    if (typeof style.size === 'number' && style.size) {
+      rngSize.value = String(style.size);
+      sizeVal.textContent = style.size + 'px';
+    } else {
+      sizeVal.textContent = style.size === 'half' ? '45vh' : style.size === 'full' ? '85vh' : '自定义';
+    }
+    if (style.color) colorInput.value = style.color;
+    Array.prototype.forEach.call(swWrap.querySelectorAll('.sw'), function (b) {
+      b.classList.toggle('on', (b.getAttribute('data-c') || '') === (style.color || ''));
+    });
+  }
+
+  /* ---------- 默认待机：圆形表盘 + 数字时钟（每秒驱动） ---------- */
+  var sbClock = document.getElementById('sbClock');
+  var sbDate = document.getElementById('sbDate');
+  var acH = document.querySelector('.analog-clock .ac-h');
+  var acM = document.querySelector('.analog-clock .ac-m');
+  var acS = document.querySelector('.analog-clock .ac-s');
+  var WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  function pad(v) { return (v < 10 ? '0' : '') + v; }
+  // 12 个刻度：0/3/6/9 点为主刻度
+  (function buildTicks() {
+    var g = document.getElementById('acTicks');
+    if (!g) return;
+    for (var i = 0; i < 12; i++) {
+      var l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      l.setAttribute('x1', '50'); l.setAttribute('y1', '6.5');
+      l.setAttribute('x2', '50'); l.setAttribute('y2', i % 3 === 0 ? '12.5' : '10.5');
+      l.setAttribute('transform', 'rotate(' + i * 30 + ' 50 50)');
+      if (i % 3 === 0) l.setAttribute('class', 'major');
+      g.appendChild(l);
+    }
+  })();
+  function setHands(n) {
+    var h = n.getHours() % 12, m = n.getMinutes(), s = n.getSeconds();
+    if (acH) acH.style.transform = 'rotate(' + (h * 30 + m * 0.5) + 'deg)';
+    if (acM) acM.style.transform = 'rotate(' + (m * 6 + s * 0.1) + 'deg)'; /* 分针平滑走 */
+    if (acS) acS.style.transform = 'rotate(' + (s * 6) + 'deg)';
+  }
+  function tickClock() {
+    var n = new Date();
+    if (sbClock) sbClock.innerHTML = pad(n.getHours()) + '<span>:</span>' + pad(n.getMinutes());
+    if (sbDate) sbDate.textContent = n.getFullYear() + '年' + pad(n.getMonth() + 1) + '月' + pad(n.getDate()) + '日 ' + WEEK[n.getDay()];
+    setHands(n);
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  /* ---------- 跑马灯循环：所有条目拼接两份，无缝水平滚动，点击暂停 / 继续 ---------- */
+  var typeIdx = document.getElementById('typeIdx');
+  var mqBox = document.getElementById('marqueeBox');
+  var mqTrack = document.getElementById('marqueeTrack');
+  var mqAnim = null;
+
+  function buildMarquee(texts) {
+    var list = (texts && texts.length) ? texts : lines;
+    // 全屏字号态：隐藏 logo / 进度 / 装饰线 / 技术支持条等，只留滚动大字
+    body.classList.toggle('text-full', style.size === 'full' && list.length > 0);
+    if (mqAnim) { mqAnim.cancel(); mqAnim = null; }
+    mqBox.classList.remove('paused');
+    mqTrack.innerHTML = '';
+    if (!list.length) return;
+
+    // 内容重复两份：track 从 0 滚到 -50% 再瞬间归位，视觉上无缝
+    var styleFont = style.font && FONTS[style.font] ? FONTS[style.font] : '';
+    var styleSize = sizeCss(style.size);
+    var frag = document.createDocumentFragment();
+    for (var rep = 0; rep < 2; rep++) {
+      list.forEach(function (s) {
+        var span = document.createElement('span');
+        span.className = 'mq-item';
+        span.textContent = s;
+        if (styleFont) span.style.fontFamily = styleFont;
+        if (styleSize) span.style.fontSize = styleSize;
+        if (style.color) span.style.color = style.color;
+        var dot = document.createElement('i');
+        dot.className = 'mq-dot';
+        dot.textContent = '✦';
+        if (style.color) dot.style.color = style.color;
+        frag.appendChild(span);
+        frag.appendChild(dot);
+      });
+    }
+    mqTrack.appendChild(frag);
+
+    // 速度恒定 55px/s：按单份内容宽度换算时长，长内容滚得久
+    var half = mqTrack.scrollWidth / 2;
+    var dur = Math.max(9000, Math.round(half / 55 * 1000));
+    mqAnim = mqTrack.animate(
+      [{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }],
+      { duration: dur, iterations: Infinity }
+    );
+
+    mqBox.onclick = function () {
+      if (!mqAnim) return;
+      if (mqAnim.playState === 'paused') { mqAnim.play(); mqBox.classList.remove('paused'); }
+      else { mqAnim.pause(); mqBox.classList.add('paused'); }
+    };
+    typeIdx.textContent = list.length + ' 条内容 · 点击文字暂停 / 继续';
+  }
+
+  /* 样式调整的即时预览：编辑器开着且有未保存草稿时，直接用草稿预览 */
+  function previewMarquee() {
+    var draft = [];
+    if (editor.classList.contains('open')) {
+      draft = ta.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    }
+    buildMarquee(draft.length ? draft : null);
+  }
+
+  function render() {
+    body.classList.toggle('standby-on', lines.length > 0);
+    buildMarquee();
+  }
+  render();
+
+  /* ---------- 编辑面板 ---------- */
+  function openEditor() {
+    ta.value = lines.join('\n');
+    syncStyleUI();
+    editor.classList.add('open');
+    if (document.activeElement) document.activeElement.blur();
+  }
+  function closeEditor() {
+    editor.classList.remove('open');
+    render(); // 丢弃草稿预览，恢复已保存内容（含 text-full 状态）
+  }
+  document.getElementById('btnEdit').addEventListener('click', openEditor);
+  document.getElementById('btnCancel').addEventListener('click', closeEditor);
+  document.getElementById('btnClear').addEventListener('click', function () { ta.value = ''; ta.focus(); });
+  document.getElementById('btnSave').addEventListener('click', function () {
+    lines = ta.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    try { localStorage.setItem(KEY, JSON.stringify(lines)); } catch (e) { /* 忽略隐私模式 */ }
+    persistStyle();
+    closeEditor();
+    render();
+  });
+
+  /* ---------- 样式控件：调整即时预览，保存时持久化 ---------- */
+  selFont.addEventListener('change', function () {
+    style.font = selFont.value;
+    previewMarquee();
+  });
+  rngSize.addEventListener('input', function () {
+    style.size = +rngSize.value; // 拖滑块 = 进入 px 微调，档位高亮自动清除
+    syncStyleUI();
+    previewMarquee();
+  });
+  sizeSeg.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    var v = b.getAttribute('data-s');
+    style.size = v === 'half' || v === 'full' ? v : +v;
+    syncStyleUI();
+    previewMarquee();
+  });
+  colorInput.addEventListener('input', function () {
+    style.color = colorInput.value;
+    syncStyleUI();
+    previewMarquee();
+  });
+  swWrap.addEventListener('click', function (e) {
+    var b = e.target.closest('.sw');
+    if (!b) return;
+    style.color = b.getAttribute('data-c') || '';
+    syncStyleUI();
+    previewMarquee();
+  });
+  document.getElementById('styleReset').addEventListener('click', function () {
+    style = { font: '', size: 0, color: '' };
+    persistStyle(); // 恢复默认立即生效并持久化，避免“点了没反应”
+    syncStyleUI();
+    previewMarquee();
+  });
+  syncStyleUI();
+  editor.addEventListener('click', function (e) { if (e.target === editor) closeEditor(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && editor.classList.contains('open')) closeEditor();
+  });
+
+  /* ---------- 全屏切换 ---------- */
+  var btnFull = document.getElementById('btnFull');
+  btnFull.addEventListener('click', function () {
+    if (document.fullscreenElement) {
+      if (document.exitFullscreen) document.exitFullscreen();
+    } else if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(function () { /* 移动端 Safari 可能拒绝 */ });
+    }
+  });
+
+  /* ---------- 底部技术支持：复制微信号 ---------- */
+  var TECH_WX = 'not_every';
+  var techBtn = document.getElementById('techCopy');
+  var techId = document.getElementById('techWx');
+  var techTimer = null;
+  function techDone(ok) {
+    clearTimeout(techTimer);
+    if (ok) {
+      techBtn.textContent = '已复制 ✓';
+      techBtn.classList.add('done');
+      techBtn.classList.remove('failed');
+    } else {
+      techBtn.textContent = '长按';
+      techBtn.classList.add('failed');
+      techBtn.classList.remove('done');
+    }
+    techTimer = setTimeout(function () {
+      techBtn.textContent = '复制';
+      techBtn.classList.remove('done');
+      techBtn.classList.remove('failed');
+    }, 1600);
+  }
+  function copyTech() {
+    function fallback() {
+      var t = document.createElement('textarea');
+      t.value = TECH_WX;
+      t.style.position = 'fixed';
+      t.style.opacity = '0';
+      document.body.appendChild(t);
+      t.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { /* 忽略 */ }
+      document.body.removeChild(t);
+      techDone(ok);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(TECH_WX).then(function () { techDone(true); }, fallback);
+    } else { fallback(); }
+  }
+  techBtn.addEventListener('click', copyTech);
+  techId.addEventListener('click', copyTech);
+  techId.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); copyTech(); }
+  });
+
+  /* ---------- 屏幕常亮（支持 Wake Lock 的浏览器） ---------- */
+  var wakeLock = null;
+  function reqWake() {
+    if (!('wakeLock' in navigator)) return;
+    navigator.wakeLock.request('screen').then(function (wl) {
+      wakeLock = wl;
+      wl.addEventListener('release', function () { wakeLock = null; });
+    }).catch(function () { /* 被拒绝则正常熄屏 */ });
+  }
+  reqWake();
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && !wakeLock) reqWake();
+  });
+})();
+</script>
+</body>
+</html>

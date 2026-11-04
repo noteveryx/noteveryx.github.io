@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#070A08">
 <title>行动突围护航社 · 三角洲行动纯绿色护航</title>
 <meta name="description" content="三角洲行动纯绿色护航：真人手打、零外挂零脚本、不索要账号。端游手游都接，闲鱼担保交易，追缴赔付。">
-<link rel="icon" type="image/png" href="assets/favicon-round.png">
-<link rel="apple-touch-icon" href="assets/logo.png">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
 <style>
 /* ==========================================================
    1. 主题变量
@@ -1240,6 +1240,10 @@ html[data-theme="amber"] .h-price{color:var(--acid-2)}
     <div style="font-family:var(--mono);font-size:11px;color:var(--muted-2);text-align:right;line-height:2">
       <div>© 2026 行动突围护航社</div>
       <div>BREAKOUT SQUAD</div>
+      <div style="margin-top:8px;font-family:inherit">技术支持 · 微信
+        <span id="techWx" role="button" tabindex="0" title="点击复制微信号"
+              style="color:var(--acid);font-weight:700;cursor:pointer;user-select:all;-webkit-user-select:all">not_every</span>
+      </div>
     </div>
   </div>
 </footer>
@@ -1569,6 +1573,25 @@ html[data-theme="amber"] .h-price{color:var(--acid-2)}
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(t).catch(fallback);
     } else { fallback(); }
+  }
+
+  /* 页脚技术支持微信：点击复制（复用 copyText；toast 元素为全局 #toast，类名 on） */
+  var techWx = document.getElementById('techWx');
+  if (techWx) {
+    var toastGlobal = document.getElementById('toast');
+    var techToastTimer = null;
+    var techShowToast = function (t) {
+      if (!toastGlobal) return;
+      toastGlobal.textContent = t;
+      toastGlobal.classList.add('on');
+      clearTimeout(techToastTimer);
+      techToastTimer = setTimeout(function () { toastGlobal.classList.remove('on'); }, 1900);
+    };
+    var techCopyHandler = function () { copyText('not_every'); techShowToast('技术支持微信已复制'); };
+    techWx.addEventListener('click', techCopyHandler);
+    techWx.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); techCopyHandler(); }
+    });
   }
 
   function setChip(chip, val) {

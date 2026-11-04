@@ -17,13 +17,19 @@
 
   var PAGES = [
     {
-      file: 'game-service-quotes.html',
+      file: 'html/game-service-quotes.html',
       tag: '工具',
       name: '文案快捷复制',
       desc: '10 条接单常用话术，一键复制，手机端直接转发给客户。'
     },
     {
-      file: 'delta-escort.html',
+      file: 'html/standby.html',
+      tag: '工具',
+      name: '待机展示',
+      desc: '全屏屏保页，可自定义文字循环展示，默认显示待机时钟。'
+    },
+    {
+      file: 'html/delta-escort.html',
       tag: '落地页',
       name: '行动突围护航社',
       desc: '纯绿双护护航落地页，正文以 V6 定稿，5 套主题一键切换。'

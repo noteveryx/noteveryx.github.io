@@ -16,13 +16,13 @@
 
 | 类别 | 用了什么 | 备注 |
 | --- | --- | --- |
-| 静态站点引擎 | **docsify**（`assets/docsify.min.js`） | 客户端渲染 markdown，不需要构建步骤 |
-| 主题样式 | **docsify-vue** 主题（`assets/vue.css`）+ `index.html` 里手写的 `<style>` 兜底 | |
+| 静态站点引擎 | **docsify**（`assets/js/docsify.min.js`） | 客户端渲染 markdown，不需要构建步骤 |
+| 主题样式 | **docsify-vue** 主题（`assets/css/vue.css`）+ `index.html` 里手写的 `<style>` 兜底 | |
 | 客户端能力 | 纯 JS 插件 | docsify 钩子机制（`window.$docsify.plugins.push(fn)`） |
 | 侧栏维护脚本 | **Python 3**（`update_sidebar.py`） | 没有任何第三方依赖，stdlib-only |
 | 工作流自动化 | **workbuddy**（`.workbuddy/`，每天 10:30 跑脚本 + 同步到示例知识库） | workbuddy 由 Claw 项目托管 |
-| 搜索引擎 | docsify 自带的 `search.min.js`（全局）+ 两个**自定义** docsify 插件：<br>① `assets/ebook-search.js`（电子资源）<br>② `assets/living-better-search.js`（高性价比） | |
-| 数据集 | `assets/books.json`（24,071 条电子书，~6.8 MB）<br>`assets/living-better.json`（34 章元数据，~20 KB） | 仅做静态查询，不需要服务器 |
+| 搜索引擎 | docsify 自带的 `search.min.js`（全局）+ 两个**自定义** docsify 插件：<br>① `assets/js/ebook-search.js`（电子资源）<br>② `assets/js/living-better-search.js`（高性价比） | |
+| 数据集 | `assets/json/books.json`（24,071 条电子书，~6.8 MB）<br>`assets/json/living-better.json`（34 章元数据，~20 KB） | 仅做静态查询，不需要服务器 |
 
 ---
 
@@ -78,14 +78,14 @@ docsify 自带：点一下回到 `README.md`，那里有今日新增的文章列
 - 一个全库搜索框（24,071 本电子书，标题 / 作者 / 分类关键词）
 - 「热门分类」chips，点击自动按分类筛选
 
-搜索 UI 由 `assets/ebook-search.js` 在 docsify `doneEach` 钩子里渲染；数据来自 `assets/books.json`。本菜单**已锁定**（见第 6 节）。
+搜索 UI 由 `assets/js/ebook-search.js` 在 docsify `doneEach` 钩子里渲染；数据来自 `assets/json/books.json`。本菜单**已锁定**（见第 6 节）。
 
 ### 4.3 高性价比（`高性价比` + 34 个章节子项）
 单页面入口 + 34 章节目录。打开后看到：
 - 搜索框（按章节标题 / 摘要关键词过滤，34 张卡片）
 - 34 个章节卡片，点击进入对应章节
 
-搜索 UI 由 `assets/living-better-search.js` 渲染；数据 `assets/living-better.json`。**章节按编号正序排列**（01, 02, ..., 34），因为这内容是「按性价比排序的人生指南」，阅读顺序有意义。本菜单**已锁定**。
+搜索 UI 由 `assets/js/living-better-search.js` 渲染；数据 `assets/json/living-better.json`。**章节按编号正序排列**（01, 02, ..., 34），因为这内容是「按性价比排序的人生指南」，阅读顺序有意义。本菜单**已锁定**。
 
 ### 4.4 申论
 日常公考笔记，按日期命名：`docs/申论/2026-XX-XX.md`，侧栏默认**倒序排**（最新在上）。
@@ -204,15 +204,15 @@ LOCKED_ENTRIES = [
 
 ## 7. 自定义插件速查
 
-### 7.1 `assets/ebook-search.js`
+### 7.1 `assets/js/ebook-search.js`
 - 路由匹配：当前 hash 含「电子资源」时初始化
-- 数据：`assets/books.json`，fallback 路径 `../assets/books.json` / `/assets/books.json`
+- 数据：`assets/json/books.json`，fallback 路径 `../assets/json/books.json` / `/assets/json/books.json`
 - 渲染：搜索框 + 状态行 + 热门分类 chips（top 30，按数量降序）+ 结果列表（卡片 100 条上限）
 - 命令行：`python -m http.server 8765` 启动后访问 `/docs/电子资源.md`
 
-### 7.2 `assets/living-better-search.js`
+### 7.2 `assets/js/living-better-search.js`
 - 路由匹配：当前 hash 含「高性价比」时初始化
-- 数据：`assets/living-better.json`
+- 数据：`assets/json/living-better.json`
 - 渲染：搜索框 + 34 张章节卡片（按编号升序）
 - 命令行：同上路径 `/docs/高性价比.md`
 
@@ -235,10 +235,10 @@ LOCKED_ENTRIES = [
 | 侧栏里没有我刚加的栏目 | 没跑 `update_sidebar.py`；等 10:30 自动跑，或手动跑 |
 | 跑完脚本后，我的某个栏目消失了 | 那个栏目**不**在锁定名单里，且它的目录被删掉了；要么把目录找回来，要么在 LOCKED_ENTRIES 里加条兜底 |
 | 「今日新增」表里软考中级顺序又乱了 | `update_sidebar.py` 顶部的 `SOFT_EXAM_MIDDLE_ORDER` 被改过，恢复成 [system集, 监, 管] |
-| 浏览器侧栏 hover 没效果 | 1) `Ctrl+Shift+R` 硬刷；2) 检查 `<script src="assets/living-better-search.js">` 是否被注释；3) DevTools 看 console 有没有 404 |
+| 浏览器侧栏 hover 没效果 | 1) `Ctrl+Shift+R` 硬刷；2) 检查 `<script src="assets/js/living-better-search.js">` 是否被注释；3) DevTools 看 console 有没有 404 |
 | hover 一级菜单子项跟着变 | 说明你的浏览器版本不支持 `:has(ul)`；改用兜底方案，给 `<p>` 的子 `<ul>` 单独写 `text-decoration: none` reset |
-| 搜索「电子资源」返回空白 | 1) `assets/books.json` 是否还在；2) DevTools 看 Network 里 `assets/books.json` 是不是 200；3) 直接访问 `/assets/books.json` 看是否 JSON 合法 |
-| 「高性价比」卡片 hover 整片变成手型 | 上一次会话改过 `assets/ebook-search.js`；它的卡片渲染层从 `<div>` 升级成了 `<a>`，确保手里那一份也是升级版 |
+| 搜索「电子资源」返回空白 | 1) `assets/json/books.json` 是否还在；2) DevTools 看 Network 里 `assets/json/books.json` 是不是 200；3) 直接访问 `/assets/json/books.json` 看是否 JSON 合法 |
+| 「高性价比」卡片 hover 整片变成手型 | 上一次会话改过 `assets/js/ebook-search.js`；它的卡片渲染层从 `<div>` 升级成了 `<a>`，确保手里那一份也是升级版 |
 | 更新脚本报 SHA256 mismatch 或 _sidebar 被改坏 | 用 build_kb.sh 备份恢复，或从 git 看 diff |
 
 ---

@@ -1,6 +1,6 @@
 /*!
  * ebook-search.js — Docsify plugin for 房屋电子资源 页面
- * 用法：在 index.html 末尾追加 <script src="assets/ebook-search.js"></script>
+ * 用法：在 index.html 末尾追加 <script src="assets/js/ebook-search.js"></script>
  * 触发：路由命中 docs/电子资源 (含 id=...) 时自动初始化搜索 UI
  * 能力:
  *   - 关键词搜索: 模糊匹配 title / author / category
@@ -13,8 +13,8 @@
   var ALL_BOOKS = [];
   var MAX_RESULTS = 100;
   var PAGE_KEY = '电子资源';
-  var SEARCH_PATH = 'assets/books.json';
-  var FALLBACK_PATHS = ['../assets/books.json', './assets/books.json', '/assets/books.json'];
+  var SEARCH_PATH = 'assets/json/books.json';
+  var FALLBACK_PATHS = ['../assets/json/books.json', './assets/json/books.json', '/assets/json/books.json'];
   var TOP_N_CATEGORIES = 30;
   var initialized = false;
 
