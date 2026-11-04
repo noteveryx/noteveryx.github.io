@@ -121,6 +121,150 @@
     letter-spacing: .12em;
     animation: breathe 5s ease-in-out infinite;
   }
+  .stage-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(12px, 2.4vmin, 20px);
+  }
+
+  /* ---------- PC 宽屏补充信息（窄屏隐藏） ---------- */
+  .stage-side { display: none; }
+  .cal-card {
+    background: var(--glass);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 16px 16px 14px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-title {
+    font-size: .95rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cal-title:hover { color: var(--brand); }
+  .cal-nav { display: flex; gap: 6px; }
+  .cal-nav button {
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: .9rem;
+    line-height: 1;
+    cursor: pointer;
+    outline: none; /* 触摸/点击后不出现虚线焦点框 */
+    -webkit-tap-highlight-color: transparent;
+    transition: color .14s, border-color .14s, transform .12s ease;
+  }
+  .cal-nav button:hover { color: var(--brand); border-color: var(--brand); }
+  .cal-nav button:active { transform: scale(.92); }
+  .cal-nav button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+  .cal-wd { font-size: .62rem; font-weight: 600; color: var(--muted); text-align: center; padding: 2px 0 4px; }
+  .cal-d {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-height: 38px;
+    padding: 2px 0;
+    border-radius: 9px;
+    color: var(--text);
+    line-height: 1.12;
+    transition: background-color .14s;
+  }
+  .cal-d-num { font-size: .78rem; font-variant-numeric: tabular-nums; }
+  .cal-d-sub {
+    font-size: .54rem;
+    color: var(--muted);
+    white-space: nowrap;
+    min-height: .8em;
+    letter-spacing: -.02em;
+  }
+  .cal-d-sub.term { color: var(--brand); font-weight: 700; }      /* 二十四节气 */
+  .cal-d-sub.first { color: var(--text); opacity: .78; font-weight: 600; } /* 农历初一显示月名 */
+  .cal-d.dim { color: var(--muted); opacity: .32; }
+  .cal-d.today {
+    background: var(--brand);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 4px 14px -4px var(--logo-glow);
+  }
+  .cal-d.today .cal-d-sub { color: rgba(255, 255, 255, .82); }
+  .cal-d.today .cal-d-sub.term { color: #fff; }
+  /* 节气当天恰好是农历初一：小字让位给节气，用左上小点提示「月初」 */
+  .cal-d.first-mark { position: relative; }
+  .cal-d.first-mark::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 6px;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--brand);
+    opacity: .72;
+  }
+  .cal-d.today.first-mark::after { background: #fff; opacity: .9; }
+  .stat-list { display: grid; gap: 12px; padding: 2px 4px; }
+  .stat { display: grid; gap: 6px; }
+  .stat-top { display: flex; align-items: baseline; justify-content: space-between; font-size: .7rem; color: var(--muted); }
+  .stat-top b {
+    font-family: "Roboto Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-size: .76rem;
+    color: var(--text);
+    font-weight: 700;
+  }
+  .stat-bar { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .stat-bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--brand); transition: width .6s ease; }
+
+  /* 宽且有高度：改为左右两栏，右侧补充月历与进度；尺寸随屏幕一起放大，避免大屏四周空旷 */
+  @media (min-width: 1024px) and (min-height: 620px) {
+    .stage {
+      flex-direction: row;
+      gap: clamp(56px, 9vw, 220px);
+      padding: 44px 48px calc(78px + env(safe-area-inset-bottom));
+    }
+    .stage-main { gap: clamp(16px, 2.8vmin, 30px); }
+    .stage .logo { width: clamp(56px, 6.4vmin, 96px); height: clamp(56px, 6.4vmin, 96px); }
+    .clock-wrap { width: clamp(210px, 33vmin, 540px); }
+    .stage .clock { font-size: clamp(3.4rem, 13.5vmin, 10rem); }
+    .stage .date { font-size: clamp(1rem, 2.7vmin, 1.7rem); }
+    .stage .hint { font-size: clamp(.82rem, 1.7vmin, 1.25rem); }
+    .stage-side {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(20px, 2.6vmin, 40px);
+      width: clamp(330px, 27vw, 660px);
+      text-align: left;
+      animation: sideIn .6s cubic-bezier(.2, .7, .3, 1) both;
+    }
+    .cal-card { padding: clamp(16px, 2vmin, 26px) clamp(16px, 2vmin, 26px) clamp(14px, 1.8vmin, 22px); }
+    .cal-head { margin-bottom: clamp(10px, 1.4vmin, 18px); }
+    .cal-title { font-size: clamp(.98rem, 1.9vmin, 1.4rem); }
+    .cal-nav { gap: 8px; }
+    .cal-nav button { width: clamp(26px, 3vmin, 38px); height: clamp(26px, 3vmin, 38px); font-size: clamp(.9rem, 1.6vmin, 1.2rem); border-radius: 9px; }
+    .cal-wd { font-size: clamp(.64rem, 1.2vmin, 1rem); padding: 2px 0 clamp(4px, .9vmin, 10px); }
+    .cal-d { min-height: clamp(40px, 4.9vmin, 70px); border-radius: 10px; }
+    .cal-d-num { font-size: clamp(.8rem, 1.5vmin, 1.22rem); }
+    .cal-d-sub { font-size: clamp(.55rem, 1.05vmin, .88rem); }
+    .stat-list { gap: clamp(12px, 1.8vmin, 20px); }
+    .stat { gap: clamp(6px, .9vmin, 10px); }
+    .stat-top { font-size: clamp(.72rem, 1.25vmin, .98rem); }
+    .stat-top b { font-size: clamp(.78rem, 1.35vmin, 1.05rem); }
+    .stat-bar { height: clamp(4px, .6vmin, 7px); }
+  }
+  @keyframes sideIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
   /* ---------- 循环文字（跑马灯态） ---------- */
   .type-wrap {
@@ -229,6 +373,81 @@
     .marquee-box { padding: 10px 0; }
     .type-idx { font-size: .66rem; }
     .tech { padding: 5px 10px; gap: 6px; }
+  }
+
+  /* ---------- 手机竖屏：月历放在时钟下方（隐藏进度条，格子紧凑） ---------- */
+  @media (max-width: 1023px) and (orientation: portrait) {
+    .stage {
+      gap: 14px;
+      justify-content: center;
+      padding: 18px 16px calc(62px + env(safe-area-inset-bottom));
+    }
+    .stage-side {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      width: min(340px, 92vw);
+      animation: sideIn .6s cubic-bezier(.2, .7, .3, 1) both;
+    }
+    .stage-side .stat-list { display: none; } /* 进度条留给 PC 宽屏 */
+    .cal-card { padding: 12px 12px 10px; border-radius: 16px; }
+    .cal-head { margin-bottom: 6px; }
+    .cal-title { font-size: .88rem; }
+    .cal-nav button { width: 24px; height: 24px; font-size: .82rem; }
+    .cal-wd { font-size: .56rem; padding: 0 0 3px; }
+    .cal-d { min-height: 33px; }
+    .cal-d-num { font-size: .72rem; }
+    .cal-d-sub { font-size: .5rem; }
+    .cal-d.first-mark::after { top: 3px; left: 4px; }
+  }
+  /* 竖屏但屏幕矮（老机型）：进一步压缩 */
+  @media (max-width: 1023px) and (orientation: portrait) and (max-height: 700px) {
+    .stage { gap: 10px; padding: 12px 14px calc(56px + env(safe-area-inset-bottom)); }
+    .cal-card { padding: 9px 10px 7px; border-radius: 14px; }
+    .cal-d { min-height: 26px; }
+    .cal-d-num { font-size: .66rem; }
+    .cal-d-sub { font-size: .44rem; }
+    .cal-nav button { width: 22px; height: 22px; }
+  }
+  /* 超矮竖屏（320×568 一类）：收掉 logo、缩表盘、月历再压扁 */
+  @media (max-width: 1023px) and (orientation: portrait) and (max-height: 620px) {
+    .stage { gap: 8px; padding: 8px 12px calc(50px + env(safe-area-inset-bottom)); }
+    .stage .logo { display: none; }
+    .clock-wrap { width: min(52vmin, 150px); }
+    .clock-wrap::before { inset: -8%; }
+    .stage .clock { font-size: clamp(1.6rem, 9vmin, 2.2rem); }
+    .cal-card { padding: 8px 8px 6px; border-radius: 12px; }
+    .cal-head { margin-bottom: 2px; }
+    .cal-title { font-size: .8rem; }
+    .cal-nav button { width: 20px; height: 20px; font-size: .74rem; }
+    .cal-wd { font-size: .5rem; padding: 0 0 1px; }
+    .cal-d { min-height: 22px; }
+    .cal-d-num { font-size: .62rem; }
+    .cal-d-sub { font-size: .4rem; }
+    .cal-d.first-mark::after { top: 2px; left: 3px; width: 2.5px; height: 2.5px; }
+  }
+
+  /* ---------- 手机横屏：时钟在左，月历在右并排 ---------- */
+  @media (orientation: landscape) and (max-height: 520px) and (min-width: 620px) {
+    .stage { flex-direction: row; gap: 18px; padding: 8px 18px calc(44px + env(safe-area-inset-bottom)); }
+    .stage-side {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      width: min(280px, 38vw);
+      animation: sideIn .6s cubic-bezier(.2, .7, .3, 1) both;
+    }
+    .stage-side .stat-list { display: none; }
+    .cal-card { padding: 6px 9px 5px; border-radius: 12px; }
+    .cal-head { margin-bottom: 3px; }
+    .cal-title { font-size: .78rem; }
+    .cal-nav { gap: 4px; }
+    .cal-nav button { width: 20px; height: 20px; font-size: .74rem; border-radius: 6px; }
+    .cal-wd { font-size: .52rem; padding: 0 0 1px; }
+    .cal-d { min-height: 21px; border-radius: 6px; gap: 0; }
+    .cal-d-num { font-size: .62rem; }
+    .cal-d-sub { font-size: .42rem; min-height: .7em; }
+    .cal-d.first-mark::after { top: 2px; left: 3px; width: 2.5px; height: 2.5px; }
   }
 
   /* ---------- 顶部按钮 ---------- */
@@ -493,21 +712,56 @@
 
   <!-- 默认待机内容（无自定义文字时展示） -->
   <div class="stage" id="stageDefault">
-    <img class="logo" src="../assets/image/logo.png" alt="">
-    <div class="clock-wrap">
-      <div class="clock-ring"></div>
-      <svg class="analog-clock" viewBox="0 0 100 100" aria-hidden="true">
-        <circle class="ac-face" cx="50" cy="50" r="47"/>
-        <g class="ac-ticks" id="acTicks"></g>
-        <line class="ac-h" x1="50" y1="50" x2="50" y2="29"/>
-        <line class="ac-m" x1="50" y1="50" x2="50" y2="19"/>
-        <line class="ac-s" x1="50" y1="56" x2="50" y2="15"/>
-        <circle class="ac-pin" cx="50" cy="50" r="3.2"/>
-      </svg>
+    <div class="stage-main">
+      <img class="logo" src="../assets/image/logo.png" alt="">
+      <div class="clock-wrap">
+        <div class="clock-ring"></div>
+        <svg class="analog-clock" viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="ac-face" cx="50" cy="50" r="47"/>
+          <g class="ac-ticks" id="acTicks"></g>
+          <line class="ac-h" x1="50" y1="50" x2="50" y2="29"/>
+          <line class="ac-m" x1="50" y1="50" x2="50" y2="19"/>
+          <line class="ac-s" x1="50" y1="56" x2="50" y2="15"/>
+          <circle class="ac-pin" cx="50" cy="50" r="3.2"/>
+        </svg>
+      </div>
+      <div class="clock" id="sbClock">--<span>:</span>--</div>
+      <div class="date" id="sbDate">--</div>
+      <div class="hint">特 立 独 行</div>
     </div>
-    <div class="clock" id="sbClock">--<span>:</span>--</div>
-    <div class="date" id="sbDate">--</div>
-    <div class="hint">特 立 独 行</div>
+
+    <!-- PC 宽屏时展示：月历 + 时间进度 -->
+    <aside class="stage-side">
+      <div class="cal-card">
+        <div class="cal-head">
+          <div class="cal-title" id="calTitle" title="点击回到本月">--</div>
+          <div class="cal-nav">
+            <button type="button" id="calPrev" aria-label="上个月">‹</button>
+            <button type="button" id="calNext" aria-label="下个月">›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="calGrid">
+          <span class="cal-wd">一</span><span class="cal-wd">二</span><span class="cal-wd">三</span>
+          <span class="cal-wd">四</span><span class="cal-wd">五</span><span class="cal-wd">六</span>
+          <span class="cal-wd">日</span>
+        </div>
+      </div>
+
+      <div class="stat-list">
+        <div class="stat">
+          <div class="stat-top"><span>今年已过</span><b id="pctYear">--</b></div>
+          <div class="stat-bar"><i id="barYear"></i></div>
+        </div>
+        <div class="stat">
+          <div class="stat-top"><span>本月已过</span><b id="pctMonth">--</b></div>
+          <div class="stat-bar"><i id="barMonth"></i></div>
+        </div>
+        <div class="stat">
+          <div class="stat-top"><span>本周已过</span><b id="pctWeek">--</b></div>
+          <div class="stat-bar"><i id="barWeek"></i></div>
+        </div>
+      </div>
+    </aside>
   </div>
 
   <!-- 自定义文字循环展示（无缝跑马灯，点击暂停 / 继续） -->
@@ -667,6 +921,164 @@
     });
   }
 
+  /* ---------- PC 宽屏侧栏：月历 + 时间进度 ---------- */
+  var calTitle = document.getElementById('calTitle');
+  var calGrid = document.getElementById('calGrid');
+  var calY = 0, calM = 0;   // 当前显示的年月（月份 0 基）
+  var calDateKey = '';
+  var calUserPicked = false; // 用户手动翻过月：跨天/跨月时不强行切回本月
+
+  /* 农历：优先用浏览器内置中文历（ICU），不可用则只显示节气 */
+  var LUNAR_FMT = null;
+  try {
+    var f = new Intl.DateTimeFormat('zh-CN-u-ca-chinese', {
+      month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai'
+    });
+    if (f.resolvedOptions().calendar === 'chinese') LUNAR_FMT = f;
+  } catch (e) { /* 忽略 */ }
+  var LUNAR_DAY_NAMES = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
+    '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
+    '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'];
+  function lunarOf(date) {
+    if (!LUNAR_FMT) return null;
+    var out = { month: '', day: 0, isFirst: false };
+    LUNAR_FMT.formatToParts(date).forEach(function (p) {
+      if (p.type === 'month') out.month = p.value;
+      else if (p.type === 'day') out.day = parseInt(p.value, 10) || 0; // ICU 返回数字，自行转中文
+    });
+    out.isFirst = out.day === 1;
+    return out;
+  }
+
+  /* 二十四节气：太阳视黄经每 15° 一个节气，用中精度公式迭代求时刻（北京时间日期） */
+  var TERMS = ['小寒', '大寒', '立春', '雨水', '惊蛰', '春分', '清明', '谷雨',
+    '立夏', '小满', '芒种', '夏至', '小暑', '大暑', '立秋', '处暑',
+    '白露', '秋分', '寒露', '霜降', '立冬', '小雪', '大雪', '冬至'];
+  function sunLongitude(jd) {
+    var T = (jd - 2451545.0) / 36525;
+    var L0 = 280.46646 + 36000.76983 * T + 0.0003032 * T * T;      // 平黄经
+    var M = (357.52911 + 35999.05029 * T - 0.0001537 * T * T) * Math.PI / 180; // 平近点角
+    var C = (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(M)
+      + (0.019993 - 0.000101 * T) * Math.sin(2 * M)
+      + 0.000289 * Math.sin(3 * M);
+    var omega = (125.04 - 1934.136 * T) * Math.PI / 180;
+    var lambda = L0 + C - 0.00569 - 0.00478 * Math.sin(omega); // 视黄经
+    return ((lambda % 360) + 360) % 360;
+  }
+  function buildTerms(year) {
+    var map = {};
+    for (var i = 0; i < 24; i++) {
+      var target = (285 + i * 15) % 360; // 小寒 285° 起，每节气 15°
+      var jd = Date.UTC(year, 0, 6 + i * 15.2184) / 86400000 + 2440587.5; // 初估
+      for (var k = 0; k < 8; k++) {
+        var diff = target - sunLongitude(jd);
+        while (diff > 180) diff -= 360;
+        while (diff < -180) diff += 360;
+        if (Math.abs(diff) < 1e-7) break;
+        jd += diff / 0.9856474; // 太阳每日约走 0.9856°
+      }
+      var bj = new Date((jd - 2440587.5) * 86400000 + 8 * 3600000); // 换算北京时间
+      map[(bj.getUTCMonth() + 1) + '-' + bj.getUTCDate()] = TERMS[i];
+    }
+    return map;
+  }
+  var termsYear = 0, termsMap = {};
+
+  function renderCal(y, m) {
+    calY = y; calM = m;
+    if (calTitle) calTitle.textContent = y + '年' + (m + 1) + '月';
+    if (!calGrid) return;
+    // 只清理日期格子，保留周一~周日的表头
+    Array.prototype.slice.call(calGrid.querySelectorAll('.cal-d')).forEach(function (el) {
+      el.parentNode.removeChild(el);
+    });
+    var now = new Date();
+    var isCurMonth = now.getFullYear() === y && now.getMonth() === m;
+    var offset = (new Date(y, m, 1).getDay() + 6) % 7; // 周一为第一列
+    var days = new Date(y, m + 1, 0).getDate();
+    if (termsYear !== y) { termsMap = buildTerms(y); termsYear = y; }
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < offset; i++) {
+      var blank = document.createElement('span');
+      blank.className = 'cal-d dim';
+      frag.appendChild(blank);
+    }
+    for (var d = 1; d <= days; d++) {
+      var cell = document.createElement('span');
+      var isToday = isCurMonth && d === now.getDate();
+      cell.className = 'cal-d' + (isToday ? ' today' : '');
+      var num = document.createElement('span');
+      num.className = 'cal-d-num';
+      num.textContent = d;
+      var sub = document.createElement('span');
+      sub.className = 'cal-d-sub';
+      var term = termsMap[(m + 1) + '-' + d];
+      var lu = lunarOf(new Date(Date.UTC(y, m, d, 4))); // 北京正午，任何时区都落在同一天
+      var luDay = lu ? (LUNAR_DAY_NAMES[lu.day - 1] || '') : '';
+      if (term) {
+        sub.textContent = term;          // 节气优先于农历日
+        sub.classList.add('term');
+        if (lu) cell.title = term + ' · 农历' + lu.month + luDay;
+        if (lu && lu.isFirst) cell.classList.add('first-mark'); // 月初与节气同日：小点提示
+      } else if (lu) {
+        sub.textContent = lu.isFirst ? lu.month : luDay; // 初一带月名
+        if (lu.isFirst) sub.classList.add('first');
+        cell.title = '农历' + lu.month + luDay;
+      }
+      cell.appendChild(num);
+      cell.appendChild(sub);
+      frag.appendChild(cell);
+    }
+    calGrid.appendChild(frag);
+  }
+  function renderStats() {
+    var n = new Date();
+    var y = n.getFullYear();
+    var yearStart = new Date(y, 0, 1), yearEnd = new Date(y + 1, 0, 1);
+    var monthStart = new Date(y, n.getMonth(), 1), monthEnd = new Date(y, n.getMonth() + 1, 1);
+    var wd = (n.getDay() + 6) % 7;
+    var weekStart = new Date(y, n.getMonth(), n.getDate() - wd); // 本周一 0 点
+    [
+      ['Year', (n - yearStart) / (yearEnd - yearStart)],
+      ['Month', (n - monthStart) / (monthEnd - monthStart)],
+      ['Week', (n - weekStart) / (7 * 86400000)]
+    ].forEach(function (s) {
+      var pct = Math.max(0, Math.min(100, s[1] * 100));
+      var bar = document.getElementById('bar' + s[0]);
+      var txt = document.getElementById('pct' + s[0]);
+      if (bar) bar.style.width = pct.toFixed(1) + '%';
+      if (txt) txt.textContent = pct.toFixed(1) + '%';
+    });
+  }
+  var calPrev = document.getElementById('calPrev');
+  var calNext = document.getElementById('calNext');
+  if (calTitle) {
+    calTitle.addEventListener('click', function () {
+      var n = new Date();
+      calUserPicked = false;
+      renderCal(n.getFullYear(), n.getMonth());
+    });
+  }
+  if (calPrev) {
+    calPrev.addEventListener('click', function () {
+      var m = calM - 1, y = calY;
+      if (m < 0) { m = 11; y--; }
+      calUserPicked = true;
+      renderCal(y, m);
+    });
+  }
+  if (calNext) {
+    calNext.addEventListener('click', function () {
+      var m = calM + 1, y = calY;
+      if (m > 11) { m = 0; y++; }
+      calUserPicked = true;
+      renderCal(y, m);
+    });
+  }
+  var nowInit = new Date();
+  renderCal(nowInit.getFullYear(), nowInit.getMonth());
+  renderStats();
+
   /* ---------- 默认待机：圆形表盘 + 数字时钟（每秒驱动） ---------- */
   var sbClock = document.getElementById('sbClock');
   var sbDate = document.getElementById('sbDate');
@@ -699,6 +1111,14 @@
     if (sbClock) sbClock.innerHTML = pad(n.getHours()) + '<span>:</span>' + pad(n.getMinutes());
     if (sbDate) sbDate.textContent = n.getFullYear() + '年' + pad(n.getMonth() + 1) + '月' + pad(n.getDate()) + '日 ' + WEEK[n.getDay()];
     setHands(n);
+    // 侧栏：跨天时刷新月历（手动翻月则保持视图）
+    var key = n.getFullYear() + '-' + n.getMonth() + '-' + n.getDate();
+    if (key !== calDateKey) {
+      calDateKey = key;
+      if (!calUserPicked) renderCal(n.getFullYear(), n.getMonth());
+      else if (calY === n.getFullYear() && calM === n.getMonth()) renderCal(calY, calM);
+    }
+    renderStats();
   }
   tickClock();
   setInterval(tickClock, 1000);
