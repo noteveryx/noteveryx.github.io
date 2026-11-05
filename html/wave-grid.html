@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>波浪点阵</title>
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
+<style>
+  :root{
+    --bg1:#f7f9fd; --bg2:#eef1f9; --card:#fff; --text:#16192b; --muted:#6b7590;
+    --line:rgba(22,25,43,.08); --accent:#635bff;
+    --logo-border:rgba(255,255,255,.16); --logo-shadow:0 4px 14px rgba(22,25,43,.18);
+  }
+  html[data-theme="emerald"]{
+    --bg1:#f5faf7; --bg2:#e8f1ec; --card:#fff; --text:#16241d; --muted:#6d8177;
+    --line:rgba(22,36,29,.08); --accent:#2f9e6d;
+    --logo-border:rgba(255,255,255,.16); --logo-shadow:0 4px 14px rgba(22,36,29,.18);
+  }
+  html[data-theme="midnight"]{
+    --bg1:#0f1626; --bg2:#0a101c; --card:#151f2e; --text:#e7eef8; --muted:#7f8fa4;
+    --line:#232f40; --accent:#5b9dff;
+    --logo-border:rgba(255,255,255,.10); --logo-shadow:0 4px 14px rgba(0,0,0,.5);
+  }
+  html[data-theme="sunset"]{
+    --bg1:#fdf8f4; --bg2:#f7ece2; --card:#fff; --text:#33231a; --muted:#96796a;
+    --line:rgba(51,35,26,.09); --accent:#f2762e;
+    --logo-border:rgba(255,255,255,.16); --logo-shadow:0 4px 14px rgba(80,45,20,.18);
+  }
+  html[data-theme="ink"]{
+    --bg1:#0e1517; --bg2:#0a1012; --card:#131b1e; --text:#e2edee; --muted:#7d9194;
+    --line:#212e31; --accent:#2dd4bf;
+    --logo-border:rgba(255,255,255,.10); --logo-shadow:0 4px 14px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;padding:0;width:100%;height:100%;
+    overflow:hidden;overscroll-behavior:none;
+  }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    background:linear-gradient(165deg,var(--bg1) 0%,var(--bg2) 100%);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    transition:background .3s ease,color .3s ease;
+    cursor:crosshair;
+    touch-action:none;      /* 手指拖动是交互本身，不要滚动页面 */
+  }
+  canvas{position:fixed;inset:0;display:block;width:100%;height:100%;}
+
+  .ui{position:fixed;z-index:5;transition:opacity .55s cubic-bezier(.3,.8,.3,1);opacity:1;}
+  body.idle .ui{opacity:.14;}
+  body.idle .mode{opacity:.14;}
+  body.idle .ui:hover,body.idle .ui:focus-within,body.idle .mode:hover{opacity:1;}
+
+  .back{
+    top:calc(14px + env(safe-area-inset-top));
+    left:calc(14px + env(safe-area-inset-left));
+    width:36px;height:36px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--card);
+    border:1px solid var(--line);
+    box-shadow:0 2px 10px rgba(0,0,0,.06);
+    color:var(--text);text-decoration:none;
+    transition:border-color .2s ease,transform .12s ease,background-color .2s ease;
+  }
+  .back:hover{border-color:var(--accent);color:var(--accent);}
+  .back:active{transform:scale(.94);}
+  .back svg{width:15px;height:15px;display:block;}
+
+  .mode{
+    position:fixed;z-index:5;
+    top:calc(14px + env(safe-area-inset-top));
+    right:calc(58px + env(safe-area-inset-right));  /* 让开 theme-kit 的圆形按钮 */
+    height:36px;padding:0 14px;border-radius:999px;
+    display:flex;align-items:center;gap:7px;
+    background:var(--card);border:1px solid var(--line);
+    box-shadow:0 2px 10px rgba(0,0,0,.06);
+    color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:600;
+    cursor:pointer;outline:none;white-space:nowrap;
+    transition:color .16s ease,border-color .16s ease,transform .12s ease;
+  }
+  .mode:hover{color:var(--accent);border-color:var(--accent);}
+  .mode:active{transform:scale(.96);}
+  .mode:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .mode i{width:7px;height:7px;border-radius:50%;background:var(--accent);display:block;}
+
+  .pk{
+    position:fixed;
+    top:calc(14px + env(safe-area-inset-top));
+    right:calc(128px + env(safe-area-inset-right));
+    z-index:6;
+  }
+  .hint{
+    left:50%;bottom:calc(16px + env(safe-area-inset-bottom));
+    transform:translateX(-50%);
+    font-size:12px;color:var(--muted);letter-spacing:.02em;
+    white-space:nowrap;pointer-events:none;user-select:none;
+  }
+  @media (max-width:520px){
+    .hint{font-size:11px;}
+    .mode{padding:0 11px;font-size:12px;}
+  }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<a class="ui back" href="../x.html" title="返回" aria-label="返回">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+</a>
+
+<button class="mode" id="modeBtn" type="button" title="切换点阵 / 线框（D）">
+  <i aria-hidden="true"></i><span id="modeText">点阵</span>
+</button>
+
+<div class="pk" id="pk" data-pk="wave" data-placement="bottom"></div>
+
+<div class="ui hint" id="hint">移动手指激起波纹 · 点击加重 · 双击切换线框</div>
+
+<script src="../assets/js/theme-kit.js"></script>
+<script src="../assets/js/palette-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+  var hintEl = document.getElementById('hint');
+  var modeBtn = document.getElementById('modeBtn');
+  var modeText = document.getElementById('modeText');
+
+  var W = 0, H = 0, DPR = 1, cx = 0, cy = 0;
+  var cols = 20, rows = 14;
+  var pts = [];              // 每帧复用的点数组 {x, y, z}
+
+  var px = 0, py = 0;        // 指针位置
+  var hasPointer = false;
+  var power = 0;             // 指针波纹强度（0~1，随时间衰减）
+  var t = 0;
+
+  var dotted = true;         // 点阵 / 线框
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var accent = '#635bff';
+  var textCol = '#16192b';
+  var isDark = false;
+  var userAccent = null;      // 用户在调色板里选过色后，就不再跟随主题
+  var running = false, rafId = 0, lastT = 0;   // running 由 start/stop 维护
+
+  /* ---------------- 主题取色 ---------------- */
+  function parseRGB(s) {
+    if (!s) return null;
+    s = s.trim();
+    if (s.charAt(0) === '#') {
+      var h = s.slice(1);
+      if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      var n = parseInt(h, 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    }
+    var m = s.match(/([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/);
+    if (!m) return null;
+    return { r: +m[1], g: +m[2], b: +m[3] };
+  }
+
+  function readColors() {
+    var cs = getComputedStyle(document.documentElement);
+    var a = parseRGB(cs.getPropertyValue('--accent'));
+    var bgc = parseRGB(cs.getPropertyValue('--bg1'));
+    if (a && !userAccent) accent = 'rgb(' + a.r + ',' + a.g + ',' + a.b + ')';
+    // 判深浅：背景亮度低 → 深色主题，点的基准亮度要相应变化
+    if (bgc) isDark = (0.2126 * bgc.r + 0.7152 * bgc.g + 0.0722 * bgc.b) < 128;
+    var tc = parseRGB(cs.getPropertyValue('--text'));
+    if (tc) textCol = 'rgb(' + tc.r + ',' + tc.g + ',' + tc.b + ')';
+    if (!running) render();
+  }
+
+  /* ---------------- 尺寸与网格 ---------------- */
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    cx = W / 2; cy = H / 2;
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    var step = 26;
+    cols = Math.max(16, Math.min(46, Math.round(W / step)));
+    rows = Math.max(12, Math.min(30, Math.round(H / step)));
+
+    pts.length = 0;
+    for (var j = 0; j < rows; j++) {
+      for (var i = 0; i < cols; i++) {
+        pts.push({
+          nx: i / (cols - 1) - 0.5,     // -0.5 ~ 0.5
+          ny: j / (rows - 1) - 0.5,
+          x: 0, y: 0, z: 0
+        });
+      }
+    }
+    if (!running) render();
+  }
+
+  /* ---------------- 渲染一帧 ---------------- */
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+
+    var spanX = W * 1.14;
+    var spanY = H * 1.14;
+    var amp = 1 + power * 2.6;                 // 指针按下时整体波纹加深
+    var fov = 620;
+
+    var i, n = pts.length, p;
+    for (i = 0; i < n; i++) {
+      p = pts[i];
+      var bx = p.nx * spanX + cx;
+      var by = p.ny * spanY + cy;
+
+      // 1) 基底：低频交叉波，空闲时也在缓慢呼吸
+      var z = Math.sin(bx * 0.0075 + t * 0.85) * Math.cos(by * 0.0092 - t * 0.62) * 24;
+
+      // 2) 指针波纹：自指针位置向外扩散，随距离衰减
+      if (hasPointer && power > 0.002) {
+        var dx = bx - px, dy = by - py;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        z += Math.sin(d * 0.042 - t * 3.4) * Math.exp(-d * 0.0055) * 46 * power;
+      }
+
+      // 透视：z 越大越靠近观察者
+      var s = fov / (fov - z);
+      p.x = cx + (bx - cx) * s;
+      p.y = cy + (by - cy) * s - z * 0.55;
+      p.z = z;
+    }
+
+    var zNorm;
+    if (dotted) {
+      // 点阵：按高度映射大小与透明度，波峰亮、波谷沉，批量绘制
+      ctx.fillStyle = accent;
+      var rBase = Math.max(1.15, Math.min(W, H) / 460);
+      for (i = 0; i < n; i++) {
+        p = pts[i];
+        zNorm = (p.z + 70) / 140;              // 0~1
+        zNorm = zNorm < 0 ? 0 : (zNorm > 1 ? 1 : zNorm);
+        var r = rBase * (0.45 + zNorm * 1.9);
+        ctx.globalAlpha = (isDark ? 0.13 : 0.08) + Math.pow(zNorm, 1.6) * (isDark ? 0.82 : 0.7);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, 6.2832);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    } else {
+      // 线框：横向 + 纵向折线，低透明度，靠交点亮线制造立体感
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = Math.max(0.7, Math.min(W, H) / 1100);
+      ctx.globalAlpha = isDark ? 0.5 : 0.36;
+
+      var row, col, idx;
+      ctx.beginPath();
+      for (row = 0; row < rows; row++) {
+        idx = row * cols;
+        ctx.moveTo(pts[idx].x, pts[idx].y);
+        for (col = 1; col < cols; col++) ctx.lineTo(pts[idx + col].x, pts[idx + col].y);
+      }
+      for (col = 0; col < cols; col++) {
+        ctx.moveTo(pts[col].x, pts[col].y);
+        for (row = 1; row < rows; row++) {
+          idx = row * cols + col;
+          ctx.lineTo(pts[idx].x, pts[idx].y);
+        }
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // 交点亮一点，模拟节点
+      ctx.fillStyle = accent;
+      for (i = 0; i < n; i++) {
+        p = pts[i];
+        zNorm = (p.z + 70) / 140;
+        zNorm = zNorm < 0 ? 0 : (zNorm > 1 ? 1 : zNorm);
+        ctx.globalAlpha = 0.05 + Math.pow(zNorm, 1.7) * 0.5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.8, Math.min(W, H) / 760), 0, 6.2832);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function loop(now) {
+    rafId = requestAnimationFrame(loop);
+    if (now - lastT < 22) return;              // 约 45fps，够顺也省电
+    var dt = lastT ? Math.min((now - lastT) / 1000, 0.08) : 0.016;
+    lastT = now;
+    t += dt;
+    if (power > 0) power = Math.max(0, power - dt * 0.55);
+    render();
+  }
+
+  function start() {
+    if (running) return;
+    running = true; lastT = 0;
+    rafId = requestAnimationFrame(loop);
+  }
+  function stop() {
+    running = false;
+    cancelAnimationFrame(rafId);
+  }
+
+  /* ---------------- 交互 ---------------- */
+  function setPointer(x, y) {
+    px = x; py = y;
+    hasPointer = true;
+    power = Math.min(1, power + 0.16);         // 移动时持续供能，停下自然衰减
+  }
+
+  cv.addEventListener('pointermove', function (e) { setPointer(e.clientX, e.clientY); }, { passive: true });
+  cv.addEventListener('pointerdown', function (e) {
+    setPointer(e.clientX, e.clientY);
+    power = 1;                                  // 点击：满强度脉冲
+  });
+  cv.addEventListener('pointerleave', function () { hasPointer = false; power = 0; });
+  window.addEventListener('pointerup', function (e) {
+    // 手指/鼠标停在原地时，波纹逐渐平复
+    if (e.pointerType === 'touch') { hasPointer = false; power = 0; }
+  }, { passive: true });
+
+  function toggleMode() {
+    dotted = !dotted;
+    if (modeText) modeText.textContent = dotted ? '点阵' : '线框';
+    if (hintEl) {
+      hintEl.textContent = dotted
+        ? '移动手指激起波纹 · 点击加重 · 双击切换线框'
+        : '线框模式 · 双击回到点阵';
+    }
+    if (!running) render();
+  }
+  if (modeBtn) modeBtn.addEventListener('click', toggleMode);
+  cv.addEventListener('dblclick', toggleMode);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'd' || e.key === 'D') toggleMode();
+    else if (e.key === ' ') { e.preventDefault(); running ? stop() : start(); }
+  });
+
+  /* ---------------- 闲置淡出 ---------------- */
+  var idleTimer = null;
+  function wake() {
+    document.body.classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () { document.body.classList.add('idle'); }, 3200);
+  }
+  ['pointermove', 'pointerdown', 'keydown', 'wheel'].forEach(function (ev) {
+    window.addEventListener(ev, wake, { passive: true });
+  });
+  wake();
+
+  /* ---------------- 主题变化时重新取色 ---------------- */
+  if (window.MutationObserver) {
+    new MutationObserver(readColors).observe(document.documentElement, {
+      attributes: true, attributeFilter: ['data-theme']
+    });
+  }
+
+  /* ---------------- 启动 ---------------- */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stop();
+    else if (!reduceMotion) start();
+  });
+
+  /* 调色板：选什么色，点阵就是什么色 */
+  var pk = window.PaletteKit.mount(document.getElementById('pk'), {
+    value: '#635bff',
+    onChange: function (c) {
+      userAccent = c;
+      accent = c;
+      if (!running) render();
+    }
+  });
+  userAccent = pk.get();
+  accent = userAccent;
+
+  window.addEventListener('resize', resize, { passive: true });
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 220); });
+
+  resize();
+  readColors();
+  if (reduceMotion) { render(); } else { start(); }
+})();
+</script>
+</body>
+</html>

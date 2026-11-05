@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0b12">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>文字形变</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/text-kit.css">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:#0a0b12;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    color:#fff;-webkit-font-smoothing:antialiased;cursor:crosshair;touch-action:manipulation;
+    user-select:none;-webkit-user-select:none;
+  }
+  canvas{position:fixed;inset:0;display:block;width:100%;height:100%;touch-action:none;}
+  .ui{position:fixed;z-index:5;opacity:1;transition:opacity .55s cubic-bezier(.3,.8,.3,1);}
+  body.idle .ui{opacity:.15;}
+  body.idle .ui:hover{opacity:1;}
+  .back{
+    top:calc(14px + env(safe-area-inset-top));left:calc(14px + env(safe-area-inset-left));
+    width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:rgba(12,16,24,.42);border:1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;text-decoration:none;
+    transition:background-color .2s ease,transform .12s ease;
+  }
+  .back:hover{background:rgba(20,26,38,.7);}
+  .back:active{transform:scale(.94);}
+  .back svg{width:15px;height:15px;display:block;}
+  .tools{right:calc(14px + env(safe-area-inset-right));top:calc(14px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px;}
+  .label{
+    left:calc(18px + env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:rgba(255,255,255,.5);
+    pointer-events:none;user-select:none;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .label b{font-weight:600;letter-spacing:.14em;color:rgba(255,255,255,.9);}
+  .picker{
+    position:fixed;z-index:6;left:50%;bottom:calc(64px + env(safe-area-inset-bottom));
+    transform:translateX(-50%);
+    max-width:calc(100vw - 24px);
+  }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<a class="ui back" href="../x.html" title="返回" aria-label="返回">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+</a>
+
+<div class="ui tools">
+  <div class="pk" id="pk" data-pk="textwarp" data-placement="left"></div>
+</div>
+
+<div class="picker" id="picker"></div>
+
+<div class="ui label" id="label">Text Warp · <b>把字推开</b></div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/quotes-data.js"></script>
+<script src="../assets/js/text-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d', { alpha: false });
+  var W = 0, H = 0, DPR = 1, t = 0;
+
+  var glyphs = [];          // 每个字符：{ch, x, y, phase}
+  var mx = -9999, my = -9999;
+  var mxS = -9999, myS = -9999;   // 平滑后的指针
+  var baseHex = '#ffd166';
+  var rgb = { r: 255, g: 209, b: 102 };
+  var fontSize = 64;
+
+  /* 默认取 quotes 里的句子，也可以自己写 */
+  var QUOTES = window.QUOTES_DATA || [];
+  var LINES = QUOTES.map(function (q) { return typeof q === 'string' ? q : q.text; }).filter(Boolean);
+  if (!LINES.length) LINES = ['把文字变成可以拨动的水。'];
+  var currentText = LINES[0];
+
+  var running = false, rafId = 0, lastT = 0;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function setColor(hex) {
+    baseHex = hex;
+    rgb = window.PaletteKit.hex2rgb(hex) || rgb;
+    var lbl = document.getElementById('label');
+    if (lbl) lbl.innerHTML = 'Text Warp · <b>' + hex.toUpperCase() + '</b>';
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    fontSize = Math.max(26, Math.min(W * 0.085, 74));
+    layout();
+    if (!running) render();
+  }
+
+  /* 逐字排版并记录原始位置 */
+  function layout() {
+    glyphs.length = 0;
+    var text = currentText || '';
+    ctx.font = '600 ' + fontSize + 'px "PingFang SC","Microsoft YaHei",system-ui,sans-serif';
+    var maxW = W - 60;
+    var lines = [], line = '';
+    for (var i = 0; i < text.length; i++) {
+      var test = line + text[i];
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = text[i]; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+
+    var lh = fontSize * 1.5;
+    var startY = H / 2 - (lines.length - 1) * lh / 2 + fontSize * 0.35;
+    for (var li = 0; li < lines.length; li++) {
+      var lw = ctx.measureText(lines[li]).width;
+      var x = (W - lw) / 2;
+      for (var ci = 0; ci < lines[li].length; ci++) {
+        var ch = lines[li][ci];
+        var w = ctx.measureText(ch).width;
+        glyphs.push({
+          ch: ch,
+          x0: x + w / 2,
+          y0: startY + li * lh,
+          w: w,
+          phase: Math.random() * 6.28
+        });
+        x += w;
+      }
+    }
+  }
+
+  function render() {
+    ctx.fillStyle = '#0a0b12';
+    ctx.fillRect(0, 0, W, H);
+
+    mxS += (mx - mxS) * 0.16;
+    myS += (my - myS) * 0.16;
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (var i = 0; i < glyphs.length; i++) {
+      var g = glyphs[i];
+      var dx = g.x0 - mxS, dy = g.y0 - myS;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      var push = 0, ang = 0;
+      if (d < 260 && d > 0.01) {
+        push = (1 - d / 260);
+        push = push * push * 130;
+        ang = Math.atan2(dy, dx);
+      }
+      var breathe = Math.sin(t * 1.4 + g.phase) * 2.2;
+      var x = g.x0 + Math.cos(ang) * push + breathe;
+      var y = g.y0 + Math.sin(ang) * push + breathe * 0.6;
+
+      var depth = push / 130;
+      var size = fontSize * (1 + depth * 0.16);
+      ctx.font = '600 ' + size.toFixed(1) + 'px "PingFang SC","Microsoft YaHei",system-ui,sans-serif';
+      var alpha = 1 - depth * 0.55;
+      ctx.fillStyle = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + alpha.toFixed(3) + ')';
+      ctx.fillText(g.ch, x, y);
+    }
+
+    if (mxS > -9000) {
+      var g2 = ctx.createRadialGradient(mxS, myS, 0, mxS, myS, 120);
+      g2.addColorStop(0, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',.16)');
+      g2.addColorStop(1, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0)');
+      ctx.fillStyle = g2;
+      ctx.fillRect(mxS - 120, myS - 120, 240, 240);
+    }
+  }
+
+  function loop(now) {
+    rafId = requestAnimationFrame(loop);
+    var dt = lastT ? Math.min((now - lastT) / 1000, 0.05) : 0.016;
+    lastT = now;
+    t += dt;
+    render();
+  }
+  function start() { if (running) return; running = true; lastT = 0; rafId = requestAnimationFrame(loop); }
+  function stop() { running = false; cancelAnimationFrame(rafId); }
+
+  /* ---------------- 句子条：quotes + 自己写 ---------------- */
+  var tk = window.TextKit.mountBar(document.getElementById('picker'), {
+    layout: 'row',
+    limit: 6,
+    collapsible: true,
+    value: currentText,
+    placeholder: '写一句想推开的字…',
+    onChange: function (text) {
+      currentText = text;
+      layout();
+      tk.collapse();              // 选好文字就收起句子列表，把画面让出来
+    }
+  });
+
+  /* ---------------- 交互 ---------------- */
+  cv.addEventListener('pointermove', function (e) { mx = e.clientX; my = e.clientY; }, { passive: true });
+  cv.addEventListener('pointerdown', function (e) { mx = e.clientX; my = e.clientY; }, { passive: true });
+  cv.addEventListener('pointerleave', function () { mx = -9999; my = -9999; });
+
+  /* ---------------- 闲置淡出 ---------------- */
+  var idleTimer = null;
+  function wake() {
+    document.body.classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () { document.body.classList.add('idle'); }, 3000);
+  }
+  ['pointermove', 'pointerdown', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, wake, { passive: true });
+  });
+  wake();
+
+  /* ---------------- 启动 ---------------- */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stop(); else if (!reduceMotion) start();
+  });
+  window.addEventListener('resize', resize, { passive: true });
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 220); });
+
+  var pk = window.PaletteKit.mount(document.getElementById('pk'), {
+    value: '#ffd166',
+    onChange: function (c) { setColor(c); }
+  });
+  setColor(pk.get());
+  resize();
+  if (!reduceMotion) start(); else render();
+})();
+</script>
+</body>
+</html>

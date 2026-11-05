@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>句子海报</title>
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/text-kit.css">
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
+<style>
+  :root{
+    --bg1:#f7f9fd; --bg2:#eef1f9; --card:#fff; --text:#16192b; --muted:#6b7590;
+    --line:rgba(22,25,43,.08); --accent:#635bff; --accent2:#00b8d9;
+    --accent-ghost-bg:rgba(99,91,255,.09); --accent-ghost-line:rgba(99,91,255,.14);
+    --logo-border:rgba(255,255,255,.16); --logo-shadow:0 4px 14px rgba(22,25,43,.18);
+  }
+  html[data-theme="emerald"]{
+    --bg1:#f5faf7; --bg2:#e8f1ec; --card:#fff; --text:#16241d; --muted:#6d8177;
+    --line:rgba(22,36,29,.08); --accent:#2f9e6d; --accent2:#31b8a4;
+    --accent-ghost-bg:rgba(47,158,109,.09); --accent-ghost-line:rgba(47,158,109,.16);
+    --logo-border:rgba(255,255,255,.16); --logo-shadow:0 4px 14px rgba(22,36,29,.18);
+  }
+  html[data-theme="midnight"]{
+    --bg1:#0f1626; --bg2:#0a101c; --card:#151f2e; --text:#e7eef8; --muted:#7f8fa4;
+    --line:#232f40; --accent:#5b9dff; --accent2:#38c8f0;
+    --accent-ghost-bg:rgba(91,157,255,.10); --accent-ghost-line:rgba(91,157,255,.20);
+    --logo-border:rgba(255,255,255,.10); --logo-shadow:0 4px 14px rgba(0,0,0,.5);
+  }
+  html[data-theme="sunset"]{
+    --bg1:#fdf8f4; --bg2:#f7ece2; --card:#fff; --text:#33231a; --muted:#96796a;
+    --line:rgba(51,35,26,.09); --accent:#f2762e; --accent2:#f5a623;
+    --accent-ghost-bg:rgba(242,118,46,.09); --accent-ghost-line:rgba(242,118,46,.16);
+    --logo-border:rgba(255,255,255,.16); --logo-shadow:0 4px 14px rgba(80,45,20,.18);
+  }
+  html[data-theme="ink"]{
+    --bg1:#0e1517; --bg2:#0a1012; --card:#131b1e; --text:#e2edee; --muted:#7d9194;
+    --line:#212e31; --accent:#2dd4bf; --accent2:#38bdf8;
+    --accent-ghost-bg:rgba(45,212,191,.10); --accent-ghost-line:rgba(45,212,191,.20);
+    --logo-border:rgba(255,255,255,.10); --logo-shadow:0 4px 14px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{margin:0;padding:0;width:100%;max-width:100%;overflow-x:hidden;overflow-x:clip;}
+  body{
+    margin:0;width:100%;max-width:100%;overflow-x:hidden;overflow-x:clip;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    color:var(--text);
+    background:linear-gradient(180deg,var(--bg1),var(--bg2));
+    min-height:100vh;
+    padding-bottom:calc(30px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing:antialiased;line-height:1.6;
+    transition:background .28s ease,color .28s ease;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left));}
+
+  header{padding:30px 0 14px;display:flex;align-items:center;gap:12px;}
+  .back{
+    width:36px;height:36px;border-radius:50%;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--card);border:1px solid var(--line);
+    box-shadow:0 2px 10px rgba(0,0,0,.06);
+    color:var(--text);text-decoration:none;
+    transition:border-color .2s ease,transform .12s ease;
+  }
+  .back:hover{border-color:var(--accent);color:var(--accent);}
+  .back:active{transform:scale(.94);}
+  .back svg{width:15px;height:15px;}
+  h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em;}
+  .sub{margin:2px 0 0;font-size:12.5px;color:var(--muted);}
+
+  .layout{display:flex;gap:22px;align-items:flex-start;}
+
+  /* 预览区 */
+  .stage{flex:1 1 auto;min-width:0;display:flex;justify-content:center;}
+  .poster-box{
+    width:min(400px, 100%);
+    border-radius:14px;overflow:hidden;
+    box-shadow:0 14px 40px -18px rgba(0,0,0,.4);
+    border:1px solid var(--line);
+    background:#000;
+    line-height:0;
+  }
+  #poster{width:100%;height:auto;display:block;}
+
+  /* 控制面板 */
+  .panel{
+    flex:0 0 300px;
+    display:flex;flex-direction:column;gap:14px;
+    background:var(--card);border:1px solid var(--line);
+    border-radius:16px;padding:16px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+  }
+  .fld{display:flex;flex-direction:column;gap:6px;}
+  .fld > label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;}
+  select,input[type="text"]{
+    width:100%;font-family:inherit;font-size:14px;color:var(--text);
+    background:var(--bg1);border:1px solid var(--line);border-radius:10px;
+    padding:9px 11px;outline:none;
+    transition:border-color .16s ease;
+  }
+  select:focus,input[type="text"]:focus{border-color:var(--accent);}
+  select{appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;
+    padding-right:30px;
+  }
+
+  .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+  .seg button{
+    border:1px solid var(--line);background:var(--bg1);color:var(--text);
+    border-radius:9px;padding:8px 0;font-family:inherit;font-size:12.5px;font-weight:600;
+    cursor:pointer;outline:none;white-space:nowrap;
+    transition:border-color .15s ease,color .15s ease,background-color .15s ease;
+  }
+  .seg button:hover{border-color:var(--accent-ghost-line);}
+  .seg button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-ghost-bg);font-weight:700;}
+
+  .row{display:flex;gap:8px;align-items:center;}
+  .btn{
+    border:1px solid var(--line);background:var(--bg1);color:var(--text);
+    border-radius:10px;padding:9px 12px;font-family:inherit;font-size:13px;font-weight:600;
+    cursor:pointer;outline:none;white-space:nowrap;
+    transition:border-color .15s ease,color .15s ease,transform .12s ease;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .btn:active{transform:scale(.96);}
+  .btn.save{
+    flex:1;border:none;border-radius:11px;
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 55%,var(--accent2)));
+    color:#fff;font-size:14.5px;font-weight:700;padding:12px;
+    box-shadow:0 6px 18px -6px var(--accent-ghost-line);
+  }
+  .btn.save:hover{color:#fff;filter:brightness(1.06);}
+  .btn.save.done{background:var(--accent);}
+
+  .hint{font-size:11.5px;color:var(--muted);text-align:center;margin:10px 0 0;}
+
+  @media (max-width:760px){
+    .layout{flex-direction:column;align-items:stretch;}
+    .poster-box{width:min(360px,88vw);margin:0 auto;}
+    .panel{flex:1 1 auto;}
+    h1{font-size:19px;}
+  }
+</style>
+</head>
+<body class="tk-light">
+<div class="wrap">
+  <header>
+    <a class="back" href="../x.html" title="返回" aria-label="返回">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+    <div>
+      <h1>句子海报</h1>
+      <p class="sub">选一句喜欢的句子，生成 1080×1440 竖版图片，可直接保存分享</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <div class="poster-box">
+        <canvas id="poster" width="1080" height="1440" aria-label="海报预览"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="fld">
+        <label>句子（可自选，也可自己写）</label>
+        <div id="quoteBar"></div>
+      </div>
+
+      <div class="fld">
+        <label>模板</label>
+        <div class="seg" id="tplSeg"></div>
+      </div>
+
+      <div class="fld">
+        <label>主色（其余颜色自动派生）</label>
+        <div class="row">
+          <span id="palName" style="font-size:12.5px;color:var(--muted);"></span>
+          <button class="btn" id="palBtn" type="button">随机主色</button>
+        </div>
+      </div>
+
+      <div class="fld">
+        <label>字号</label>
+        <div class="seg" id="fontSeg">
+          <button type="button" data-f="0.82">小</button>
+          <button type="button" data-f="1" class="on">中</button>
+          <button type="button" data-f="1.18">大</button>
+          <button type="button" data-f="1.36">特大</button>
+        </div>
+      </div>
+
+      <div class="fld">
+        <label for="footInput">落款（可选）</label>
+        <input type="text" id="footInput" maxlength="24" placeholder="例如：句子收藏 / 你的名字">
+      </div>
+
+      <button class="btn save" id="saveBtn" type="button">保存 PNG</button>
+      <p class="hint">1080 × 1440 · 保存后可在相册或下载目录找到</p>
+    </div>
+  </div>
+</div>
+
+<div class="pk pk-float" id="pk" data-pk="poster" data-placement="bottom"></div>
+
+<script src="../assets/js/theme-kit.js"></script>
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/quotes-data.js"></script>
+<script src="../assets/js/text-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var QUOTES = window.QUOTES_DATA || [];
+  var cv = document.getElementById('poster');
+  var ctx = cv.getContext('2d');
+  var PW = 1080, PH = 1440;
+
+  var state = { qIdx: 0, tIdx: 0, fontScale: 1, footer: '', base: '#635bff', text: '' };
+
+  /* ==========================================================
+     模板：风格固定，配色由调色板主色派生
+     ========================================================== */
+  var TEMPLATES = [
+    { id: 'aurora', name: '极光' },
+    { id: 'paper', name: '纸纹' },
+    { id: 'neon', name: '荧光' },
+    { id: 'grid', name: '网格' }
+  ];
+
+  function hex(c) { return window.PaletteKit.rgb2hex(c.r, c.g, c.b); }
+
+  /* 由主色 + 模板，生成一套协调的配色 */
+  function buildPal(tplId, baseHex) {
+    var rgb = window.PaletteKit.hex2rgb(baseHex) || { r: 99, g: 91, b: 255 };
+    var hsl = window.PaletteKit.rgb2hsl(rgb.r, rgb.g, rgb.b);
+    var d = window.PaletteKit.derive(baseHex, 32, 0.06, 0.12);   // 4 个邻近色
+    var mk = function (h, s, l) { return hex(window.PaletteKit.hsl2rgb(h, s, l)); };
+
+    if (tplId === 'aurora') {
+      return {
+        bg: mk(hsl.h, Math.min(0.6, hsl.s * 0.62), 0.05),
+        blobs: [d[0], d[1], d[2]],
+        txt: '#ffffff'
+      };
+    }
+    if (tplId === 'paper') {
+      return {
+        bg: mk(hsl.h, Math.min(0.32, hsl.s * 0.34), 0.955),
+        txt: mk(hsl.h, Math.min(0.55, hsl.s * 0.55), 0.16),
+        mark: mk(hsl.h, Math.min(0.3, hsl.s * 0.3), 0.68)
+      };
+    }
+    if (tplId === 'neon') {
+      return {
+        bg: mk(hsl.h, Math.min(0.5, hsl.s * 0.55), 0.045),
+        a: d[1],
+        b: d[2],
+        txt: '#eaeef8'
+      };
+    }
+    // grid
+    return {
+      bg: mk(hsl.h, Math.min(0.3, hsl.s * 0.3), 0.955),
+      grid: 'rgba(30,30,40,.07)',
+      txt: mk(hsl.h, Math.min(0.55, hsl.s * 0.55), 0.14),
+      no: mk(hsl.h, 0.16, 0.6)
+    };
+  }
+
+  var SANS = '"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif';
+  var SERIF = '"Noto Serif SC","Songti SC","STSong","SimSun",serif';
+
+  function hex2rgba(hex, a) {
+    var h = hex.replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var n = parseInt(h, 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+
+  /* 中文逐字符断行（标点悬挂在行尾，不落行首） */
+  var PUNCT = /[，。！？；、：）」』】…—]/;
+  function wrapText(text, maxW, font) {
+    ctx.font = font;
+    var lines = [], line = '';
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      var test = line + ch;
+      if (ctx.measureText(test).width > maxW && line) {
+        if (PUNCT.test(ch)) { lines.push(line + ch); line = ''; }   // 标点跟随上一行
+        else { lines.push(line); line = ch; }
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  /* 字号自适应：从大到小试到放得下 */
+  function fitLines(text, maxW, maxH, startSize, lineH, weight, family) {
+    var size;
+    for (size = startSize; size >= 22; size -= 3) {
+      var font = weight + ' ' + size + 'px ' + family;
+      var lines = wrapText(text, maxW, font);
+      if (lines.length * size * lineH <= maxH) return { size: size, lines: lines, font: font };
+    }
+    return { size: 22, lines: wrapText(text, maxW, weight + ' 22px ' + family), font: weight + ' 22px ' + family };
+  }
+
+  function plain(q) { return typeof q === 'string' ? q : (q && q.text) || ''; }
+  function authorOf(q) { return (typeof q === 'object' && q && q.author) ? q.author : ''; }
+
+  /* ==========================================================
+     四种模板
+     ========================================================== */
+  function drawAurora(pal, text, footer) {
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, PW, PH);
+
+    // 光斑
+    ctx.globalCompositeOperation = 'lighter';
+    var blobs = [
+      { x: 0.28, y: 0.24, r: 0.52, c: pal.blobs[0] },
+      { x: 0.75, y: 0.44, r: 0.46, c: pal.blobs[1] },
+      { x: 0.42, y: 0.78, r: 0.55, c: pal.blobs[2] }
+    ];
+    for (var i = 0; i < blobs.length; i++) {
+      var b = blobs[i];
+      var g = ctx.createRadialGradient(b.x * PW, b.y * PH, 0, b.x * PW, b.y * PH, b.r * PW);
+      g.addColorStop(0, hex2rgba(b.c, 0.5));
+      g.addColorStop(0.55, hex2rgba(b.c, 0.2));
+      g.addColorStop(1, hex2rgba(b.c, 0));
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, PW, PH);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+
+    // 顶部小标签
+    ctx.fillStyle = hex2rgba(pal.txt, 0.55);
+    ctx.font = '500 26px ' + SANS;
+    ctx.textAlign = 'center';
+    ctx.fillText('句 子 收 藏', PW / 2, 110);
+
+    // 正文
+    var fit = fitLines(text, PW * 0.76, PH * 0.52, Math.round(92 * state.fontScale), 1.72, '600', SANS);
+    var blockH = fit.lines.length * fit.size * 1.72;
+    var y0 = PH / 2 - blockH / 2 + fit.size;
+    ctx.fillStyle = pal.txt;
+    ctx.font = fit.font;
+    ctx.textAlign = 'center';
+    for (var L = 0; L < fit.lines.length; L++) {
+      ctx.fillText(fit.lines[L], PW / 2, y0 + L * fit.size * 1.72);
+    }
+
+    // 分割线 + 落款
+    var ly = Math.min(y0 + (fit.lines.length - 1) * fit.size * 1.72 + fit.size * 1.55, PH - 220);
+    ctx.strokeStyle = hex2rgba(pal.txt, 0.4);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(PW / 2 - 40, ly);
+    ctx.lineTo(PW / 2 + 40, ly);
+    ctx.stroke();
+    ctx.fillStyle = hex2rgba(pal.txt, 0.7);
+    ctx.font = '400 30px ' + SANS;
+    ctx.fillText(footer || '', PW / 2, ly + 64);
+  }
+
+  function drawPaper(pal, text, footer) {
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, PW, PH);
+
+    // 内边框
+    ctx.strokeStyle = hex2rgba(pal.txt, 0.16);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(64, 64, PW - 128, PH - 128);
+
+    // 左上大引号
+    ctx.fillStyle = hex2rgba(pal.txt, 0.16);
+    ctx.font = '700 220px ' + SERIF;
+    ctx.textAlign = 'left';
+    ctx.fillText('“', 96, 300);
+
+    // 正文（左对齐，衬线）
+    var fit = fitLines(text, PW - 300, PH * 0.46, Math.round(84 * state.fontScale), 1.85, '600', SERIF);
+    var y0 = PH * 0.34;
+    ctx.fillStyle = pal.txt;
+    ctx.font = fit.font;
+    ctx.textAlign = 'left';
+    for (var L = 0; L < fit.lines.length; L++) {
+      ctx.fillText(fit.lines[L], 150, y0 + L * fit.size * 1.85);
+    }
+
+    // 右下落款 + 短横线
+    var ly = PH - 220;
+    ctx.strokeStyle = hex2rgba(pal.txt, 0.5);
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(PW - 150 - 72, ly);
+    ctx.lineTo(PW - 150, ly);
+    ctx.stroke();
+    ctx.fillStyle = hex2rgba(pal.txt, 0.75);
+    ctx.font = '400 32px ' + SANS;
+    ctx.textAlign = 'right';
+    if (footer) ctx.fillText(footer, PW - 150, ly + 62);
+    ctx.fillStyle = pal.mark;
+    ctx.font = '400 24px ' + SANS;
+    ctx.fillText('COLLECTION', PW - 150, PH - 108);
+  }
+
+  function drawNeon(pal, text, footer) {
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, PW, PH);
+
+    var fit = fitLines(text, PW * 0.8, PH * 0.5, Math.round(94 * state.fontScale), 1.7, '700', SANS);
+    var blockH = fit.lines.length * fit.size * 1.7;
+    var y0 = PH / 2 - blockH / 2 + fit.size;
+
+    // 渐变文字 + 辉光
+    var grad = ctx.createLinearGradient(0, y0 - fit.size, 0, y0 + (fit.lines.length - 1) * fit.size * 1.7);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.45, pal.a);
+    grad.addColorStop(1, pal.b);
+    ctx.save();
+    ctx.font = fit.font;
+    ctx.textAlign = 'center';
+    ctx.shadowColor = pal.a;
+    ctx.shadowBlur = 34;
+    ctx.fillStyle = grad;
+    for (var L = 0; L < fit.lines.length; L++) {
+      ctx.fillText(fit.lines[L], PW / 2, y0 + L * fit.size * 1.7);
+    }
+    ctx.restore();
+
+    // 底部落款
+    ctx.fillStyle = hex2rgba(pal.txt, 0.55);
+    ctx.font = '400 28px ' + SANS;
+    ctx.textAlign = 'center';
+    if (footer) ctx.fillText('— ' + footer + ' —', PW / 2, PH - 150);
+  }
+
+  function drawGrid(pal, text, footer, idx) {
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, PW, PH);
+
+    // 网格
+    ctx.strokeStyle = pal.grid;
+    ctx.lineWidth = 1.5;
+    var step = 72;
+    ctx.beginPath();
+    for (var x = step; x < PW; x += step) { ctx.moveTo(x, 0); ctx.lineTo(x, PH); }
+    for (var y = step; y < PH; y += step) { ctx.moveTo(0, y); ctx.lineTo(PW, y); }
+    ctx.stroke();
+
+    // 顶部横线与编号
+    ctx.fillStyle = pal.no;
+    ctx.font = '600 30px "SF Mono",Menlo,Consolas,monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('No.' + String(idx + 1).padStart(2, '0'), 110, 130);
+    ctx.fillText('COLLECTION', PW - 110 - ctx.measureText('COLLECTION').width, 130);
+    ctx.strokeStyle = hex2rgba(pal.txt, 0.5);
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(110, 156);
+    ctx.lineTo(PW - 110, 156);
+    ctx.stroke();
+
+    // 大字压右下角
+    var fit = fitLines(text, PW - 220, PH * 0.5, Math.round(108 * state.fontScale), 1.5, '800', SANS);
+    var y0 = PH - 330 - (fit.lines.length - 1) * fit.size * 1.5;
+    ctx.fillStyle = pal.txt;
+    ctx.font = fit.font;
+    ctx.textAlign = 'left';
+    for (var L = 0; L < fit.lines.length; L++) {
+      ctx.fillText(fit.lines[L], 110, y0 + L * fit.size * 1.5);
+    }
+
+    // 落款
+    ctx.fillStyle = hex2rgba(pal.txt, 0.55);
+    ctx.font = '400 27px ' + SANS;
+    ctx.fillText(footer || '', 110, PH - 118);
+  }
+
+  /* ---------------- 渲染入口 ---------------- */
+  function render() {
+    var q = QUOTES[state.qIdx] || '';
+    var text = state.text || plain(q);          // 自己写的优先
+    var footer = state.footer || (state.text ? '' : (authorOf(q) || ''));
+    var tpl = TEMPLATES[state.tIdx];
+    var pal = buildPal(tpl.id, state.base);
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, PW, PH);
+    ctx.textBaseline = 'alphabetic';
+
+    if (tpl.id === 'aurora') drawAurora(pal, text, footer);
+    else if (tpl.id === 'paper') drawPaper(pal, text, footer);
+    else if (tpl.id === 'neon') drawNeon(pal, text, footer);
+    else drawGrid(pal, text, footer, state.qIdx);
+
+    var nameEl = document.getElementById('palName');
+    if (nameEl) nameEl.textContent = state.base.toUpperCase();
+  }
+
+  /* ==========================================================
+     UI
+     ========================================================== */
+  /* 句子条：quotes 列表 + 自己写一句 */
+  var tkBar = window.TextKit.mountBar(document.getElementById('quoteBar'), {
+    layout: 'list',
+    limit: 30,
+    value: plain(QUOTES[0] || ''),
+    placeholder: '或者自己写一句…',
+    okText: '用这句',
+    onChange: function (text, meta) {
+      state.text = meta && meta.custom ? text : '';
+      if (!meta || !meta.custom) {
+        for (var i = 0; i < QUOTES.length; i++) {
+          if (plain(QUOTES[i]) === text) { state.qIdx = i; break; }
+        }
+      }
+      render();
+    }
+  });
+
+  var tplSeg = document.getElementById('tplSeg');
+  if (tplSeg) {
+    TEMPLATES.forEach(function (t, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = t.name;
+      if (i === state.tIdx) b.classList.add('on');
+      b.addEventListener('click', function () {
+        state.tIdx = i;
+        tplSeg.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        render();
+      });
+      tplSeg.appendChild(b);
+    });
+  }
+
+  /* 调色板：选主色，其余自动派生 */
+  var pk = window.PaletteKit.mount(document.getElementById('pk'), {
+    value: state.base,
+    onChange: function (c) { state.base = c; render(); }
+  });
+  state.base = pk.get();
+
+  var palBtn = document.getElementById('palBtn');
+  if (palBtn) palBtn.addEventListener('click', function () {
+    pk.set(window.PaletteKit.random());
+  });
+
+  var fontSeg = document.getElementById('fontSeg');
+  if (fontSeg) {
+    fontSeg.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        state.fontScale = +b.getAttribute('data-f');
+        fontSeg.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        render();
+      });
+    });
+  }
+
+  var footInput = document.getElementById('footInput');
+  if (footInput) {
+    var debounce = 0;
+    footInput.addEventListener('input', function () {
+      clearTimeout(debounce);
+      debounce = setTimeout(function () {
+        state.footer = footInput.value.trim();
+        render();
+      }, 200);
+    });
+  }
+
+  var saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) saveBtn.addEventListener('click', function () {
+    try {
+      var d = new Date();
+      var ymd = d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2);
+      var name = 'poster-' + ymd + '-' + String(state.qIdx + 1).padStart(2, '0') + '.png';
+      var done = function () {
+        saveBtn.textContent = '已保存 ✓';
+        saveBtn.classList.add('done');
+        setTimeout(function () {
+          saveBtn.textContent = '保存 PNG';
+          saveBtn.classList.remove('done');
+        }, 1600);
+      };
+      if (cv.toBlob) {
+        cv.toBlob(function (blob) {
+          if (!blob) return;
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = name;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+          done();
+        }, 'image/png');
+      } else {
+        var a2 = document.createElement('a');
+        a2.href = cv.toDataURL('image/png');
+        a2.download = name;
+        document.body.appendChild(a2);
+        a2.click();
+        a2.remove();
+        done();
+      }
+    } catch (e) { /* 忽略 */ }
+  });
+
+  /* ---------------- 启动 ---------------- */
+  if (!QUOTES.length) {
+    var panel = document.querySelector('.panel');
+    if (panel) {
+      var tip = document.createElement('p');
+      tip.style.cssText = 'color:#c0392b;font-size:13px;margin:0;';
+      tip.textContent = '句子数据加载失败（assets/js/quotes-data.js）';
+      panel.insertBefore(tip, panel.firstChild);
+    }
+  } else {
+    render();
+  }
+})();
+</script>
+</body>
+</html>

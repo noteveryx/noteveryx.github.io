@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#04060d">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>星空漫游</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;padding:0;width:100%;height:100%;
+    overflow:hidden;overscroll-behavior:none;
+    background:#04060d;
+  }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    color:#fff;-webkit-font-smoothing:antialiased;
+    cursor:crosshair;user-select:none;-webkit-user-select:none;
+    touch-action:none;
+  }
+  canvas{position:fixed;inset:0;display:block;width:100%;height:100%;}
+
+  .ui{position:fixed;z-index:5;opacity:1;transition:opacity .55s cubic-bezier(.3,.8,.3,1);}
+  body.idle .ui{opacity:.16;}
+  body.idle .ui:hover{opacity:1;}
+
+  .back{
+    top:calc(14px + env(safe-area-inset-top));
+    left:calc(14px + env(safe-area-inset-left));
+    width:36px;height:36px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(12,16,24,.42);
+    border:1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    color:#fff;text-decoration:none;
+    transition:background-color .2s ease,transform .12s ease;
+  }
+  .back:hover{background:rgba(20,26,38,.7);}
+  .back:active{transform:scale(.94);}
+  .back svg{width:15px;height:15px;display:block;}
+
+  .tools{
+    right:calc(14px + env(safe-area-inset-right));
+    bottom:calc(14px + env(safe-area-inset-bottom));
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .btn{
+    width:38px;height:38px;padding:0;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(12,16,24,.42);
+    border:1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    color:#fff;cursor:pointer;font-family:inherit;outline:none;
+    transition:background-color .2s ease,transform .12s ease;
+  }
+  .btn:hover{background:rgba(20,26,38,.7);}
+  .btn:active{transform:scale(.93);}
+  .btn:focus-visible{outline:2px solid rgba(140,180,255,.8);outline-offset:2px;}
+  .btn svg{width:16px;height:16px;display:block;}
+
+  .label{
+    left:calc(18px + env(safe-area-inset-left));
+    bottom:calc(18px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+    color:rgba(255,255,255,.5);
+    pointer-events:none;user-select:none;
+  }
+  .label b{font-weight:600;letter-spacing:.18em;color:rgba(255,255,255,.8);}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<a class="ui back" href="../x.html" title="返回" aria-label="返回">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+</a>
+
+<div class="ui tools">
+  <div class="pk" id="pk" data-pk="starfield" data-placement="left"></div>
+  <button class="btn" id="pauseBtn" type="button" title="暂停 / 播放（空格）" aria-label="暂停或播放"></button>
+  <button class="btn" id="speedBtn" type="button" title="切换速度（S）" aria-label="切换速度">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 17l6-10M9 19.5l7.5-12.5"/><path d="M17.5 13.5L21 7.5"/></svg>
+  </button>
+  <button class="btn" id="fsBtn" type="button" title="全屏（F）" aria-label="全屏">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/></svg>
+  </button>
+</div>
+
+<div class="ui label" id="label">Starfield · <b>巡航</b></div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d', { alpha: false });
+  var labelEl = document.getElementById('label');
+
+  var W = 0, H = 0, DPR = 1, cx = 0, cy = 0, f = 0;
+  var stars = [];
+  var t = 0;
+  var running = false, rafId = 0, lastT = 0;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* 三档速度（z 每秒递减量） */
+  var SPEEDS = [
+    { key: '漂移', v: 0.045 },
+    { key: '巡航', v: 0.14 },
+    { key: '穿越', v: 0.55 }
+  ];
+  var speedIdx = 1;
+  var boost = 0;          // 按住屏幕：0→1
+  var curV = SPEEDS[1].v; // 平滑后的当前速度
+
+  /* ---------------- 初始化 ---------------- */
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    cx = W / 2; cy = H / 2;
+    f = Math.max(W, H) * 0.9;
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    // 屏幕面积决定星数：手机约 400，桌面约 850
+    var want = Math.round(Math.max(300, Math.min(900, (W * H) / 1500)));
+    stars.length = 0;
+    for (var i = 0; i < want; i++) stars.push(newStar(true));
+    paintBase();
+    if (!running) frame(0, true);
+  }
+
+  function newStar(anywhere) {
+    return {
+      x: Math.random() * 0.9 - 0.45,   // 收敛分布，让更多星落在屏幕内
+      y: Math.random() * 0.9 - 0.45,
+      z: anywhere ? Math.random() * 0.96 + 0.04 : 1,
+      kind: Math.random() < 0.62 ? 0 : (Math.random() < 0.5 ? 1 : 2)  // 0 主色 / 1 白 / 2 邻近色
+    };
+  }
+
+  /* 主色 → 星色 + 深空底色 */
+  var baseRGB = [4, 6, 13];
+  var starHue = 215;
+  var nearHue = 45;
+  function setStarColor(hex) {
+    var rgb = window.PaletteKit.hex2rgb(hex);
+    if (!rgb) return;
+    var hsl = window.PaletteKit.rgb2hsl(rgb.r, rgb.g, rgb.b);
+    starHue = hsl.h;
+    nearHue = (hsl.h + 150) % 360;
+    var b = window.PaletteKit.hsl2rgb(hsl.h, Math.min(0.55, hsl.s * 0.7), 0.035);
+    baseRGB = [b.r, b.g, b.b];
+  }
+
+  function paintBase() {
+    ctx.fillStyle = 'rgb(' + baseRGB[0] + ',' + baseRGB[1] + ',' + baseRGB[2] + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  /* ---------------- 渲染 ---------------- */
+  function frame(dt, still) {
+    var v = still ? 0 : curV * (1 + boost * 2.6);
+
+    // 半透明覆盖产生拖尾
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(' + baseRGB[0] + ',' + baseRGB[1] + ',' + baseRGB[2] + ',' + (still ? 1 : (boost > 0.4 ? 0.16 : 0.3)) + ')';
+    ctx.fillRect(0, 0, W, H);
+
+    var i, s, pz, sx, sy, psx, psy, size, lum;
+    for (i = 0; i < stars.length; i++) {
+      s = stars[i];
+      pz = s.z;
+      s.z -= v * dt;
+      if (s.z <= 0.02) { stars[i] = newStar(false); continue; }
+
+      sx = cx + (s.x / s.z) * f;
+      sy = cy + (s.y / s.z) * f;
+      if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) { stars[i] = newStar(false); continue; }
+
+      psx = cx + (s.x / pz) * f;
+      psy = cy + (s.y / pz) * f;
+
+      var near = 1 - s.z;                       // 越近越亮越大
+      size = 0.55 + Math.pow(near, 1.6) * 3;
+      lum = 0.3 + Math.pow(near, 0.85) * 0.7;
+      ctx.strokeStyle = s.kind === 1
+        ? 'rgba(232,238,255,' + lum.toFixed(3) + ')'
+        : 'hsla(' + (s.kind === 0 ? starHue : nearHue).toFixed(1) + ',72%,' + (74 + near * 12) + '%,' + lum.toFixed(3) + ')';
+      ctx.lineWidth = size;
+      ctx.beginPath();
+      ctx.moveTo(psx, psy);
+      ctx.lineTo(sx, sy);
+      ctx.stroke();
+    }
+
+    // 穿越时中心泛起微光
+    if (boost > 0.05 && !still) {
+      var glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(W, H) * 0.34);
+      glow.addColorStop(0, 'rgba(120,150,255,' + (boost * 0.10).toFixed(3) + ')');
+      glow.addColorStop(1, 'rgba(120,150,255,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function loop(now) {
+    rafId = requestAnimationFrame(loop);
+    var dt = lastT ? Math.min((now - lastT) / 1000, 0.06) : 0.016;
+    lastT = now;
+    t += dt;
+    curV += (SPEEDS[speedIdx].v * (1 + boost * 1.2) - curV) * Math.min(1, dt * 4);
+    frame(dt, false);
+  }
+
+  function start() {
+    if (running) return;
+    running = true; lastT = 0;
+    rafId = requestAnimationFrame(loop);
+  }
+  function stop() {
+    running = false;
+    cancelAnimationFrame(rafId);
+  }
+
+  /* ---------------- 交互 ---------------- */
+  cv.addEventListener('pointerdown', function (e) {
+    boost = 1;
+    setSpeedLabel();
+  });
+  window.addEventListener('pointerup', function () { boost = 0; setSpeedLabel(); }, { passive: true });
+  window.addEventListener('pointercancel', function () { boost = 0; }, { passive: true });
+
+  function setSpeedLabel() {
+    if (!labelEl) return;
+    var name = boost > 0 ? '穿越' : SPEEDS[speedIdx].key;
+    labelEl.innerHTML = 'Starfield · <b>' + name + '</b>';
+  }
+
+  function cycleSpeed() {
+    speedIdx = (speedIdx + 1) % SPEEDS.length;
+    setSpeedLabel();
+  }
+
+  var pauseBtn = document.getElementById('pauseBtn');
+  var ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg>';
+  var ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2l11 6.8-11 6.8z"/></svg>';
+
+  function togglePause() {
+    if (reduceMotion) return;
+    if (running) {
+      stop();
+      if (pauseBtn) { pauseBtn.innerHTML = ICON_PLAY; pauseBtn.title = '播放（空格）'; }
+    } else {
+      start();
+      if (pauseBtn) { pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.title = '暂停（空格）'; }
+    }
+  }
+  if (pauseBtn) {
+    pauseBtn.innerHTML = reduceMotion ? ICON_PLAY : ICON_PAUSE;
+    pauseBtn.addEventListener('click', togglePause);
+  }
+
+  var speedBtn = document.getElementById('speedBtn');
+  if (speedBtn) speedBtn.addEventListener('click', cycleSpeed);
+
+  var fsBtn = document.getElementById('fsBtn');
+  var canFs = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+  if (fsBtn) {
+    if (!canFs) fsBtn.style.display = 'none';
+    else fsBtn.addEventListener('click', function () {
+      try {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen).call(document.documentElement);
+        } else {
+          (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        }
+      } catch (e) { /* 忽略 */ }
+    });
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); togglePause(); }
+    else if (e.key === 's' || e.key === 'S') cycleSpeed();
+    else if (e.key === 'f' || e.key === 'F') { if (fsBtn && canFs) fsBtn.click(); }
+  });
+
+  /* ---------------- 闲置淡出 ---------------- */
+  var idleTimer = null;
+  function wake() {
+    document.body.classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () { document.body.classList.add('idle'); }, 3000);
+  }
+  ['pointermove', 'pointerdown', 'keydown', 'wheel'].forEach(function (ev) {
+    window.addEventListener(ev, wake, { passive: true });
+  });
+  wake();
+
+  /* ---------------- 启动 ---------------- */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stop();
+    else if (!reduceMotion) start();
+  });
+
+  window.addEventListener('resize', resize, { passive: true });
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 220); });
+
+  /* 调色板：选什么色，星就是什么色 */
+  var pk = window.PaletteKit.mount(document.getElementById('pk'), {
+    value: '#8fb8ff',
+    onChange: function (c) { setStarColor(c); if (!running) frame(0, true); }
+  });
+  setStarColor(pk.get());
+
+  resize();
+  if (!reduceMotion) start();
+})();
+</script>
+</body>
+</html>

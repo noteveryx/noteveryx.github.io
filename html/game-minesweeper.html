@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>扫雷</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/game-kit.css">
+<style>
+  /* 难度条：z-index 高于覆盖层(30)，所以 ready 时也能点 */
+  .lv{
+    position:fixed;z-index:35;
+    left:calc(60px + env(safe-area-inset-left));
+    top:calc(72px + env(safe-area-inset-top));
+    display:flex;gap:3px;padding:4px;border-radius:12px;
+    background:rgba(12,16,24,.58);
+    border:1px solid rgba(255,255,255,.12);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  }
+  .lv button{
+    border:none;background:transparent;color:rgba(255,255,255,.62);
+    font-family:inherit;font-size:11px;font-weight:600;letter-spacing:.04em;
+    padding:5px 9px;border-radius:9px;cursor:pointer;white-space:nowrap;
+    transition:background-color .15s ease,color .15s ease;
+  }
+  .lv button:hover{color:#fff;background:rgba(255,255,255,.08);}
+  .lv button.on{background:var(--gk-accent,#635bff);color:#fff;}
+
+  .tip{
+    position:fixed;z-index:12;left:50%;transform:translateX(-50%);
+    bottom:calc(38px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.34);
+    pointer-events:none;user-select:none;white-space:nowrap;
+  }
+  @media (max-width:420px){ .tip{font-size:10px;letter-spacing:.02em;} }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div class="lv" id="lv">
+  <button type="button" data-lv="0" class="on">初级 9×9</button>
+  <button type="button" data-lv="1">中级 12×12</button>
+  <button type="button" data-lv="2">高级 16×16</button>
+</div>
+
+<div class="tip">左键翻开 · 右键 / 长按插旗 · 空格 暂停</div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/game-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LW = 480, LH = 720;
+  var BX = 10, BY = 150, BS = 460;          // 棋盘区域（逻辑坐标，略微下移以配平上下留白）
+
+  var LEVELS = [
+    { name: '初级', cols: 9,  rows: 9,  mines: 10 },
+    { name: '中级', cols: 12, rows: 12, mines: 25 },
+    { name: '高级', cols: 16, rows: 16, mines: 40 }
+  ];
+
+  var level = 0;
+  var cols = 9, rows = 9, mines = 10;
+  var mine, cnt, st;                        // st: 0未开 1已开 2旗 3雷(揭示) 4错旗
+  var flags = 0, opened = 0;
+  var started = false, elapsed = 0, lastHud = -1;
+  var boomAt = -1, boomR = 0, boomC = 0;
+  var won = false;
+
+  function cfg() { return LEVELS[level]; }
+  function inB(r, c) { return r >= 0 && r < rows && c >= 0 && c < cols; }
+  function idx(r, c) { return r * cols + c; }
+  function csz() { return BS / cols; }
+
+  // 注意：onInit 是 create() 内部回调，那时外层 api 还没赋值，
+  // 所以必须用参数 a，不能引用外层 api（否则 TypeError，整页脚本中断）
+  function resetBoard(a) {
+    var g = a || api;
+    var L = cfg();
+    cols = L.cols; rows = L.rows; mines = L.mines;
+    var n = cols * rows;
+    mine = new Uint8Array(n);
+    cnt = new Uint8Array(n);
+    st = new Uint8Array(n);
+    flags = 0; opened = 0;
+    started = false; elapsed = 0; lastHud = -1;
+    boomAt = -1; won = false;
+    g.setStat('left', mines);
+    g.setStat('time', 0);
+  }
+
+  /* 首开不炸：雷避开点击格及其 8 邻域 */
+  function placeMines(sr, sc) {
+    var n = cols * rows, ban = {}, free = [];
+    for (var dr = -1; dr <= 1; dr++) {
+      for (var dc = -1; dc <= 1; dc++) {
+        var rr = sr + dr, cc = sc + dc;
+        if (inB(rr, cc)) ban[idx(rr, cc)] = 1;
+      }
+    }
+    for (var i = 0; i < n; i++) if (!ban[i]) free.push(i);
+    var m = Math.min(mines, free.length);
+    for (var k = 0; k < m; k++) {
+      var j = k + ((Math.random() * (free.length - k)) | 0);
+      var t = free[k]; free[k] = free[j]; free[j] = t;
+      mine[free[k]] = 1;
+    }
+    for (var r2 = 0; r2 < rows; r2++) {
+      for (var c2 = 0; c2 < cols; c2++) {
+        var s = 0;
+        for (var dr2 = -1; dr2 <= 1; dr2++) {
+          for (var dc2 = -1; dc2 <= 1; dc2++) {
+            if (!dr2 && !dc2) continue;
+            var r3 = r2 + dr2, c3 = c2 + dc2;
+            if (inB(r3, c3) && mine[idx(r3, c3)]) s++;
+          }
+        }
+        cnt[idx(r2, c2)] = s;
+      }
+    }
+  }
+
+  function floodFill(sr, sc) {
+    var stack = [idx(sr, sc)];
+    while (stack.length) {
+      var j = stack.pop();
+      if (st[j] !== 0) continue;
+      st[j] = 1; opened++;
+      if (cnt[j] !== 0) continue;           // 有数字就停，不往里展开
+      var rj = (j / cols) | 0, cj = j % cols;
+      for (var dr = -1; dr <= 1; dr++) {
+        for (var dc = -1; dc <= 1; dc++) {
+          if (!dr && !dc) continue;
+          var rr = rj + dr, cc = cj + dc;
+          if (!inB(rr, cc)) continue;
+          var jj = idx(rr, cc);
+          if (st[jj] === 0 && !mine[jj]) stack.push(jj);
+        }
+      }
+    }
+  }
+
+  function openCell(r, c) {
+    if (won || api.state !== 'playing') return;
+    if (!inB(r, c)) return;
+    var i = idx(r, c);
+    if (st[i] !== 0) return;                 // 已开 / 已插旗
+    if (!started) { started = true; placeMines(r, c); }
+    if (mine[i]) { lose(r, c); return; }
+    var before = opened;
+    floodFill(r, c);
+    if (opened > before) api.sound('move');
+    checkWin();
+  }
+
+  function toggleFlag(r, c) {
+    if (won || api.state !== 'playing') return;
+    if (!inB(r, c)) return;
+    var i = idx(r, c);
+    if (st[i] === 1) return;
+    if (st[i] === 2) { st[i] = 0; flags--; }
+    else { st[i] = 2; flags++; }
+    api.setStat('left', mines - flags);
+    api.sound('click');
+  }
+
+  function checkWin() {
+    if (opened < cols * rows - mines) return;
+    won = true;
+    for (var i = 0; i < cols * rows; i++) {
+      if (mine[i] && st[i] === 0) { st[i] = 2; flags++; }
+    }
+    api.setStat('left', 0);
+    api.setScore(elapsed);                    // min 模式：结算留到 gameOver
+    api.sound('win');
+    api.gameOver('扫雷成功！');
+  }
+
+  function lose(r, c) {
+    st[idx(r, c)] = 1;
+    for (var i = 0; i < cols * rows; i++) {
+      if (mine[i] && st[i] === 0) st[i] = 3;
+      else if (!mine[i] && st[i] === 2) st[i] = 4;
+    }
+    boomAt = elapsed; boomR = r; boomC = c;
+    api.sound('boom');
+    api.gameOver('踩到雷了');
+  }
+
+  function cellAt(x, y) {
+    var cs = csz();
+    var c = Math.floor((x - BX) / cs);
+    var r = Math.floor((y - BY) / cs);
+    if (!inB(r, c)) return null;
+    return { r: r, c: c };
+  }
+
+  /* ---------------- 绘制 ---------------- */
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function numColor(n, pal) {
+    switch (n) {
+      case 1: return pal.base;
+      case 2: return pal.alt;
+      case 3: return pal.alt2;
+      case 4: return pal.bright;
+      case 5: return pal.deep;
+      case 6: return pal.at(70, 0.06, 0);
+      case 7: return pal.at(-70, 0.04, -0.04);
+      default: return pal.muted;
+    }
+  }
+
+  function drawFlag(c, cx, cy, cs, pal) {
+    var s = cs * 0.24;
+    c.save();
+    c.strokeStyle = pal.ink2;
+    c.lineWidth = Math.max(1.3, cs * 0.05);
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(cx, cy + s);
+    c.lineTo(cx, cy - s);
+    c.stroke();
+    c.fillStyle = pal.base;
+    c.shadowColor = pal.base;
+    c.shadowBlur = 8;
+    c.beginPath();
+    c.moveTo(cx, cy - s);
+    c.lineTo(cx + s * 0.92, cy - s * 0.4);
+    c.lineTo(cx, cy + s * 0.14);
+    c.closePath();
+    c.fill();
+    c.restore();
+  }
+
+  function drawMine(c, cx, cy, cs) {
+    var r = cs * 0.16;
+    c.save();
+    c.strokeStyle = 'rgba(255,120,120,.85)';
+    c.lineWidth = Math.max(1.1, cs * 0.045);
+    for (var k = 0; k < 4; k++) {
+      var a = k * Math.PI / 4;
+      c.beginPath();
+      c.moveTo(cx - Math.cos(a) * r * 1.5, cy - Math.sin(a) * r * 1.5);
+      c.lineTo(cx + Math.cos(a) * r * 1.5, cy + Math.sin(a) * r * 1.5);
+      c.stroke();
+    }
+    c.fillStyle = 'rgba(255,95,95,.95)';
+    c.shadowColor = 'rgba(255,80,80,.8)';
+    c.shadowBlur = 9;
+    c.beginPath();
+    c.arc(cx, cy, r, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+
+  function drawCross(c, cx, cy, cs) {
+    var s = cs * 0.15;
+    c.save();
+    c.strokeStyle = 'rgba(255,255,255,.5)';
+    c.lineWidth = Math.max(1.4, cs * 0.055);
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(cx - s, cy - s); c.lineTo(cx + s, cy + s);
+    c.moveTo(cx + s, cy - s); c.lineTo(cx - s, cy + s);
+    c.stroke();
+    c.restore();
+  }
+
+  var api = window.GameKit.create({
+    slug: 'minesweeper',
+    title: '扫雷',
+    logic: [LW, LH],
+    color: '#635bff',
+    bestMode: 'min',                          // 越小越好：最快通关时间
+    dpad: false,
+    hint: '左键翻开格子，右键或长按插旗<br>踩到雷就结束，找出全部雷才算赢',
+    hud: [
+      { k: 'time', label: '用时', fmt: function (v) { return (v || 0).toFixed(1) + 's'; } },
+      { k: 'best', label: '最快', fmt: function (v) { return v ? v.toFixed(1) + 's' : '—'; } },
+      { k: 'left', label: '剩余雷' }
+    ],
+    // 三档难度各存各的最快纪录
+    bestKey: function () { return 'gk_minesweeper_best_' + level; },
+
+    onInit: function (a) {
+      resetBoard(a);
+      a.setScore(0);
+    },
+
+    onUpdate: function (a, dt) {
+      if (!started || won) return;
+      elapsed += dt;
+      if (lastHud < 0 || elapsed - lastHud >= 0.1) {
+        lastHud = elapsed;
+        a.setStat('time', elapsed);
+      }
+    },
+
+    onRender: function (a, c) {
+      var pal = a.colors;
+      var cs = csz();
+      var pad = Math.max(1, cs * 0.055);
+      var w = cs - pad * 2;
+      var rr = Math.max(2, cs * 0.16);
+
+      // 棋盘容器
+      c.save();
+      roundRect(c, BX, BY, BS, BS, 14);
+      c.fillStyle = 'rgba(255,255,255,.03)';
+      c.fill();
+      c.lineWidth = 1.5;
+      c.strokeStyle = won ? pal.glow : 'rgba(255,255,255,.1)';
+      if (won) { c.shadowColor = pal.glow; c.shadowBlur = 14; }
+      c.stroke();
+      c.restore();
+
+      for (var r = 0; r < rows; r++) {
+        for (var col = 0; col < cols; col++) {
+          var i = idx(r, col);
+          var x = BX + col * cs, y = BY + r * cs;
+          var s = st[i];
+
+          if (s === 1) {
+            // 已开：凹陷 + 数字
+            c.fillStyle = 'rgba(255,255,255,.022)';
+            roundRect(c, x + pad, y + pad, w, w, rr);
+            c.fill();
+            if (cnt[i] > 0) {
+              c.save();
+              c.font = '700 ' + Math.round(cs * 0.46) + 'px -apple-system, "PingFang SC", system-ui, sans-serif';
+              c.textAlign = 'center';
+              c.textBaseline = 'middle';
+              c.fillStyle = numColor(cnt[i], pal);
+              c.shadowColor = numColor(cnt[i], pal);
+              c.shadowBlur = 6;
+              c.fillText(String(cnt[i]), x + cs / 2, y + cs / 2 + 1);
+              c.restore();
+            }
+          } else if (s === 2) {
+            c.fillStyle = 'rgba(255,255,255,.10)';
+            roundRect(c, x + pad, y + pad, w, w, rr);
+            c.fill();
+            drawFlag(c, x + cs / 2, y + cs / 2, cs, pal);
+          } else if (s === 3) {
+            c.fillStyle = 'rgba(255,90,90,.13)';
+            roundRect(c, x + pad, y + pad, w, w, rr);
+            c.fill();
+            drawMine(c, x + cs / 2, y + cs / 2, cs);
+          } else if (s === 4) {
+            c.fillStyle = 'rgba(255,255,255,.05)';
+            roundRect(c, x + pad, y + pad, w, w, rr);
+            c.fill();
+            drawCross(c, x + cs / 2, y + cs / 2, cs);
+          } else {
+            // 未开
+            c.fillStyle = 'rgba(255,255,255,.085)';
+            roundRect(c, x + pad, y + pad, w, w, rr);
+            c.fill();
+            c.strokeStyle = 'rgba(255,255,255,.06)';
+            c.lineWidth = 1;
+            c.stroke();
+          }
+        }
+      }
+
+      // 爆炸扩散环
+      if (boomAt >= 0 && elapsed - boomAt < 0.6) {
+        var t = (elapsed - boomAt) / 0.6;
+        c.save();
+        c.strokeStyle = 'rgba(255,90,90,' + (0.75 * (1 - t)).toFixed(3) + ')';
+        c.lineWidth = 3;
+        c.beginPath();
+        c.arc(BX + boomC * cs + cs / 2, BY + boomR * cs + cs / 2, cs * (0.35 + t * 2.4), 0, Math.PI * 2);
+        c.stroke();
+        c.restore();
+      }
+    },
+
+    onAction: function (a, act) {
+      if (act.type === 'tap') {
+        var g = cellAt(act.x, act.y);
+        if (!g) return;
+        if (act.button === 2) toggleFlag(g.r, g.c);   // 右键插旗
+        else openCell(g.r, g.c);
+      } else if (act.type === 'longpress') {
+        var g2 = cellAt(act.x, act.y);
+        if (g2) toggleFlag(g2.r, g2.c);               // 长按插旗
+      }
+    }
+  });
+
+  /* 难度切换 */
+  var lvBtns = document.querySelectorAll('#lv button');
+  Array.prototype.forEach.call(lvBtns, function (b) {
+    b.addEventListener('click', function () {
+      var i = +b.getAttribute('data-lv');
+      if (i === level) return;
+      level = i;
+      Array.prototype.forEach.call(lvBtns, function (x) {
+        x.classList.toggle('on', +x.getAttribute('data-lv') === level);
+      });
+      if (api.state === 'ready') {
+        resetBoard();                                 // 还在开始面板，保持 ready
+        api.setScore(0);
+      } else {
+        api.restart();                                // 换难度重开，顺便读该难度的纪录
+      }
+    });
+  });
+
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试用（正常访问不注入任何全局） */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__mine = {
+      get level() { return level; },
+      get cols() { return cols; },
+      get rows() { return rows; },
+      get mines() { return mines; },
+      get opened() { return opened; },
+      get flags() { return flags; },
+      get elapsed() { return elapsed; },
+      get won() { return won; },
+      box: { x: BX, y: BY, size: BS },
+      safe: function () {
+        var out = [];
+        for (var r = 0; r < rows; r++) {
+          for (var c = 0; c < cols; c++) if (!mine[idx(r, c)]) out.push([r, c]);
+        }
+        return out;
+      },
+      flagged: function () {
+        var out = [];
+        for (var r = 0; r < rows; r++) {
+          for (var c = 0; c < cols; c++) if (st[idx(r, c)] === 2) out.push([r, c]);
+        }
+        return out;
+      },
+      grid: function () {
+        var out = [];
+        for (var r = 0; r < rows; r++) {
+          var line = [];
+          for (var c = 0; c < cols; c++) line.push(mine[idx(r, c)] ? 1 : 0);
+          out.push(line);
+        }
+        return out;
+      },
+      open: openCell,
+      flag: toggleFlag
+    };
+  }
+
+  void api;
+})();
+</script>
+</body>
+</html>

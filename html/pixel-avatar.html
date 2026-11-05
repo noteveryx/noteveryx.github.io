@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>像素头像</title>
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
+<style>
+  :root{
+    --bg1:#f7f9fd; --bg2:#eef1f9; --card:#fff; --text:#16192b; --muted:#6b7590;
+    --line:rgba(22,25,43,.08); --accent:#635bff; --accent2:#00b8d9;
+    --logo-border:rgba(255,255,255,.16); --logo-shadow:0 4px 14px rgba(22,25,43,.18);
+  }
+  html[data-theme="emerald"]{--bg1:#f5faf7;--bg2:#e8f1ec;--card:#fff;--text:#16241d;--muted:#6d8177;--line:rgba(22,36,29,.08);--accent:#2f9e6d;--accent2:#31b8a4;--logo-border:rgba(255,255,255,.16);--logo-shadow:0 4px 14px rgba(22,36,29,.18);}
+  html[data-theme="midnight"]{--bg1:#0f1626;--bg2:#0a101c;--card:#151f2e;--text:#e7eef8;--muted:#7f8fa4;--line:#232f40;--accent:#5b9dff;--accent2:#38c8f0;--logo-border:rgba(255,255,255,.10);--logo-shadow:0 4px 14px rgba(0,0,0,.5);}
+  html[data-theme="sunset"]{--bg1:#fdf8f4;--bg2:#f7ece2;--card:#fff;--text:#33231a;--muted:#96796a;--line:rgba(51,35,26,.09);--accent:#f2762e;--accent2:#f5a623;--logo-border:rgba(255,255,255,.16);--logo-shadow:0 4px 14px rgba(80,45,20,.18);}
+  html[data-theme="ink"]{--bg1:#0e1517;--bg2:#0a1012;--card:#131b1e;--text:#e2edee;--muted:#7d9194;--line:#212e31;--accent:#2dd4bf;--accent2:#38bdf8;--logo-border:rgba(255,255,255,.10);--logo-shadow:0 4px 14px rgba(0,0,0,.5);}
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{margin:0;padding:0;overflow-x:hidden;overflow-x:clip;}
+  body{
+    margin:0;width:100%;max-width:100%;overflow-x:hidden;overflow-x:clip;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    color:var(--text);background:linear-gradient(180deg,var(--bg1),var(--bg2));
+    min-height:100vh;padding-bottom:calc(28px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing:antialiased;transition:background .28s ease,color .28s ease;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left));}
+  header{padding:28px 0 14px;display:flex;align-items:center;gap:12px;}
+  .back{
+    width:36px;height:36px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    background:var(--card);border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.06);
+    color:var(--text);text-decoration:none;transition:border-color .2s ease,transform .12s ease;
+  }
+  .back:hover{border-color:var(--accent);color:var(--accent);}
+  .back:active{transform:scale(.94);}
+  .back svg{width:15px;height:15px;}
+  h1{margin:0;font-size:21px;font-weight:800;}
+  .sub{margin:2px 0 0;font-size:12.5px;color:var(--muted);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;
+    box-shadow:0 8px 26px rgba(0,0,0,.07);
+  }
+  .card h2{margin:0 0 12px;font-size:14px;font-weight:700;color:var(--muted);letter-spacing:.04em;}
+  .preview{
+    width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;
+    background:var(--bg2);border:1px solid var(--line);display:block;
+  }
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  .btn{
+    border:1px solid var(--line);background:var(--bg1);color:var(--text);
+    border-radius:10px;padding:9px 13px;font-family:inherit;font-size:13px;font-weight:600;
+    cursor:pointer;outline:none;transition:border-color .15s ease,color .15s ease,transform .12s ease;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .btn:active{transform:scale(.96);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.primary:hover{color:#fff;filter:brightness(1.06);}
+  .field{
+    width:100%;font-family:inherit;font-size:14px;color:var(--text);background:var(--bg1);
+    border:1px solid var(--line);border-radius:10px;padding:9px 11px;outline:none;margin-top:10px;
+  }
+  .field:focus{border-color:var(--accent);}
+  .hint{font-size:12px;color:var(--muted);text-align:center;margin:16px 0 0;}
+  .mini{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .mini canvas{width:52px;height:52px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="../x.html" title="返回" aria-label="返回">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+    <div>
+      <h1>像素头像</h1>
+      <p class="sub">输入名字 → 生成对称像素头像，可直接下载当头像</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h2>预览</h2>
+      <canvas class="preview" id="avatar" width="512" height="512"></canvas>
+      <input class="field" id="nameInput" type="text" maxlength="16" placeholder="输入名字，例如 not_every" value="not_every">
+      <div class="row">
+        <button class="btn primary" id="regenBtn" type="button">换个样子</button>
+        <button class="btn" id="saveBtn" type="button">下载 PNG</button>
+      </div>
+      <div class="row" style="align-items:center;gap:10px;">
+        <span style="font-size:12.5px;color:var(--muted);" id="seedLabel">种子 —</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>同系列（点一个套用）</h2>
+      <div class="mini" id="mini"></div>
+      <p class="hint" style="text-align:left;margin-top:14px;">同一名字、不同种子会生成不同头像；<br>下载的是 512×512 PNG，可直接上传到微信等平台。</p>
+    </div>
+  </div>
+</div>
+
+<div class="pk pk-float" id="pk" data-pk="avatar" data-placement="bottom"></div>
+
+<script src="../assets/js/theme-kit.js"></script>
+<script src="../assets/js/palette-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var SIZE = 16;                 // 16×16 像素格
+  var cv = document.getElementById('avatar');
+  var ctx = cv.getContext('2d');
+  var miniEl = document.getElementById('mini');
+
+  var seed = 0;
+  var baseHex = '#635bff';
+
+  function hash(str) {
+    var h = 2166136261;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /* 对称像素头像：左右镜像 + 随机块面 */
+  function pixels(rnd) {
+    var half = Math.ceil(SIZE / 2);
+    var grid = [];
+    for (var y = 0; y < SIZE; y++) {
+      grid[y] = [];
+      for (var x = 0; x < half; x++) {
+        grid[y][x] = rnd() < 0.42 ? 1 : 0;
+      }
+    }
+    // 左右镜像
+    var out = [];
+    for (var yy = 0; yy < SIZE; yy++) {
+      var row = [];
+      for (var xx = 0; xx < SIZE; xx++) {
+        row.push(grid[yy][xx < half ? xx : SIZE - 1 - xx]);
+      }
+      out.push(row);
+    }
+    // 挖空一些块，形成图案感
+    var holes = Math.floor(rnd() * 5);
+    for (var h = 0; h < holes; h++) {
+      var hx = Math.floor(rnd() * SIZE), hy = Math.floor(rnd() * SIZE);
+      var hw = 1 + Math.floor(rnd() * 3), hh = 1 + Math.floor(rnd() * 3);
+      for (var dy = 0; dy < hh; dy++) {
+        for (var dx = 0; dx < hw; dx++) {
+          var px = (hx + dx) % SIZE, py = (hy + dy) % SIZE;
+          var mx = px < SIZE / 2 ? px : SIZE - 1 - px;
+          out[py][px] = 0;
+          out[py][mx] = 0;
+        }
+      }
+    }
+    return out;
+  }
+
+  function palette(rnd, hex) {
+    var c = window.PaletteKit.hex2rgb(hex) || { r: 99, g: 91, b: 255 };
+    var hsl = window.PaletteKit.rgb2hsl(c.r, c.g, c.b);
+    var hx = function (cc) { return window.PaletteKit.rgb2hex(cc.r, cc.g, cc.b); };
+    var a = window.PaletteKit.hsl2rgb(hsl.h, Math.min(1, hsl.s + 0.12), 0.56);
+    var b = window.PaletteKit.hsl2rgb((hsl.h + 38) % 360, Math.min(1, hsl.s + 0.2), 0.68);
+    var bg = window.PaletteKit.hsl2rgb(hsl.h, Math.min(0.4, hsl.s * 0.5), 0.12);
+    return { main: hx(a), hi: hx(b), bg: hx(bg) };
+  }
+
+  function drawAvatar(canvas, name, s, hex) {
+    var octx = canvas.getContext('2d');
+    var px = canvas.width / SIZE;
+    octx.fillStyle = '#101014';
+    octx.fillRect(0, 0, canvas.width, canvas.height);
+
+    var rnd = mulberry32(hash(name) ^ s);
+    var g = pixels(rnd);
+    var pal = palette(rnd, hex);
+
+    // 底色方块（淡）
+    for (var y = 0; y < SIZE; y++) {
+      for (var x = 0; x < SIZE; x++) {
+        if (!g[y][x]) continue;
+        octx.fillStyle = (rnd() < 0.3) ? pal.hi : pal.main;
+        octx.fillRect(x * px, y * px, px, px);
+      }
+    }
+    // 深色描边感：随机补一点暗块
+    for (var k = 0; k < 26; k++) {
+      var bx = Math.floor(rnd() * SIZE), by = Math.floor(rnd() * SIZE);
+      octx.fillStyle = 'rgba(0,0,0,.18)';
+      octx.fillRect(bx * px, by * px, px, px);
+    }
+  }
+
+  function refresh() {
+    var name = document.getElementById('nameInput').value.trim() || 'not_every';
+    drawAvatar(cv, name, seed, baseHex);
+    var label = document.getElementById('seedLabel');
+    if (label) label.textContent = '种子 ' + seed;
+
+    miniEl.innerHTML = '';
+    for (var i = 0; i < 6; i++) {
+      var m = document.createElement('canvas');
+      m.width = 64; m.height = 64;
+      miniEl.appendChild(m);
+      drawAvatar(m, name, i + 1, baseHex);
+      (function (c, s) {
+        c.style.cursor = 'pointer';
+        c.addEventListener('click', function () {
+          seed = s;
+          refresh();
+        });
+      })(m, i + 1);
+    }
+  }
+
+  document.getElementById('nameInput').addEventListener('input', function () {
+    seed = 0;
+    refresh();
+  });
+  document.getElementById('regenBtn').addEventListener('click', function () {
+    seed = (seed + 1) % 999;
+    refresh();
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', function () {
+    try {
+      var out = document.createElement('canvas');
+      out.width = 512; out.height = 512;
+      drawAvatar(out, document.getElementById('nameInput').value.trim() || 'not_every', seed, baseHex);
+      out.toBlob(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'avatar-' + (document.getElementById('nameInput').value.trim() || 'avatar') + '-' + seed + '.png';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+      }, 'image/png');
+    } catch (e) { }
+  });
+
+  var pk = window.PaletteKit.mount(document.getElementById('pk'), {
+    value: '#635bff',
+    onChange: function (c) { baseHex = c; refresh(); }
+  });
+  baseHex = pk.get();
+
+  refresh();
+})();
+</script>
+</body>
+</html>

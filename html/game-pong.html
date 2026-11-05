@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>Pong</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/game-kit.css">
+<style>
+  .tip{
+    position:fixed;z-index:12;left:50%;transform:translateX(-50%);
+    bottom:calc(20px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.34);
+    pointer-events:none;user-select:none;white-space:nowrap;
+  }
+  @media (max-width:420px){ .tip{font-size:10px;letter-spacing:.02em;} }
+  .gk-label{display:none;}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="tip">鼠标 / 触摸 移动挡板 · ↑ ↓ 也能控 · 空格 暂停</div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/game-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LW = 480, LH = 720;
+  var PADDLE_W = 12, PADDLE_H = 88;
+  var PLAYER_X = 40, AI_X = LW - 40 - PADDLE_W;
+  var BALL_R = 9;
+  var WIN_SCORE = 11;
+  var AI_SPEED = 340;             // AI 挡板移动速度 px/s
+  var AI_ACC = 5.0;               // AI 追踪加速度（越大越强）
+
+  var player = { y: 360 };
+  var ai = { y: 360 };
+  var ball = { x: 240, y: 360, vx: 300, vy: 160, r: BALL_R };
+  var pScore = 0, aScore = 0;
+  var rally = 0;                  // 连续对打次数
+  var speed = 300;
+  var serveT = 0, serving = false;
+  var hitFlash = 0;
+  var lastPtrT = 0, ptrActive = false;
+  var keyUp = false, keyDown = false;
+
+  function reset(a) {
+    var g = a || api;
+    player.y = 360; ai.y = 360;
+    pScore = 0; aScore = 0;
+    rally = 0; speed = 300;
+    hitFlash = 0;
+    serve(1);
+    g.setScore(0);
+    g.setStat('p', 0);
+    g.setStat('a', 0);
+  }
+
+  function serve(dir) {
+    ball.x = 240; ball.y = 360;
+    var ang = (Math.random() * 0.7 - 0.35);          // -0.35 ~ 0.35 rad
+    speed = 300 + rally * 9;
+    ball.vx = Math.cos(ang) * speed * dir;
+    ball.vy = Math.sin(ang) * speed;
+    serving = true;
+    serveT = 0.9;
+  }
+
+  function paddleRect(y) {
+    return { x: PLAYER_X, y: y - PADDLE_H / 2, w: PADDLE_W, h: PADDLE_H };
+  }
+  function aiRect(y) {
+    return { x: AI_X, y: y - PADDLE_H / 2, w: PADDLE_W, h: PADDLE_H };
+  }
+  function hitRect(b, r) {
+    return b.x + b.r > r.x && b.x - b.r < r.x + r.w &&
+           b.y + b.r > r.y && b.y - b.r < r.y + r.h;
+  }
+
+  function point(who) {
+    if (who === 'p') {
+      pScore++;
+      api.setStat('p', pScore);
+      api.addScore(1);
+      api.sound('eat');
+    } else {
+      aScore++;
+      api.setStat('a', aScore);
+      api.sound('die');
+    }
+    rally = 0;
+    if (pScore >= WIN_SCORE || aScore >= WIN_SCORE) {
+      api.sound('win');
+      api.gameOver(pScore >= WIN_SCORE ? '你赢了！' : '电脑赢了');
+      return;
+    }
+    serve(pScore > aScore ? 1 : -1);
+  }
+
+  function update(dt) {
+    // 玩家：键盘
+    var kdir = 0;
+    if (keyUp) kdir -= 1;
+    if (keyDown) kdir += 1;
+    if (kdir) player.y += kdir * 560 * dt;
+    else if (now() - lastPtrT < 1600) {
+      // 指针：平滑跟随
+      player.y += (pointerY - player.y) * Math.min(1, dt * 16);
+    }
+    player.y = Math.max(PADDLE_H / 2 + 6, Math.min(LH - PADDLE_H / 2 - 6, player.y));
+
+    // AI：预测球到达右边的位置
+    var target = ball.y;
+    if (ball.vx > 0) {
+      var t2 = (AI_X - ball.x) / ball.vx;
+      target = ball.y + ball.vy * t2;
+      target = Math.max(PADDLE_H / 2 + 6, Math.min(LH - PADDLE_H / 2 - 6, target));
+    }
+    var diff = target - ai.y;
+    var step = AI_SPEED * dt;
+    if (Math.abs(diff) < step) ai.y = target;
+    else ai.y += (diff > 0 ? step : -step);
+    // 加点随机误差，别太机械
+    ai.y += (Math.random() - 0.5) * 14 * dt;
+    ai.y = Math.max(PADDLE_H / 2 + 6, Math.min(LH - PADDLE_H / 2 - 6, ai.y));
+
+    if (hitFlash > 0) hitFlash = Math.max(0, hitFlash - dt * 4);
+
+    // 发球等待
+    if (serving) {
+      serveT -= dt;
+      if (serveT <= 0) serving = false;
+      return;
+    }
+
+    // 球
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+
+    // 上下墙
+    if (ball.y - BALL_R <= 0) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); api.sound('tick'); }
+    if (ball.y + BALL_R >= LH) { ball.y = LH - BALL_R; ball.vy = -Math.abs(ball.vy); api.sound('tick'); }
+
+    // 玩家挡板
+    if (ball.vx < 0 && hitRect(ball, paddleRect(player.y))) {
+      bounce(paddleRect(player.y), 1);
+    }
+    // AI 挡板
+    if (ball.vx > 0 && hitRect(ball, aiRect(ai.y))) {
+      bounce(aiRect(ai.y), -1);
+    }
+
+    // 出界
+    if (ball.x < -30) point('a');
+    else if (ball.x > LW + 30) point('p');
+  }
+
+  function bounce(rect, dir) {
+    // 击球点决定反弹角：边缘打出平角，中间打出大角
+    var rel = (ball.y - (rect.y + rect.h / 2)) / (rect.h / 2);
+    rel = Math.max(-1, Math.min(1, rel));
+    var ang = rel * 0.95;                        // ±54°
+    rally++;
+    speed = Math.min(720, 300 + rally * 11);
+    ball.vx = Math.cos(ang) * speed * dir;
+    ball.vy = Math.sin(ang) * speed;
+    ball.x = dir > 0 ? rect.x + rect.w + BALL_R + 1 : rect.x - BALL_R - 1;
+    hitFlash = 1;
+    api.sound('click');
+  }
+
+  function now() { return performance.now(); }
+  var pointerY = 360;
+
+  /* ---------------- 绘制 ---------------- */
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  var api = window.GameKit.create({
+    slug: 'pong',
+    title: 'Pong',
+    logic: [LW, LH],
+    color: '#f472b6',
+    dpad: false,
+    hint: '鼠标或触摸移动左侧挡板<br>先得 11 分获胜，回合越快球速越快',
+    hud: [
+      { k: 'p', label: '玩家' },
+      { k: 'a', label: '电脑' },
+      { k: 'score', label: '胜局' }
+    ],
+
+    onInit: function (a) { reset(a); },
+
+    onUpdate: function (a, dt) {
+      // 只有指针近期动过才采用指针位置
+      // （内核的 pointer.y 初始为 0，且 performance.now() 起始也接近 0，
+      //   不能只用时间差判断，否则开局挡板会被拉到顶部）
+      if (ptrActive && now() - lastPtrT < 1600) pointerY = a.pointer.y;
+      update(dt);
+    },
+
+    onRender: function (a, c) {
+      var pal = a.colors;
+
+      // 中线
+      c.save();
+      c.strokeStyle = 'rgba(255,255,255,.09)';
+      c.lineWidth = 3;
+      c.setLineDash([10, 12]);
+      c.beginPath();
+      c.moveTo(LW / 2, 24);
+      c.lineTo(LW / 2, LH - 24);
+      c.stroke();
+      c.restore();
+
+      // 玩家挡板
+      c.save();
+      c.shadowColor = pal.base;
+      c.shadowBlur = 12;
+      c.fillStyle = pal.base;
+      roundRect(c, PLAYER_X, player.y - PADDLE_H / 2, PADDLE_W, PADDLE_H, PADDLE_W / 2);
+      c.fill();
+      c.restore();
+
+      // AI 挡板
+      c.save();
+      c.shadowColor = pal.alt;
+      c.shadowBlur = 12;
+      c.fillStyle = pal.alt;
+      roundRect(c, AI_X, ai.y - PADDLE_H / 2, PADDLE_W, PADDLE_H, PADDLE_W / 2);
+      c.fill();
+      c.restore();
+
+      // 球
+      if (!serving) {
+        c.save();
+        var glow = 10 + hitFlash * 22;
+        c.shadowColor = pal.glow;
+        c.shadowBlur = glow;
+        c.fillStyle = pal.glow;
+        c.beginPath();
+        c.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      }
+
+      // 比分
+      c.save();
+      c.font = '800 46px -apple-system, "PingFang SC", system-ui, sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'top';
+      c.fillStyle = 'rgba(255,255,255,.16)';
+      c.fillText(String(pScore), LW / 2 - 52, 44);
+      c.fillStyle = 'rgba(255,255,255,.12)';
+      c.fillText(String(aScore), LW / 2 + 52, 44);
+      c.restore();
+
+      // 发球提示
+      if (serving) {
+        c.save();
+        c.font = '600 13px -apple-system, "PingFang SC", system-ui, sans-serif';
+        c.textAlign = 'center';
+        c.fillStyle = 'rgba(255,255,255,.4)';
+        c.fillText('准备发球…', LW / 2, LH / 2 + 20);
+        c.restore();
+      }
+    },
+
+    onAction: function (a, act) {
+      if (act.type === 'key') {
+        if (act.key === 'ArrowUp' || act.key === 'w' || act.key === 'W') keyUp = true;
+        else if (act.key === 'ArrowDown' || act.key === 's' || act.key === 'S') keyDown = true;
+      }
+    }
+  });
+
+  /* 指针（鼠标 / 触摸） */
+  var cv = document.getElementById('cv');
+  cv.addEventListener('pointermove', function () { lastPtrT = now(); ptrActive = true; }, { passive: true });
+  cv.addEventListener('pointerdown', function () { lastPtrT = now(); ptrActive = true; }, { passive: true });
+
+  /* 键盘松开 */
+  document.addEventListener('keyup', function (e) {
+    var k = e.key;
+    if (k === 'ArrowUp' || k === 'w' || k === 'W') keyUp = false;
+    else if (k === 'ArrowDown' || k === 's' || k === 'S') keyDown = false;
+  });
+
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__pong = {
+      get player() { return { y: player.y }; },
+      get ai() { return { y: ai.y }; },
+      get ball() { return { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy, sp: Math.hypot(ball.vx, ball.vy) }; },
+      get ps() { return pScore; },
+      get as() { return aScore; },
+      get rally() { return rally; },
+      get serving() { return serving; },
+      setPlayerY: function (y) { player.y = y; },
+      reset: function () { api.restart(); }
+    };
+  }
+
+  void api;
+})();
+</script>
+</body>
+</html>

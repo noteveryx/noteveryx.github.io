@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>贪吃蛇</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/game-kit.css">
+<style>
+  .tip{
+    position:fixed;z-index:12;left:50%;transform:translateX(-50%);
+    bottom:calc(74px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.34);
+    pointer-events:none;user-select:none;white-space:nowrap;
+  }
+  @media (max-width:420px){ .tip{font-size:10px;letter-spacing:.02em;} }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="tip">方向键 / WASD / 滑动 转向 · 空格 暂停 · 右上色球换配色</div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/game-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LW = 480, LH = 720;
+  var COLS = 20, ROWS = 25;
+  var CELL = 24;
+  var BOARD_Y = 96;
+
+  var snake, prevSnake, food, dir, queue, acc, interval, alive, animT;
+
+  var DIRS = {
+    left: { x: -1, y: 0 }, right: { x: 1, y: 0 },
+    up: { x: 0, y: -1 }, down: { x: 0, y: 1 }
+  };
+
+  function reset() {
+    snake = [{ x: 8, y: 12 }, { x: 7, y: 12 }, { x: 6, y: 12 }, { x: 5, y: 12 }];
+    prevSnake = snake.map(function (s) { return { x: s.x, y: s.y }; });
+    dir = DIRS.right;
+    queue = [];
+    acc = 0;
+    interval = 0.16;
+    alive = true;
+    animT = 0;
+    placeFood();
+  }
+
+  function placeFood() {
+    var free = [];
+    for (var y = 0; y < ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        var hit = false;
+        for (var i = 0; i < snake.length; i++) {
+          if (snake[i].x === x && snake[i].y === y) { hit = true; break; }
+        }
+        if (!hit) free.push({ x: x, y: y });
+      }
+    }
+    if (!free.length) { food = null; return; }
+    food = free[(Math.random() * free.length) | 0];
+  }
+
+  function setDir(name) {
+    var d = DIRS[name];
+    if (!d) return;
+    var last = queue.length ? queue[queue.length - 1] : dir;
+    if (d.x === -last.x && d.y === -last.y) return;   // 不能 180° 掉头
+    if (d.x === last.x && d.y === last.y) return;     // 同向忽略
+    if (queue.length < 2) queue.push(d);
+  }
+
+  function step() {
+    if (queue.length) dir = queue.shift();
+    prevSnake = snake.map(function (s) { return { x: s.x, y: s.y }; });
+
+    var head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) return die();
+
+    // 尾巴这一步会移开，所以只检查前 length-1 节
+    for (var i = 0; i < snake.length - 1; i++) {
+      if (snake[i].x === head.x && snake[i].y === head.y) return die();
+    }
+
+    snake.unshift(head);
+
+    if (food && head.x === food.x && head.y === food.y) {
+      api.addScore(10);
+      api.setStat('len', snake.length);
+      api.sound('eat');
+      placeFood();
+      interval = Math.max(0.07, 0.16 - snake.length * 0.0035);
+    } else {
+      snake.pop();
+    }
+  }
+
+  function die() {
+    alive = false;
+    api.sound('die');
+    api.gameOver('撞到了！');
+  }
+
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function draw(c, a) {
+    var col = a.colors;
+
+    // 棋盘底
+    c.save();
+    c.strokeStyle = 'rgba(255,255,255,.065)';
+    c.lineWidth = 1;
+    for (var x = 0; x <= COLS; x++) {
+      c.beginPath();
+      c.moveTo(x * CELL + .5, BOARD_Y);
+      c.lineTo(x * CELL + .5, BOARD_Y + ROWS * CELL);
+      c.stroke();
+    }
+    for (var y = 0; y <= ROWS; y++) {
+      c.beginPath();
+      c.moveTo(0, BOARD_Y + y * CELL + .5);
+      c.lineTo(COLS * CELL, BOARD_Y + y * CELL + .5);
+      c.stroke();
+    }
+    // 外框
+    c.strokeStyle = 'rgba(255,255,255,.2)';
+    c.strokeRect(.5, BOARD_Y + .5, COLS * CELL - 1, ROWS * CELL - 1);
+    c.restore();
+
+    // 食物（脉动）
+    if (food) {
+      var pulse = 0.5 + 0.5 * Math.sin(animT * 6);
+      var fx = food.x * CELL + CELL / 2;
+      var fy = BOARD_Y + food.y * CELL + CELL / 2;
+      c.save();
+      c.shadowColor = col.glow;
+      c.shadowBlur = 10 + pulse * 12;
+      c.fillStyle = col.glow;
+      c.beginPath();
+      c.arc(fx, fy, 5 + pulse * 1.6, 0, 6.2832);
+      c.fill();
+      c.restore();
+    }
+
+    // 蛇身
+    var n = snake.length;
+    var p = interval > 0 ? Math.min(1, acc / interval) : 1;
+    for (var i = n - 1; i >= 0; i--) {
+      var cur = snake[i];
+      var old = prevSnake[Math.min(i, prevSnake.length - 1)];
+      var gx = old.x + (cur.x - old.x) * p;
+      var gy = old.y + (cur.y - old.y) * p;
+      var px = gx * CELL + 2;
+      var py = BOARD_Y + gy * CELL + 2;
+      var t = n > 1 ? i / (n - 1) : 0;
+      var bodyCol = col.at(0, 0.06 - t * 0.06, 0.14 - t * 0.36);
+
+      c.save();
+      c.shadowColor = bodyCol;
+      c.shadowBlur = i === 0 ? 16 : 8;
+      c.fillStyle = bodyCol;
+      roundRect(c, px, py, CELL - 4, CELL - 4, 7);
+      c.fill();
+      c.restore();
+    }
+
+    // 眼睛
+    var head = snake[0];
+    var hp = prevSnake[0] || head;
+    var hx = (hp.x + (head.x - hp.x) * p) * CELL + CELL / 2;
+    var hy = BOARD_Y + (hp.y + (head.y - hp.y) * p) * CELL + CELL / 2;
+    var ex = dir.x * 3.4, ey = dir.y * 3.4;
+    var px2 = dir.y !== 0 ? 3.6 : 0, py2 = dir.x !== 0 ? 3.6 : 0;
+    c.save();
+    c.fillStyle = 'rgba(255,255,255,.92)';
+    c.beginPath();
+    c.arc(hx + ex - px2, hy + ey - py2, 2.1, 0, 6.2832);
+    c.arc(hx + ex + px2, hy + ey + py2, 2.1, 0, 6.2832);
+    c.fill();
+    c.restore();
+  }
+
+  var api = window.GameKit.create({
+    slug: 'snake',
+    title: '贪吃蛇',
+    logic: [LW, LH],
+    color: '#2dd4bf',
+    hint: '吃掉果实别撞墙，长度越长速度越快',
+    hud: [
+      { k: 'score', label: '分数' },
+      { k: 'best', label: '最佳' },
+      { k: 'len', label: '长度' }
+    ],
+
+    onInit: function (a) {
+      reset();
+      a.setScore(0);
+      a.setStat('len', snake.length);
+    },
+
+    onUpdate: function (a, dt) {
+      animT += dt;
+      if (!alive) return;
+      acc += dt;
+      while (acc >= interval) {
+        acc -= interval;
+        step();
+        if (!alive) { acc = 0; break; }
+      }
+    },
+
+    onRender: function (a, c) {
+      draw(c, a);
+    },
+
+    onAction: function (a, act) {
+      if (act.type === 'key') {
+        var k = act.key;
+        if (k === 'ArrowLeft' || k === 'a' || k === 'A') setDir('left');
+        else if (k === 'ArrowRight' || k === 'd' || k === 'D') setDir('right');
+        else if (k === 'ArrowUp' || k === 'w' || k === 'W') setDir('up');
+        else if (k === 'ArrowDown' || k === 's' || k === 'S') setDir('down');
+      } else if (act.type === 'swipe') {
+        setDir(act.dir);
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

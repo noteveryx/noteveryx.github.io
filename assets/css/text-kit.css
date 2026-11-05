@@ -1,0 +1,130 @@
+/* ==========================================================
+   text-kit —— 共享「句子条」样式
+   横向（.tk-bar）或竖向（.tk-bar.tk-list）排布的句子切换 + 自定义输入
+   ========================================================== */
+
+/* ---------- 横向句子条（文字形变 / 粒子文字等全屏页） ---------- */
+.tk-bar{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+  width:min(calc(100vw - 20px),880px);        /* 明确宽度，句子区才有换行基准 */
+  padding:7px;border-radius:14px;
+  background:rgba(14,18,26,.72);
+  border:1px solid rgba(255,255,255,.12);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  box-shadow:0 6px 22px rgba(0,0,0,.28);
+  user-select:text;-webkit-user-select:text;   /* 句子可长按选中复制 */
+  touch-action:auto;                          /* 允许在句子上选择/滚动 */
+}
+.tk-bar.tk-list{
+  flex-direction:column;align-items:stretch;
+  width:auto;max-width:100%;                  /* 侧栏里跟随容器宽度 */
+  background:transparent;border:none;box-shadow:none;padding:0;
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+}
+/* 句子独占第一行，输入框与按钮在第二行 —— 不会被句子挤到中间 */
+.tk-chips{
+  display:flex;flex-wrap:wrap;gap:6px;
+  flex:1 0 100%;min-width:0;
+  max-height:118px;overflow-y:auto;           /* 够放下两行完整句子 */
+  padding:1px;
+}
+.tk-chips::-webkit-scrollbar{width:5px;}
+.tk-chips::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:9px;}
+.tk-bar.tk-list .tk-chips{
+  flex:0 0 auto;flex-direction:column;flex-wrap:nowrap;
+  overflow-y:auto;max-height:250px;padding-right:3px;
+}
+.tk-bar.tk-list .tk-chips::-webkit-scrollbar{width:5px;}
+.tk-bar.tk-list .tk-chips::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:9px;}
+
+.tk-chip{
+  flex:0 0 auto;max-width:250px;      /* 不收缩：横向滚动时不会被压成竖条 */
+  border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);
+  color:rgba(255,255,255,.82);border-radius:9px;padding:7px 11px;
+  font-family:inherit;font-size:12.5px;line-height:1.45;text-align:left;
+  cursor:pointer;
+  white-space:normal;                 /* 完整显示，不再截断成省略号 */
+  overflow-wrap:anywhere;
+  user-select:text;-webkit-user-select:text;
+  transition:background-color .15s ease,border-color .15s ease,color .15s ease;
+}
+.tk-chip:hover{background:rgba(255,255,255,.13);}
+.tk-chip.on{border-color:rgba(255,255,255,.55);color:#fff;background:rgba(255,255,255,.16);}
+.tk-chip:focus-visible{outline:2px solid rgba(120,200,255,.8);outline-offset:2px;}
+.tk-bar.tk-list .tk-chip{max-width:none;width:100%;}
+
+/* ---------- 自定义输入 ---------- */
+.tk-input{
+  flex:1 1 auto;max-width:none;min-width:0;  /* 铺满第二行，按钮靠右 */
+  font-family:inherit;font-size:12.5px;color:#fff;
+  background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.26);
+  border-radius:9px;padding:7px 10px;outline:none;
+  transition:border-color .15s ease,background-color .15s ease;
+}
+.tk-input::placeholder{color:rgba(255,255,255,.38);}
+.tk-input:focus{border-color:rgba(150,190,255,.8);background:rgba(255,255,255,.12);}
+.tk-bar.tk-list .tk-input{flex:0 0 auto;width:100%;}
+.tk-ok{
+  flex:0 0 auto;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.1);
+  color:rgba(255,255,255,.9);border-radius:9px;padding:7px 10px;
+  font-family:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap;
+  transition:background-color .15s ease;
+}
+.tk-ok:hover{background:rgba(255,255,255,.2);}
+.tk-bar.tk-list .tk-ok{width:100%;}
+
+/* ---------- 浅色主题页面（海报 / 句子收藏） ---------- */
+body.tk-light .tk-bar{
+  background:var(--card,#fff);border-color:var(--line,rgba(0,0,0,.08));box-shadow:none;
+}
+body.tk-light .tk-bar.tk-list{background:transparent;border:none;box-shadow:none;}
+body.tk-light .tk-chip{
+  background:var(--bg1,#f7f9fd);color:var(--text,#16192b);border-color:var(--line,rgba(0,0,0,.08));
+}
+body.tk-light .tk-chip:hover{background:var(--bg2,#eef1f9);}
+body.tk-light .tk-chip.on{border-color:var(--accent,#635bff);color:var(--accent,#635bff);background:var(--bg1,#f7f9fd);}
+body.tk-light .tk-input{
+  color:var(--text,#16192b);background:var(--bg1,#f7f9fd);border-color:var(--line,rgba(0,0,0,.16));
+}
+body.tk-light .tk-input::placeholder{color:var(--muted,#98a0b0);}
+body.tk-light .tk-ok{
+  background:var(--bg1,#f7f9fd);border-color:var(--line,rgba(0,0,0,.1));color:var(--text,#16192b);
+}
+body.tk-light .tk-ok:hover{background:var(--bg2,#eef1f9);}
+
+/* ---------- 折叠：收起后只剩一个小箭头 ---------- */
+.tk-fold{
+  flex:0 0 auto;width:28px;height:28px;border-radius:8px;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);
+  color:rgba(255,255,255,.8);cursor:pointer;
+  transition:background-color .15s ease,color .15s ease;
+}
+.tk-fold:hover{background:rgba(255,255,255,.13);color:#fff;}
+.tk-fold svg{width:15px;height:15px;display:block;transition:transform .22s ease;}
+.tk-bar.tk-folded{width:auto;padding:6px;}
+.tk-bar.tk-folded .tk-chips,
+.tk-bar.tk-folded .tk-input,
+.tk-bar.tk-folded .tk-ok{display:none;}
+.tk-bar.tk-folded .tk-fold{background:rgba(255,255,255,.12);color:#fff;}
+.tk-bar.tk-folded .tk-fold svg{transform:rotate(180deg);}
+body.tk-light .tk-fold{
+  border-color:var(--line,rgba(0,0,0,.12));background:var(--bg1,#f7f9fd);color:var(--text,#16192b);
+}
+body.tk-light .tk-fold:hover{background:var(--bg2,#eef1f9);}
+body.tk-light .tk-bar.tk-folded .tk-fold{background:var(--bg2,#eef1f9);}
+
+/* ---------- 窄屏：句子换行完整显示，输入框换到第二行 ---------- */
+@media (max-width:640px){
+  .tk-bar{flex-wrap:wrap;gap:6px;}
+  .tk-chips{
+    flex:1 0 100%;order:1;min-height:30px;
+    flex-wrap:wrap;overflow-y:auto;max-height:112px;  /* 每句都完整，不裁半截 */
+  }
+  .tk-input{order:2;flex:1 1 auto;width:auto;min-width:0;}
+  .tk-ok{order:3;flex:0 0 auto;}
+  .tk-chip{max-width:100%;}
+  .tk-bar.tk-list{flex-wrap:nowrap;}
+  .tk-bar.tk-list .tk-chips{flex:0 0 auto;flex-wrap:nowrap;max-height:250px;}
+  .tk-bar.tk-list .tk-chip{max-width:none;width:100%;}
+}

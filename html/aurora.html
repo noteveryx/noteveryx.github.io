@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>极光</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;padding:0;width:100%;height:100%;
+    overflow:hidden;overscroll-behavior:none;
+    background:#05070e;
+  }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    color:#fff;
+    -webkit-font-smoothing:antialiased;
+    cursor:crosshair;
+  }
+  canvas{position:fixed;inset:0;display:block;width:100%;height:100%;}
+
+  /* 胶片颗粒：SVG 噪声当 CSS 背景，GPU 合成，不占主线程 */
+  .grain{
+    position:fixed;inset:0;pointer-events:none;z-index:2;
+    opacity:.06;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .vignette{
+    position:fixed;inset:0;pointer-events:none;z-index:2;
+    background:radial-gradient(ellipse 78% 68% at 50% 46%, rgba(0,0,0,0) 40%, rgba(0,0,0,.62) 100%);
+  }
+
+  /* ---------- UI ---------- */
+  .ui{
+    position:fixed;z-index:5;
+    opacity:1;
+    transition:opacity .55s cubic-bezier(.3,.8,.3,1);
+  }
+  body.idle .ui{opacity:.16;}
+  body.idle .ui:hover{opacity:1;}
+
+  .back{
+    top:calc(14px + env(safe-area-inset-top));
+    left:calc(14px + env(safe-area-inset-left));
+    display:flex;align-items:center;justify-content:center;
+    width:36px;height:36px;border-radius:50%;
+    background:rgba(12,16,24,.42);
+    border:1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    color:#fff;text-decoration:none;
+    transition:background-color .2s ease,border-color .2s ease,transform .12s ease;
+  }
+  .back:hover{background:rgba(20,26,38,.7);border-color:rgba(255,255,255,.3);}
+  .back:active{transform:scale(.94);}
+  .back svg{width:15px;height:15px;display:block;}
+
+  .tools{
+    right:calc(14px + env(safe-area-inset-right));
+    bottom:calc(14px + env(safe-area-inset-bottom));
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .btn{
+    width:38px;height:38px;padding:0;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(12,16,24,.42);
+    border:1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    color:#fff;cursor:pointer;font-family:inherit;
+    outline:none;
+    transition:background-color .2s ease,border-color .2s ease,transform .12s ease;
+  }
+  .btn:hover{background:rgba(20,26,38,.7);border-color:rgba(255,255,255,.3);}
+  .btn:active{transform:scale(.93);}
+  .btn:focus-visible{outline:2px solid rgba(120,230,255,.8);outline-offset:2px;}
+  .btn svg{width:16px;height:16px;display:block;}
+
+  .label{
+    left:calc(18px + env(safe-area-inset-left));
+    bottom:calc(18px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+    color:rgba(255,255,255,.5);
+    pointer-events:none;user-select:none;
+  }
+  .label b{font-weight:600;letter-spacing:.18em;color:rgba(255,255,255,.8);}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<a class="ui back" href="../x.html" title="返回" aria-label="返回">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 5l-7 7 7 7"/>
+  </svg>
+</a>
+
+<div class="ui tools">
+  <div class="pk" id="pk" data-pk="aurora" data-placement="left"></div>
+  <button class="btn" id="pauseBtn" type="button" title="暂停 / 播放（空格）" aria-label="暂停或播放">
+    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg>
+  </button>
+  <button class="btn" id="fsBtn" type="button" title="全屏（F）" aria-label="全屏">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/>
+    </svg>
+  </button>
+</div>
+
+<div class="ui label" id="label">Aurora · <b>极光</b></div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d', { alpha: false });
+  var labelEl = document.getElementById('label');
+
+  /* ==========================================================
+     配色：调色板选一个主色，其余光斑色相由它派生（同色系）
+     ========================================================== */
+  var BLOBS = [
+    { bx: .28, by: .33, amp: .10, w: .052, p: 0.0, r: 1.00 },
+    { bx: .70, by: .27, amp: .09, w: .041, p: 1.7, r: .92 },
+    { bx: .50, by: .61, amp: .12, w: .061, p: 3.1, r: 1.12 },
+    { bx: .23, by: .71, amp: .08, w: .069, p: 4.4, r: .80 },
+    { bx: .79, by: .65, amp: .10, w: .047, p: 2.3, r: .88 },
+    { bx: .52, by: .41, amp: .15, w: .033, p: 5.6, r: 1.18 }
+  ];
+
+  var hue = [168, 192, 212, 268, 305, 152];     // 当前色相（平滑过渡用）
+  var bg = [4, 7, 15];
+  var targetHue = hue.slice();
+  var targetBg = bg.slice();
+  var baseColor = '#37d0c0';
+
+  /* 由主色派生 6 个光斑色相 + 深色底 */
+  function setBase(hex) {
+    var rgb = window.PaletteKit.hex2rgb(hex);
+    if (!rgb) return;
+    var hsl = window.PaletteKit.rgb2hsl(rgb.r, rgb.g, rgb.b);
+    var offsets = [-46, -14, 16, 48, -74, 78];
+    targetHue = offsets.map(function (o) { return (hsl.h + o + 360) % 360; });
+    var b = window.PaletteKit.hsl2rgb(hsl.h, Math.min(0.6, hsl.s * 0.62), 0.045);
+    targetBg = [b.r, b.g, b.b];
+    baseColor = hex;
+    var lbl = document.getElementById('label');
+    if (lbl) lbl.innerHTML = 'Aurora · <b>' + hex.toUpperCase() + '</b>';
+  }
+
+  var W = 0, H = 0, DPR = 1, R = 0;
+  var layer = document.createElement('canvas');   // 半分辨率光斑层
+  var lctx = layer.getContext('2d');
+
+  var running = false;               // 是否有 rAF 在跑（start/stop 维护，勿手动设 true）
+  var rafId = 0;
+  var lastDraw = 0;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var t = 0;                                      // 动画时间（秒）
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+
+    // 光斑画在 1/2 分辨率上再放大 —— 渐变放大无损，填充量降到 1/4
+    var lw = Math.max(2, Math.round(W * 0.5));
+    var lh = Math.max(2, Math.round(H * 0.5));
+    layer.width = lw;
+    layer.height = lh;
+    lctx.setTransform(lw / W, 0, 0, lh / H, 0, 0);
+    R = Math.min(W, H);
+
+    if (!running || reduceMotion) draw();   // 静态态也要跟上尺寸变化
+  }
+
+  function mixHue(cur, target) {
+    var d = target - cur;
+    while (d > 180) d -= 360;
+    while (d < -180) d += 360;
+    return cur + d * 0.05;
+  }
+
+  function draw() {
+    // 色相 / 底色平滑趋近目标
+    for (var k = 0; k < hue.length; k++) {
+      hue[k] = mixHue(hue[k], targetHue[k]);
+      if (hue[k] < 0) hue[k] += 360;
+      if (hue[k] >= 360) hue[k] -= 360;
+    }
+    for (var c = 0; c < 3; c++) bg[c] += (targetBg[c] - bg[c]) * 0.05;
+
+    // ---- 光斑层 ----
+    lctx.clearRect(0, 0, W, H);
+    lctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < BLOBS.length; i++) {
+      var b = BLOBS[i];
+      var ang = t * b.w + b.p;
+      var x = (b.bx + Math.cos(ang) * b.amp) * W;
+      var y = (b.by + Math.sin(ang * 0.82 + 1.1) * b.amp) * H;
+      var rad = R * (0.58 + 0.10 * Math.sin(ang * 0.63 + 2.2)) * b.r;
+      if (rad <= 0) continue;
+
+      var g = lctx.createRadialGradient(x, y, 0, x, y, rad);
+      var h = hue[i % hue.length];
+      g.addColorStop(0, 'hsla(' + h.toFixed(1) + ',92%,64%,.52)');
+      g.addColorStop(0.42, 'hsla(' + h.toFixed(1) + ',95%,56%,.26)');
+      g.addColorStop(0.78, 'hsla(' + h.toFixed(1) + ',95%,50%,.07)');
+      g.addColorStop(1, 'hsla(' + h.toFixed(1) + ',95%,48%,0)');
+      lctx.fillStyle = g;
+      lctx.fillRect(0, 0, W, H);
+    }
+    lctx.globalCompositeOperation = 'source-over';
+
+    // ---- 合成到主画布 ----
+    ctx.globalCompositeOperation = 'source-over';
+    var br = Math.round(bg[0]), bgc = Math.round(bg[1]), bb = Math.round(bg[2]);
+    ctx.fillStyle = 'rgb(' + br + ',' + bgc + ',' + bb + ')';
+    ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(layer, 0, 0, W, H);
+  }
+
+  function loop(now) {
+    rafId = requestAnimationFrame(loop);
+    // 变化很慢，36fps 足够，省电也省 GPU
+    if (now - lastDraw < 27) return;
+    var dt = lastDraw ? Math.min((now - lastDraw) / 1000, 0.1) : 0.016;
+    lastDraw = now;
+    t += dt;
+    draw();
+  }
+
+  function start() {
+    if (running) return;
+    running = true;
+    lastDraw = 0;
+    rafId = requestAnimationFrame(loop);
+  }
+  function stop() {
+    running = false;
+    cancelAnimationFrame(rafId);
+  }
+
+  /* ---------------- 控件 ---------------- */
+  var pk = window.PaletteKit.mount(document.getElementById('pk'), {
+    value: baseColor,
+    onChange: function (c) { setBase(c); }
+  });
+  setBase(pk.get());
+
+  /* ---------------- 配色切换 ---------------- */
+  function applyPalette(idx, silent) {
+    // 保留旧接口：随机换一组主色
+    setBase(window.PaletteKit.random());
+    if (silent && !running) draw();
+  }
+  var pauseBtn = document.getElementById('pauseBtn');
+  var ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg>';
+  var ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2l11 6.8-11 6.8z"/></svg>';
+
+  function togglePause() {
+    if (reduceMotion) return;
+    if (running) {
+      stop();
+      if (pauseBtn) { pauseBtn.innerHTML = ICON_PLAY; pauseBtn.title = '播放（空格）'; }
+    } else {
+      start();
+      if (pauseBtn) { pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.title = '暂停（空格）'; }
+    }
+  }
+
+  if (pauseBtn) {
+    if (reduceMotion) { pauseBtn.innerHTML = ICON_PLAY; }
+    pauseBtn.addEventListener('click', togglePause);
+  }
+
+  var paletteBtn = null;
+
+  var fsBtn = document.getElementById('fsBtn');
+  var canFs = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+  if (fsBtn) {
+    if (!canFs) { fsBtn.style.display = 'none'; }
+    else {
+      fsBtn.addEventListener('click', function () {
+        try {
+          if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen).call(document.documentElement);
+          } else {
+            (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+          }
+        } catch (e) { /* 部分手机浏览器不支持，忽略 */ }
+      });
+    }
+  }
+
+  /* ---------------- 点击画面随机换一组主色 ---------------- */
+  cv.addEventListener('click', function () { applyPalette(); });
+
+  /* ---------------- 键盘 ---------------- */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); togglePause(); }
+    else if (e.key === 'c' || e.key === 'C') applyPalette();
+    else if (e.key === 'f' || e.key === 'F') { if (fsBtn && canFs) fsBtn.click(); }
+  });
+
+  /* ---------------- 闲置淡出 ---------------- */
+  var idleTimer = null;
+  function wake() {
+    document.body.classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () { document.body.classList.add('idle'); }, 3000);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown', 'wheel'].forEach(function (ev) {
+    window.addEventListener(ev, wake, { passive: true });
+  });
+  wake();
+
+  /* ---------------- 页面隐藏时暂停，省电 ---------------- */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stop();
+    else if (!reduceMotion) start();
+  });
+
+  /* ---------------- 启动 ---------------- */
+  window.addEventListener('resize', resize, { passive: true });
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 220); });
+
+  resize();
+  if (!reduceMotion) start();
+})();
+</script>
+</body>
+</html>

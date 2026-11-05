@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>Flappy</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/game-kit.css">
+<style>
+  .tip{
+    position:fixed;z-index:12;left:50%;transform:translateX(-50%);
+    bottom:calc(20px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.34);
+    pointer-events:none;user-select:none;white-space:nowrap;
+  }
+  @media (max-width:420px){ .tip{font-size:10px;letter-spacing:.02em;} }
+  .gk-label{display:none;}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="tip">点击 / ↑ 拍翅 · 空格 暂停</div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/game-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LW = 480, LH = 720;
+  var GROUND_Y = 660;            // 地面线
+  var BIRD_X = 130;              // 小鸟横坐标（固定）
+  var BIRD_R = 15;               // 小鸟半径
+  var GRAVITY = 1500;            // px/s²
+  var JUMP_V = -430;             // 拍翅初速度 px/s
+  var GAP_H = 152;               // 管道缝隙高度
+  var PIPE_W = 62;               // 管道宽度
+  var PIPE_GAP = 214;            // 管道间距
+  var BASE_SPEED = 158;          // 基础滚动速度 px/s
+
+  var bird = { y: 300, v: 0, rot: 0, flap: 0 };
+  var pipes = [];
+  var dist = 0;
+  var clouds = [];
+  var shake = 0;
+  var dead = false;
+
+  function pipeSpeed() { return BASE_SPEED + Math.min(140, score() * 4); }
+  function score() { return dist; }
+
+  function reset(a) {
+    var g = a || api;
+    bird.y = 300; bird.v = 0; bird.rot = 0; bird.flap = 0;
+    pipes = [];
+    dist = 0;
+    shake = 0;
+    dead = false;
+    clouds = [];
+    for (var i = 0; i < 5; i++) {
+      clouds.push({ x: Math.random() * LW, y: 60 + Math.random() * 380, s: 0.6 + Math.random() * 0.8, sp: 0.15 + Math.random() * 0.25 });
+    }
+    g.setScore(0);
+    addPipe(560);
+  }
+
+  function addPipe(x) {
+    var h = GAP_H;
+    var top = 60 + Math.random() * (GROUND_Y - h - 140);
+    pipes.push({ x: x, gapY: top + h / 2, w: PIPE_W });
+  }
+
+  function flap() {
+    if (dead) return;
+    bird.v = JUMP_V;
+    bird.flap = 1;
+    api.sound('move');
+  }
+
+  function die(reason) {
+    if (dead) return;
+    dead = true;
+    shake = 1;
+    api.sound('boom');
+    api.gameOver(reason || '撞上了');
+  }
+
+  /* ---------------- 更新 ---------------- */
+  function update(dt) {
+    if (dead) { shake = Math.max(0, shake - dt * 2.2); return; }
+
+    // 物理：固定步长积分 → 与帧率无关
+    bird.v += GRAVITY * dt;
+    bird.y += bird.v * dt;
+    if (bird.flap > 0) bird.flap = Math.max(0, bird.flap - dt * 5);
+
+    // 姿态：上升抬头，下落低头
+    var targetRot = bird.v < 0 ? -0.42 : 0.5;
+    bird.rot += (targetRot - bird.rot) * Math.min(1, dt * 9);
+
+    var sp = pipeSpeed();
+
+    // 管道左移 + 生成
+    for (var i = pipes.length - 1; i >= 0; i--) {
+      pipes[i].x -= sp * dt;
+      if (pipes[i].x + PIPE_W < -20) pipes.splice(i, 1);
+    }
+    var lastX = pipes.length ? pipes[pipes.length - 1].x : LW;
+    if (lastX < LW - PIPE_GAP) addPipe(lastX + PIPE_GAP);
+
+    // 得分：管道从鸟右边完全越过
+    for (var j = 0; j < pipes.length; j++) {
+      if (!pipes[j].scored && pipes[j].x + PIPE_W < BIRD_X - BIRD_R) {
+        pipes[j].scored = true;
+        dist++;
+        api.addScore(1);
+        api.sound('eat');
+      }
+    }
+
+    // 云
+    for (var k = 0; k < clouds.length; k++) {
+      clouds[k].x -= sp * dt * clouds[k].sp;
+      if (clouds[k].x < -80) {
+        clouds[k].x = LW + 60;
+        clouds[k].y = 60 + Math.random() * 380;
+      }
+    }
+
+    // 碰撞
+    if (bird.y - BIRD_R <= 0) { bird.y = BIRD_R; die('飞到顶了'); }
+    if (bird.y + BIRD_R >= GROUND_Y) { bird.y = GROUND_Y - BIRD_R; die('掉到地面了'); }
+    for (var m = 0; m < pipes.length; m++) {
+      var p = pipes[m];
+      if (BIRD_X + BIRD_R < p.x || BIRD_X - BIRD_R > p.x + PIPE_W) continue;
+      var topEnd = p.gapY - GAP_H / 2;
+      var botStart = p.gapY + GAP_H / 2;
+      if (bird.y - BIRD_R < topEnd || bird.y + BIRD_R > botStart) { die('撞到管道了'); break; }
+    }
+  }
+
+  /* ---------------- 绘制 ---------------- */
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function drawCloud(c, x, y, s, col) {
+    c.save();
+    c.globalAlpha = 0.16;
+    c.fillStyle = col;
+    c.beginPath();
+    c.arc(x, y, 22 * s, 0, Math.PI * 2);
+    c.arc(x + 26 * s, y + 5 * s, 17 * s, 0, Math.PI * 2);
+    c.arc(x - 25 * s, y + 6 * s, 15 * s, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+
+  function drawPipe(c, x, gapY, pal) {
+    var half = GAP_H / 2;
+    var w = PIPE_W;
+    var col = pal.at(0, 0.04, -0.02);
+    var lip = pal.at(0, 0.06, 0.06);
+
+    // 上管道
+    c.save();
+    c.fillStyle = col;
+    roundRect(c, x, -20, w, gapY - half + 20, 6);
+    c.fill();
+    // 管口
+    roundRect(c, x - 5, gapY - half - 14, w + 10, 18, 4);
+    c.fillStyle = lip;
+    c.fill();
+    // 高光
+    c.fillStyle = 'rgba(255,255,255,.16)';
+    roundRect(c, x + 6, 0, 7, gapY - half - 20, 3);
+    c.fill();
+    c.restore();
+
+    // 下管道
+    c.save();
+    c.fillStyle = col;
+    roundRect(c, x, gapY + half, w, GROUND_Y - (gapY + half) + 20, 6);
+    c.fill();
+    roundRect(c, x - 5, gapY + half - 4, w + 10, 18, 4);
+    c.fillStyle = lip;
+    c.fill();
+    c.fillStyle = 'rgba(255,255,255,.16)';
+    roundRect(c, x + 6, gapY + half + 20, 7, GROUND_Y - (gapY + half), 3);
+    c.fill();
+    c.restore();
+  }
+
+  function drawBird(c, pal) {
+    var x = BIRD_X, y = bird.y;
+    c.save();
+    c.translate(x, y);
+    c.rotate(bird.rot);
+
+    // 翅膀
+    var wingY = bird.flap > 0.05 ? -6 : 7;
+    c.fillStyle = pal.at(0, -0.06, -0.1);
+    c.beginPath();
+    c.ellipse(-3, wingY, 11, 7, -0.3, 0, Math.PI * 2);
+    c.fill();
+
+    // 身体
+    var col = pal.base;
+    c.shadowColor = col;
+    c.shadowBlur = 16;
+    c.fillStyle = col;
+    c.beginPath();
+    c.arc(0, 0, BIRD_R, 0, Math.PI * 2);
+    c.fill();
+    c.shadowBlur = 0;
+
+    // 腹部高光
+    c.fillStyle = 'rgba(255,255,255,.22)';
+    c.beginPath();
+    c.arc(-3, -4, BIRD_R * 0.52, 0, Math.PI * 2);
+    c.fill();
+
+    // 眼睛
+    c.fillStyle = '#fff';
+    c.beginPath();
+    c.arc(5, -5, 5.4, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#1a1d28';
+    c.beginPath();
+    c.arc(7, -5, 2.6, 0, Math.PI * 2);
+    c.fill();
+
+    // 嘴
+    c.fillStyle = pal.at(30, 0.12, 0.06);
+    c.beginPath();
+    c.moveTo(10, -1);
+    c.lineTo(21, 2);
+    c.lineTo(10, 5);
+    c.closePath();
+    c.fill();
+
+    c.restore();
+  }
+
+  var api = window.GameKit.create({
+    slug: 'flappy',
+    title: 'Flappy',
+    logic: [LW, LH],
+    color: '#2dd4bf',
+    dpad: false,
+    hint: '点击屏幕即可开始并拍翅膀<br>穿过管道缝隙，别碰管子和地面',
+    hud: [
+      { k: 'score', label: '分数' },
+      { k: 'best', label: '最佳' }
+    ],
+
+    onInit: function (a) { reset(a); },
+
+    onUpdate: function (a, dt) { update(dt); },
+
+    onRender: function (a, c) {
+      var pal = a.colors;
+
+      c.save();
+      if (shake > 0) {
+        var s = shake * 7;
+        c.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
+      }
+
+      // 云
+      for (var i = 0; i < clouds.length; i++) {
+        drawCloud(c, clouds[i].x, clouds[i].y, clouds[i].s, pal.base);
+      }
+
+      // 管道
+      for (var j = 0; j < pipes.length; j++) {
+        drawPipe(c, pipes[j].x, pipes[j].gapY, pal);
+      }
+
+      // 地面
+      c.fillStyle = pal.at(0, 0.02, -0.24);
+      c.fillRect(0, GROUND_Y, LW, LH - GROUND_Y);
+      c.strokeStyle = pal.at(0, 0.04, 0.04);
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(0, GROUND_Y + 1);
+      c.lineTo(LW, GROUND_Y + 1);
+      c.stroke();
+      // 地面条纹（滚动）
+      c.save();
+      c.beginPath();
+      c.rect(0, GROUND_Y + 1, LW, LH - GROUND_Y);
+      c.clip();
+      c.strokeStyle = 'rgba(255,255,255,.07)';
+      c.lineWidth = 12;
+      var off = -(dist * 6 % 48);
+      for (var gx = off - 48; gx < LW + 48; gx += 48) {
+        c.beginPath();
+        c.moveTo(gx, LH);
+        c.lineTo(gx + 30, GROUND_Y + 2);
+        c.stroke();
+      }
+      c.restore();
+
+      // 小鸟
+      drawBird(c, pal);
+
+      c.restore();
+    },
+
+    onAction: function (a, act) {
+      if (act.type === 'tap') flap();
+      else if (act.type === 'key' && (act.key === 'ArrowUp' || act.key === 'w' || act.key === 'W')) flap();
+      else if (act.type === 'swipe' && act.dir === 'up') flap();
+    }
+  });
+
+  /* ready 时点屏幕 = 直接开始 + 第一拍翅膀（避免点「开始」后小鸟立刻掉下来） */
+  document.getElementById('cv').addEventListener('pointerdown', function () {
+    if (api.state === 'ready') { api.start(); flap(); }
+  });
+
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__flappy = {
+      get bird() { return { y: bird.y, v: bird.v, rot: bird.rot }; },
+      get pipes() { return pipes.map(function (p) { return { x: p.x, gapY: p.gapY }; }); },
+      get dist() { return dist; },
+      get dead() { return dead; },
+      get groundY() { return GROUND_Y; },
+      flap: flap,
+      reset: function () { api.restart(); }
+    };
+  }
+
+  void api;
+})();
+</script>
+</body>
+</html>

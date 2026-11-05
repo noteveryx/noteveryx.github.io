@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05050a">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>分形缩放</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:#05050a;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    color:#fff;-webkit-font-smoothing:antialiased;cursor:zoom-in;touch-action:none;
+    user-select:none;-webkit-user-select:none;
+  }
+  canvas{position:fixed;inset:0;display:block;width:100%;height:100%;}
+  .ui{position:fixed;z-index:5;opacity:1;transition:opacity .55s cubic-bezier(.3,.8,.3,1);}
+  body.idle .ui{opacity:.15;}
+  body.idle .ui:hover{opacity:1;}
+  .back{
+    top:calc(14px + env(safe-area-inset-top));left:calc(14px + env(safe-area-inset-left));
+    width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:rgba(12,16,24,.42);border:1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;text-decoration:none;
+    transition:background-color .2s ease,transform .12s ease;
+  }
+  .back:hover{background:rgba(20,26,38,.7);}
+  .back:active{transform:scale(.94);}
+  .back svg{width:15px;height:15px;display:block;}
+  .tools{right:calc(14px + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;}
+  .btn{
+    width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:rgba(12,16,24,.42);border:1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;cursor:pointer;
+    font-family:inherit;font-size:15px;line-height:1;outline:none;
+    transition:background-color .2s ease,transform .12s ease;
+  }
+  .btn:hover{background:rgba(20,26,38,.7);}
+  .btn:active{transform:scale(.93);}
+  .label{
+    left:calc(18px + env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:rgba(255,255,255,.5);
+    pointer-events:none;user-select:none;
+  }
+  .label b{font-weight:600;letter-spacing:.16em;color:rgba(255,255,255,.9);}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<a class="ui back" href="../x.html" title="返回" aria-label="返回">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+</a>
+
+<div class="ui tools">
+  <div class="pk" id="pk" data-pk="fractal" data-placement="left"></div>
+  <button class="btn" id="resetBtn" type="button" title="复位（R）">↺</button>
+  <button class="btn" id="juliaBtn" type="button" title="切换曼德博 / 茱莉亚">J</button>
+</div>
+
+<div class="ui label" id="label">Fractal · <b>分形缩放</b></div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d', { alpha: false });
+  var W = 0, H = 0;
+
+  /* 内部低分辨率缓冲：分形计算量大，低分辨率再放大，兼顾速度与观感 */
+  var buf = document.createElement('canvas');
+  var bctx = buf.getContext('2d');
+  var BW = 0, BH = 0;
+  var img = null, data = null;
+  var SCALE = 0.42;
+
+  var SPAN_X = 3.2, SPAN_Y = 2.4;      // 缩放 1 时可见的复平面范围
+  var zoom = 1, cx = -0.5, cy = 0;
+  var tz = 1, tcx = -0.5, tcy = 0;
+  var julia = false;
+  var jc = { x: -0.4, y: 0.58 };
+
+  var baseHex = '#7b5cff';
+  var LUT = new Uint8Array(1024 * 3);
+
+  var running = false, rafId = 0, lastT = 0, need = true;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function buildLUT() {
+    var c = window.PaletteKit.hex2rgb(baseHex) || { r: 123, g: 92, b: 255 };
+    var hsl = window.PaletteKit.rgb2hsl(c.r, c.g, c.b);
+    for (var i = 0; i < 1024; i++) {
+      var mu = i / 1023;                       // 0 = 立刻逃逸（远处），1 = 不逃逸（集合内部）
+      var hue = (hsl.h + mu * 430) % 360;      // 色相循环一圈多，形成彩虹带
+      var sat = Math.max(0.05, Math.min(1, hsl.s * (0.35 + mu * 1.05)));
+      var lig = Math.max(0.012, Math.min(0.9, hsl.l * (0.22 + mu * 1.05) + 0.015));
+      if (mu > 0.88) {                         // 集合内部压成纯黑
+        var k = (1 - mu) / 0.12;
+        lig *= k * k;
+        sat *= k;
+      }
+      var c2 = window.PaletteKit.hsl2rgb(hue, sat, lig);
+      LUT[i * 3] = c2.r; LUT[i * 3 + 1] = c2.g; LUT[i * 3 + 2] = c2.b;
+    }
+  }
+
+  function setColor(hex) {
+    baseHex = hex;
+    buildLUT();
+    var lbl = document.getElementById('label');
+    if (lbl) lbl.innerHTML = 'Fractal · <b>' + hex.toUpperCase() + '</b>';
+    need = true;
+  }
+
+  function resize() {
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W * Math.min(window.devicePixelRatio || 1, 2));
+    cv.height = Math.round(H * Math.min(window.devicePixelRatio || 1, 2));
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+
+    BW = Math.max(120, Math.round(W * SCALE));
+    BH = Math.max(90, Math.round(H * SCALE));
+    buf.width = BW; buf.height = BH;
+    img = bctx.createImageData(BW, BH);
+    data = img.data;
+    need = true;
+    if (!running) draw();
+  }
+
+  function draw() {
+    if (!data) return;
+    var maxIter = Math.min(260, Math.round(60 + Math.log(zoom + 1) * 55));
+    var sx = SPAN_X / zoom, sy = SPAN_Y / zoom;
+    var p = 0;
+    for (var y = 0; y < BH; y++) {
+      var cy0 = (y / BH - 0.5) * sy + cy;      // 该像素的复数坐标
+      for (var x = 0; x < BW; x++) {
+        var cx0 = (x / BW - 0.5) * sx + cx;
+        var zx, zy, i = 0;
+        if (julia) {
+          // 茱莉亚集：z0 = 像素坐标，c = 固定常数
+          zx = cx0; zy = cy0;
+          for (; i < maxIter; i++) {
+            var t = zx * zx - zy * zy + jc.x;
+            zy = 2 * zx * zy + jc.y;
+            zx = t;
+            if (zx * zx + zy * zy > 16) { i++; break; }
+          }
+        } else {
+          // 曼德博集：z0 = 0，c = 像素坐标
+          zx = 0; zy = 0;
+          for (; i < maxIter; i++) {
+            var t2 = zx * zx - zy * zy + cx0;
+            zy = 2 * zx * zy + cy0;
+            zx = t2;
+            if (zx * zx + zy * zy > 16) { i++; break; }
+          }
+        }
+        var idx = ((i / maxIter) * 1023) | 0;
+        idx = idx > 1023 ? 1023 : idx;
+        data[p] = LUT[idx * 3];
+        data[p + 1] = LUT[idx * 3 + 1];
+        data[p + 2] = LUT[idx * 3 + 2];
+        data[p + 3] = 255;
+        p += 4;
+      }
+    }
+    bctx.putImageData(img, 0, 0);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(buf, 0, 0, cv.width, cv.height);
+  }
+
+  function loop(now) {
+    rafId = requestAnimationFrame(loop);
+    var dt = lastT ? Math.min((now - lastT) / 1000, 0.05) : 0.016;
+    lastT = now;
+
+    var dz = tz - zoom, dcx = tcx - cx, dcy = tcy - cy;
+    if (Math.abs(dz) > 1e-4 || Math.abs(dcx) > 1e-6 || Math.abs(dcy) > 1e-6) {
+      zoom += dz * Math.min(1, dt * 9);
+      cx += dcx * Math.min(1, dt * 9);
+      cy += dcy * Math.min(1, dt * 9);
+      need = true;
+    }
+    if (need) { draw(); need = false; }
+  }
+  function start() { if (running) return; running = true; lastT = 0; rafId = requestAnimationFrame(loop); }
+  function stop() { running = false; cancelAnimationFrame(rafId); }
+
+  /* ---------------- 缩放 / 平移 ---------------- */
+  function zoomAt(px, py, factor) {
+    var nz = Math.max(1, Math.min(9000, tz * factor));
+    var ux = px / W - 0.5, uy = py / H - 0.5;
+    var fx = ux * (SPAN_X / zoom) + cx;
+    var fy = uy * (SPAN_Y / zoom) + cy;
+    tcx = fx - ux * (SPAN_X / nz);
+    tcy = fy - uy * (SPAN_Y / nz);
+    tz = nz;
+    need = true;
+  }
+
+  cv.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    var r = cv.getBoundingClientRect();
+    zoomAt(e.clientX - r.left, e.clientY - r.top, e.deltaY < 0 ? 1.2 : 1 / 1.2);
+  }, { passive: false });
+
+  var drag = null;
+  cv.addEventListener('pointerdown', function (e) {
+    cv.setPointerCapture && cv.setPointerCapture(e.pointerId);
+    drag = { x: e.clientX, y: e.clientY, cx: tcx, cy: tcy };
+  });
+  cv.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    tcx = drag.cx - (e.clientX - drag.x) / W * (SPAN_X / tz);
+    tcy = drag.cy - (e.clientY - drag.y) / H * (SPAN_Y / tz);
+    need = true;
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+    cv.addEventListener(ev, function () { drag = null; });
+  });
+
+  var lastDist = 0;
+  cv.addEventListener('touchmove', function (e) {
+    if (e.touches.length !== 2) return;
+    e.preventDefault();
+    var t1 = e.touches[0], t2 = e.touches[1];
+    var d = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+    var r = cv.getBoundingClientRect();
+    var mx = (t1.clientX + t2.clientX) / 2 - r.left;
+    var my = (t1.clientY + t2.clientY) / 2 - r.top;
+    if (lastDist) zoomAt(mx, my, d / lastDist);
+    lastDist = d;
+  }, { passive: false });
+  cv.addEventListener('touchend', function () { lastDist = 0; });
+
+  function reset() {
+    tz = 1; tcx = julia ? 0 : -0.5; tcy = 0;
+    need = true;
+  }
+  var resetBtn = document.getElementById('resetBtn');
+  if (resetBtn) resetBtn.addEventListener('click', reset);
+
+  var juliaBtn = document.getElementById('juliaBtn');
+  if (juliaBtn) juliaBtn.addEventListener('click', function () {
+    julia = !julia;
+    juliaBtn.textContent = julia ? 'M' : 'J';
+    reset();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'r' || e.key === 'R') reset();
+  });
+
+  /* ---------------- 闲置淡出 ---------------- */
+  var idleTimer = null;
+  function wake() {
+    document.body.classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () { document.body.classList.add('idle'); }, 3000);
+  }
+  ['pointermove', 'pointerdown', 'keydown', 'wheel'].forEach(function (ev) {
+    window.addEventListener(ev, wake, { passive: true });
+  });
+  wake();
+
+  /* ---------------- 启动 ---------------- */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stop(); else if (!reduceMotion) start();
+  });
+  window.addEventListener('resize', resize, { passive: true });
+
+  var pk = window.PaletteKit.mount(document.getElementById('pk'), {
+    value: '#7b5cff',
+    onChange: function (c) { setColor(c); }
+  });
+  setColor(pk.get());
+  resize();
+  if (!reduceMotion) start(); else draw();
+})();
+</script>
+</body>
+</html>

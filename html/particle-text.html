@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#07080f">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>粒子文字</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/text-kit.css">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:#07080f;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    color:#fff;-webkit-font-smoothing:antialiased;cursor:crosshair;touch-action:manipulation;
+    user-select:none;-webkit-user-select:none;
+  }
+  canvas{position:fixed;inset:0;display:block;width:100%;height:100%;touch-action:none;}
+  .ui{position:fixed;z-index:5;opacity:1;transition:opacity .55s cubic-bezier(.3,.8,.3,1);}
+  body.idle .ui{opacity:.15;}
+  body.idle .ui:hover{opacity:1;}
+  .back{
+    top:calc(14px + env(safe-area-inset-top));left:calc(14px + env(safe-area-inset-left));
+    width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:rgba(12,16,24,.42);border:1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;text-decoration:none;
+    transition:background-color .2s ease,transform .12s ease;
+  }
+  .back:hover{background:rgba(20,26,38,.7);}
+  .back:active{transform:scale(.94);}
+  .back svg{width:15px;height:15px;display:block;}
+  .tools{right:calc(14px + env(safe-area-inset-right));top:calc(14px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px;}
+  .btn{
+    width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:rgba(12,16,24,.42);border:1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;cursor:pointer;
+    font-family:inherit;font-size:15px;line-height:1;outline:none;
+    transition:background-color .2s ease,transform .12s ease;
+  }
+  .btn:hover{background:rgba(20,26,38,.7);}
+  .btn:active{transform:scale(.93);}
+  .label{
+    left:calc(18px + env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:rgba(255,255,255,.5);
+    pointer-events:none;user-select:none;
+  }
+  .label b{font-weight:600;letter-spacing:.16em;color:rgba(255,255,255,.9);}
+  .picker{
+    position:fixed;z-index:6;left:50%;bottom:calc(64px + env(safe-area-inset-bottom));
+    transform:translateX(-50%);
+    max-width:calc(100vw - 24px);
+  }
+
+  /* ---------- 文字设置面板（字号 / 颜色） ---------- */
+  .panel{
+    position:fixed;z-index:20;width:214px;padding:13px 14px 14px;
+    border-radius:14px;background:rgba(17,21,29,.94);
+    border:1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    box-shadow:0 12px 34px rgba(0,0,0,.55);
+  }
+  .panel[hidden]{display:none !important;}
+  .panel h4{
+    margin:0 0 9px;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:rgba(255,255,255,.42);font-weight:600;
+  }
+  .panel h4 + h4{margin-top:14px;}
+  .prow{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+  .prow .val{font-size:12px;color:rgba(255,255,255,.82);font-variant-numeric:tabular-nums;}
+  .rng{
+    -webkit-appearance:none;appearance:none;display:block;width:100%;height:14px;
+    background:transparent;outline:none;margin:0;
+  }
+  .rng::-webkit-slider-runnable-track{height:4px;border-radius:99px;background:rgba(255,255,255,.18);}
+  .rng::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%;
+    background:#fff;margin-top:-5.5px;box-shadow:0 1px 5px rgba(0,0,0,.6);cursor:pointer;
+  }
+  .rng::-moz-range-track{height:4px;border-radius:99px;background:rgba(255,255,255,.18);}
+  .rng::-moz-range-thumb{width:15px;height:15px;border:none;border-radius:50%;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.6);cursor:pointer;}
+  .rng:focus-visible{outline:2px solid rgba(120,200,255,.8);outline-offset:3px;border-radius:99px;}
+  .swatches{display:flex;gap:7px;flex-wrap:wrap;}
+  .sw{
+    width:23px;height:23px;border-radius:8px;cursor:pointer;padding:0;
+    border:1px solid rgba(255,255,255,.24);
+    transition:transform .12s ease,box-shadow .15s ease;
+  }
+  .sw:hover{transform:scale(1.1);}
+  .sw.on{box-shadow:0 0 0 2px #fff;}
+  .hexline{
+    display:flex;align-items:center;gap:8px;margin-top:12px;
+    font-size:11.5px;color:rgba(255,255,255,.5);
+  }
+  .hexdot{width:14px;height:14px;border-radius:5px;border:1px solid rgba(255,255,255,.25);}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<a class="ui back" href="../x.html" title="返回" aria-label="返回">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+</a>
+
+<div class="ui tools">
+  <div class="pk" id="pk" data-pk="ptext" data-placement="left"></div>
+  <button class="btn" id="typeBtn" type="button" title="文字大小与颜色">Aa</button>
+  <button class="btn" id="regenBtn" type="button" title="重新生成（R）">↻</button>
+</div>
+
+<div class="ui label" id="label">Particle Text · <b>粒子文字</b></div>
+
+<div class="panel" id="typePanel" hidden>
+  <h4>字号</h4>
+  <div class="prow"><span class="val" id="sizeVal">自适应</span></div>
+  <input type="range" class="rng" id="sizeRange" min="24" max="180" step="2" value="96" aria-label="文字字号">
+  <h4>颜色</h4>
+  <div class="swatches" id="swatches"></div>
+  <div class="hexline"><span class="hexdot" id="hexDot"></span><span id="hexVal">#7CC4FF</span></div>
+</div>
+
+<div class="picker" id="picker"></div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/quotes-data.js"></script>
+<script src="../assets/js/text-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d', { alpha: false });
+  var W = 0, H = 0, DPR = 1, t = 0;
+
+  var targets = [];       // 目标位置（从文字像素采样）
+  var parts = [];         // 粒子 {x, y, tx, ty, vx, vy, free, r, hue}
+  var blow = 0;           // 吹散程度 0~1
+  var blowTarget = 0;
+  var baseHex = '#7cc4ff';
+  var rgb = { r: 124, g: 196, b: 255 };
+  var hueSpread = 40;
+  var fontSize = 0;            // 0 = 跟随屏幕自适应
+
+  /* 文字：默认取 quotes 里的句子，也可以自己写 */
+  var QUOTES = window.QUOTES_DATA || [];
+  var currentText = QUOTES.length ? (typeof QUOTES[0] === 'string' ? QUOTES[0] : QUOTES[0].text) : '粒子文字';
+
+  var running = false, rafId = 0, lastT = 0;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function setColor(hex) {
+    baseHex = hex;
+    rgb = window.PaletteKit.hex2rgb(hex) || rgb;
+    var lbl = document.getElementById('label');
+    if (lbl) lbl.innerHTML = 'Particle Text · <b>' + hex.toUpperCase() + '</b>';
+    recolor();                 // 已有粒子立即换色，不用重新生成
+    var dot = document.getElementById('hexDot');
+    if (dot) dot.style.background = hex;
+    var hv = document.getElementById('hexVal');
+    if (hv) hv.textContent = hex.toUpperCase();
+    markSwatch(hex);
+  }
+
+  /* 只改粒子颜色，不动位置 */
+  function recolor() {
+    var hsl = window.PaletteKit.rgb2hsl(rgb.r, rgb.g, rgb.b);
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      var h = (hsl.h + (p.d * hueSpread - hueSpread / 2) + 360) % 360;
+      var c = window.PaletteKit.hsl2rgb(h, Math.max(0.3, hsl.s), Math.min(0.92, hsl.l + 0.18));
+      p.cr = c.r; p.cg = c.g; p.cb = c.b;
+    }
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    build();
+    if (!running) render();
+  }
+
+  /* 用离屏 canvas 把文字渲染成像素，采样出目标点 */
+  function currentSize() {
+    if (fontSize > 0) return fontSize;
+    return Math.max(30, Math.min(W * 0.16, 120));
+  }
+
+  function sampleText() {
+    var text = currentText || '粒子文字';
+
+    var off = document.createElement('canvas');
+    var size = currentSize();
+    off.width = W; off.height = H;
+    var octx = off.getContext('2d');
+    octx.clearRect(0, 0, W, H);
+    octx.fillStyle = '#fff';
+    octx.textAlign = 'center';
+    octx.textBaseline = 'middle';
+    octx.font = '800 ' + size + 'px "PingFang SC","Microsoft YaHei",system-ui,sans-serif';
+
+    // 换行
+    var maxW = W - 60;
+    var lines = [], line = '';
+    for (var i = 0; i < text.length; i++) {
+      var test = line + text[i];
+      if (octx.measureText(test).width > maxW && line) { lines.push(line); line = text[i]; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+
+    var lh = size * 1.25;
+    var y0 = H / 2 - (lines.length - 1) * lh / 2;
+    for (var li = 0; li < lines.length; li++) {
+      octx.fillText(lines[li], W / 2, y0 + li * lh);
+    }
+
+    var d = octx.getImageData(0, 0, Math.max(1, W), Math.max(1, H)).data;
+    targets.length = 0;
+    var step = Math.max(2, Math.round(3 * DPR));
+    for (var y = 0; y < H; y += step) {
+      for (var x = 0; x < W; x += step) {
+        if (d[(y * W + x) * 4 + 3] > 128) {
+          targets.push({ x: x, y: y, d: Math.random() });
+        }
+      }
+    }
+    return targets.length;
+  }
+
+  function build() {
+    sampleText();
+    parts.length = 0;
+    var hsl = window.PaletteKit.rgb2hsl(rgb.r, rgb.g, rgb.b);
+    for (var i = 0; i < targets.length; i++) {
+      var tg = targets[i];
+      // 颜色预先算好，避免每帧做 HSL 转换
+      var h = (hsl.h + (tg.d * hueSpread - hueSpread / 2) + 360) % 360;
+      var c = window.PaletteKit.hsl2rgb(h, Math.max(0.3, hsl.s), Math.min(0.92, hsl.l + 0.18));
+      parts.push({
+        x: W / 2 + (Math.random() - 0.5) * W * 0.9,
+        y: H / 2 + (Math.random() - 0.5) * H * 0.9,
+        tx: tg.x, ty: tg.y,
+        vx: 0, vy: 0,
+        free: false,
+        d: tg.d,
+        r: 0.9 + Math.random() * 1.3,
+        cr: c.r, cg: c.g, cb: c.b
+      });
+    }
+  }
+
+  function render() {
+    ctx.fillStyle = '#07080f';
+    ctx.fillRect(0, 0, W, H);
+
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      ctx.fillStyle = 'rgb(' + p.cr + ',' + p.cg + ',' + p.cb + ')';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * (1 + blow * 0.5), 0, 6.2832);
+      ctx.fill();
+    }
+  }
+
+  function loop(now) {
+    rafId = requestAnimationFrame(loop);
+    var dt = lastT ? Math.min((now - lastT) / 1000, 0.05) : 0.016;
+    lastT = now;
+    t += dt;
+
+    // 吹散程度平滑趋近
+    blow += (blowTarget - blow) * Math.min(1, dt * 2.2);
+
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      if (p.free) {
+        p.vy += 6 * dt;
+        p.vx += Math.sin(t * 1.5 + p.hue * 10) * 6 * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.y > H + 20 || p.x < -20 || p.x > W + 20) {
+          // 回到随机位置，重新聚合
+          p.free = false;
+          p.x = W / 2 + (Math.random() - 0.5) * W * 0.8;
+          p.y = H / 2 + (Math.random() - 0.5) * H * 0.8;
+          p.vx = 0; p.vy = 0;
+        }
+        continue;
+      }
+      // 回归目标
+      var dx = p.tx - p.x, dy = p.ty - p.y;
+      var pull = 2.6 + blow * 0.6;
+      p.vx += dx * pull * dt;
+      p.vy += dy * pull * dt;
+      p.vx *= 0.90;
+      p.vy *= 0.90;
+      p.x += p.vx;
+      p.y += p.vy;
+    }
+    render();
+  }
+  function start() { if (running) return; running = true; lastT = 0; rafId = requestAnimationFrame(loop); }
+  function stop() { running = false; cancelAnimationFrame(rafId); }
+
+  /* ---------------- 交互：吹散 ---------------- */
+  function blowUp(x, y) {
+    blowTarget = 1;
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      var dx = p.x - x, dy = p.y - y;
+      var d = Math.sqrt(dx * dx + dy * dy) || 1;
+      if (d < 420) {
+        p.free = true;
+        var f = (1 - d / 420) * 12;
+        p.vx += dx / d * f;
+        p.vy += dy / d * f - 4;
+      }
+    }
+  }
+
+  cv.addEventListener('pointerdown', function (e) { blowUp(e.clientX, e.clientY); });
+  cv.addEventListener('pointermove', function (e) {
+    if (e.buttons) blowUp(e.clientX, e.clientY);
+  }, { passive: true });
+
+  var regenBtn = document.getElementById('regenBtn');
+  if (regenBtn) regenBtn.addEventListener('click', function () { build(); blowTarget = 0; blow = 0; });
+
+  /* ---------------- 闲置淡出 ---------------- */
+  var idleTimer = null;
+  function wake() {
+    document.body.classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () { document.body.classList.add('idle'); }, 3000);
+  }
+  ['pointermove', 'pointerdown', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, wake, { passive: true });
+  });
+  wake();
+
+  /* ---------------- 启动 ---------------- */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stop(); else if (!reduceMotion) start();
+  });
+  window.addEventListener('resize', resize, { passive: true });
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 220); });
+
+  /* ---------------- 句子条：quotes + 自己写 ---------------- */
+  var tk = window.TextKit.mountBar(document.getElementById('picker'), {
+    layout: 'row',
+    limit: 6,
+    collapsible: true,
+    value: currentText,
+    placeholder: '写一句要碎成粒子的字…',
+    onChange: function (text) {
+      currentText = text;
+      build();
+      tk.collapse();            // 选好文字就把句子列表收起来，把画布让出来
+    }
+  });
+
+  /* ---------------- 文字设置：字号 + 颜色 ----------------
+     注意：色板要先建好再挂调色板，否则 setColor → markSwatch 会访问还没初始化的数组 */
+  var PRESETS = ['#7cc4ff', '#8be28b', '#ffd166', '#ff7cc4', '#c792ea', '#ff9f6e', '#66e0d0', '#ffffff'];
+  var swBox = document.getElementById('swatches');
+  var swEls = [];
+  function markSwatch(hex) {
+    if (!swEls || !swEls.length) return;
+    var t = (hex || '').toLowerCase();
+    swEls.forEach(function (b) {
+      b.classList.toggle('on', b.title.toLowerCase() === t);
+    });
+  }
+
+  PRESETS.forEach(function (hex) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sw';
+    b.style.background = hex;
+    b.title = hex.toUpperCase();
+    b.setAttribute('aria-label', '文字颜色 ' + hex.toUpperCase());
+    b.addEventListener('click', function () { pk.set(hex); });
+    swBox.appendChild(b);
+    swEls.push(b);
+  });
+
+  var pk = window.PaletteKit.mount(document.getElementById('pk'), {
+    value: '#7cc4ff',
+    onChange: function (c) { setColor(c); }
+  });
+  setColor(pk.get());
+
+  var sizeRange = document.getElementById('sizeRange');
+  var sizeVal = document.getElementById('sizeVal');
+  // 初始值用 window.innerWidth（此时 resize 还没跑，W 还是 0）
+  var initSize = Math.round(Math.max(30, Math.min(window.innerWidth * 0.16, 120)));
+  sizeRange.value = initSize;
+  sizeVal.textContent = initSize + ' px';
+
+  var sizeTimer = null;
+  sizeRange.addEventListener('input', function () {
+    fontSize = +sizeRange.value;
+    sizeVal.textContent = fontSize + ' px';
+    clearTimeout(sizeTimer);
+    sizeTimer = setTimeout(function () { build(); }, 60);   // 合并连续拖动
+  });
+
+  /* 面板开合 */
+  var typeBtn = document.getElementById('typeBtn');
+  var typePanel = document.getElementById('typePanel');
+  function placePanel() {
+    typePanel.hidden = false;
+    typePanel.style.visibility = 'hidden';
+    var r = typeBtn.getBoundingClientRect();
+    var pr = typePanel.getBoundingClientRect();
+    var left = r.left - pr.width - 10;
+    if (left < 8) left = Math.min(r.right + 10, window.innerWidth - pr.width - 8);
+    var top = r.bottom + 10;
+    if (top + pr.height > window.innerHeight - 8) top = Math.max(8, r.top - pr.height - 10);
+    typePanel.style.left = Math.max(8, left) + 'px';
+    typePanel.style.top = top + 'px';
+    typePanel.style.visibility = 'visible';
+  }
+  function closePanel() { typePanel.hidden = true; }
+
+  typeBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (typePanel.hidden) placePanel(); else closePanel();
+  });
+  document.addEventListener('click', function (e) {
+    if (!typePanel.hidden && !typePanel.contains(e.target) && e.target !== typeBtn) closePanel();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closePanel();
+    if (e.key === 'r' || e.key === 'R') { build(); blowTarget = 0; blow = 0; }
+  });
+  window.addEventListener('resize', function () { if (!typePanel.hidden) placePanel(); }, { passive: true });
+
+  resize();
+  if (!reduceMotion) start(); else render();
+})();
+</script>
+</body>
+</html>

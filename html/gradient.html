@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>渐变配色</title>
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
+<style>
+  :root{
+    --bg1:#f7f9fd; --bg2:#eef1f9; --card:#fff; --text:#16192b; --muted:#6b7590;
+    --line:rgba(22,25,43,.08); --accent:#635bff; --accent2:#00b8d9;
+    --logo-border:rgba(255,255,255,.16); --logo-shadow:0 4px 14px rgba(22,25,43,.18);
+  }
+  html[data-theme="emerald"]{--bg1:#f5faf7;--bg2:#e8f1ec;--card:#fff;--text:#16241d;--muted:#6d8177;--line:rgba(22,36,29,.08);--accent:#2f9e6d;--accent2:#31b8a4;--logo-border:rgba(255,255,255,.16);--logo-shadow:0 4px 14px rgba(22,36,29,.18);}
+  html[data-theme="midnight"]{--bg1:#0f1626;--bg2:#0a101c;--card:#151f2e;--text:#e7eef8;--muted:#7f8fa4;--line:#232f40;--accent:#5b9dff;--accent2:#38c8f0;--logo-border:rgba(255,255,255,.10);--logo-shadow:0 4px 14px rgba(0,0,0,.5);}
+  html[data-theme="sunset"]{--bg1:#fdf8f4;--bg2:#f7ece2;--card:#fff;--text:#33231a;--muted:#96796a;--line:rgba(51,35,26,.09);--accent:#f2762e;--accent2:#f5a623;--logo-border:rgba(255,255,255,.16);--logo-shadow:0 4px 14px rgba(80,45,20,.18);}
+  html[data-theme="ink"]{--bg1:#0e1517;--bg2:#0a1012;--card:#131b1e;--text:#e2edee;--muted:#7d9194;--line:#212e31;--accent:#2dd4bf;--accent2:#38bdf8;--logo-border:rgba(255,255,255,.10);--logo-shadow:0 4px 14px rgba(0,0,0,.5);}
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{margin:0;padding:0;overflow-x:hidden;overflow-x:clip;}
+  body{
+    margin:0;width:100%;max-width:100%;overflow-x:hidden;overflow-x:clip;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    color:var(--text);background:linear-gradient(180deg,var(--bg1),var(--bg2));
+    min-height:100vh;padding-bottom:calc(28px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing:antialiased;transition:background .28s ease,color .28s ease;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left));}
+  header{padding:28px 0 14px;display:flex;align-items:center;gap:12px;}
+  .back{
+    width:36px;height:36px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    background:var(--card);border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.06);
+    color:var(--text);text-decoration:none;transition:border-color .2s ease,transform .12s ease;
+  }
+  .back:hover{border-color:var(--accent);color:var(--accent);}
+  .back:active{transform:scale(.94);}
+  .back svg{width:15px;height:15px;}
+  h1{margin:0;font-size:21px;font-weight:800;}
+  .sub{margin:2px 0 0;font-size:12.5px;color:var(--muted);}
+
+  .stage{
+    border-radius:18px;overflow:hidden;border:1px solid var(--line);
+    box-shadow:0 14px 40px -20px rgba(0,0,0,.45);
+    aspect-ratio:16/9;background:var(--card);position:relative;
+  }
+  #grad{width:100%;height:100%;display:block;}
+
+  .codes{display:flex;gap:8px;margin:14px 0 0;flex-wrap:wrap;}
+  .code{
+    flex:1 1 30%;min-width:96px;
+    background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+    display:flex;align-items:center;gap:9px;cursor:pointer;text-align:left;
+    font-family:inherit;outline:none;
+    transition:border-color .16s ease,transform .12s ease;
+  }
+  .code:hover{border-color:var(--accent);}
+  .code:active{transform:scale(.97);}
+  .code i{width:26px;height:26px;border-radius:8px;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);}
+  .code span{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12.5px;color:var(--text);}
+  .code small{display:block;font-size:10.5px;color:var(--muted);}
+
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  .btn{
+    border:1px solid var(--line);background:var(--card);color:var(--text);
+    border-radius:11px;padding:10px 14px;font-family:inherit;font-size:13.5px;font-weight:600;
+    cursor:pointer;outline:none;transition:border-color .15s ease,color .15s ease,transform .12s ease;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .btn:active{transform:scale(.96);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.primary:hover{color:#fff;filter:brightness(1.06);}
+
+  .hint{font-size:12px;color:var(--muted);text-align:center;margin:16px 0 0;}
+  @media (max-width:520px){ .code{flex:1 1 45%;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="../x.html" title="返回" aria-label="返回">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+    <div>
+      <h1>渐变配色</h1>
+      <p class="sub">点一下换一组渐变，点色块复制 HEX 与 CSS</p>
+    </div>
+  </header>
+
+  <div class="stage"><canvas id="grad"></canvas></div>
+
+  <div class="codes" id="codes"></div>
+
+  <div class="row">
+    <button class="btn primary" id="nextBtn" type="button">换一组</button>
+    <button class="btn" id="copyCssBtn" type="button">复制 CSS</button>
+    <button class="btn" id="saveBtn" type="button">保存 PNG</button>
+  </div>
+
+  <p class="hint" id="hint">渐变方向：线性 · 角度 · 径向</p>
+</div>
+
+<div class="pk pk-float" id="pk" data-pk="gradient" data-placement="bottom"></div>
+
+<script src="../assets/js/theme-kit.js"></script>
+<script src="../assets/js/palette-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cv = document.getElementById('grad');
+  var ctx = cv.getContext('2d');
+  var codesEl = document.getElementById('codes');
+  var hintEl = document.getElementById('hint');
+
+  var TYPES = [
+    { id: 'linear', name: '线性' },
+    { id: 'angle', name: '角度' },
+    { id: 'radial', name: '径向' }
+  ];
+  var typeIdx = 0;
+
+  var stops = ['#635bff', '#00b8d9', '#ff6ec7'];
+  var angle = 135;
+
+  function pickStops() {
+    var mode = Math.random();
+    if (mode < 0.45) {
+      // 同色系
+      var base = window.PaletteKit.random();
+      var d = window.PaletteKit.derive(base, 42, 0.08, 0.16);
+      stops = [d[0], d[1], d[2]];
+    } else if (mode < 0.8) {
+      // 双色对比
+      stops = [window.PaletteKit.random(), window.PaletteKit.random()];
+    } else {
+      // 三色随机
+      stops = [window.PaletteKit.random(), window.PaletteKit.random(), window.PaletteKit.random()];
+    }
+    angle = Math.floor(Math.random() * 360);
+  }
+
+  function cssGradient() {
+    var t = TYPES[typeIdx].id;
+    if (t === 'radial') {
+      return 'radial-gradient(circle at ' + (30 + Math.random() * 40).toFixed(0) + '% ' + (30 + Math.random() * 40).toFixed(0) + '%, ' + stops.join(', ') + ')';
+    }
+    if (t === 'angle') {
+      return 'linear-gradient(' + angle + 'deg, ' + stops.join(', ') + ')';
+    }
+    return 'linear-gradient(' + angle + 'deg, ' + stops.join(', ') + ')';
+  }
+
+  function draw() {
+    var w = cv.width = cv.clientWidth * Math.min(window.devicePixelRatio || 1, 2);
+    var h = cv.height = cv.clientHeight * Math.min(window.devicePixelRatio || 1, 2);
+    ctx.clearRect(0, 0, w, h);
+
+    var g;
+    var t = TYPES[typeIdx].id;
+    if (t === 'radial') {
+      var r = Math.max(w, h) * 0.75;
+      g = ctx.createRadialGradient(w * 0.35, h * 0.35, 0, w * 0.35, h * 0.35, r);
+    } else {
+      var rad = angle * Math.PI / 180;
+      var cx = w / 2, cy = h / 2;
+      var len = Math.abs(w * Math.cos(rad)) + Math.abs(h * Math.sin(rad));
+      g = ctx.createLinearGradient(
+        cx - Math.cos(rad) * len / 2, cy - Math.sin(rad) * len / 2,
+        cx + Math.cos(rad) * len / 2, cy + Math.sin(rad) * len / 2
+      );
+    }
+    for (var i = 0; i < stops.length; i++) g.addColorStop(stops.length === 1 ? 0 : i / (stops.length - 1), stops[i]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  function renderCodes() {
+    codesEl.innerHTML = '';
+    stops.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'code';
+      b.innerHTML = '<i style="background:' + c + '"></i><span>' + c.toUpperCase() + '<small>点击复制</small></span>';
+      b.addEventListener('click', function () { copy(c.toUpperCase(), '已复制 ' + c.toUpperCase()); });
+      codesEl.appendChild(b);
+    });
+  }
+
+  function copy(text, msg) {
+    var ok = false;
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+      document.body.appendChild(ta);
+      ta.select();
+      ok = document.execCommand('copy');
+      ta.remove();
+    } catch (e) { ok = false; }
+    setHint(msg || (ok ? '已复制：' + text : '复制失败：' + text));
+  }
+
+  var hintTimer = null;
+  function setHint(txt) {
+    if (!hintEl) return;
+    hintEl.textContent = txt;
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(function () {
+      hintEl.textContent = '渐变方向：线性 · 角度 · 径向';
+    }, 2200);
+  }
+
+  function refresh() { pickStops(); draw(); renderCodes(); }
+
+  /* ---------------- 控件 ---------------- */
+  var nextBtn = document.getElementById('nextBtn');
+  if (nextBtn) nextBtn.addEventListener('click', refresh);
+
+  cv.addEventListener('click', function () {
+    typeIdx = (typeIdx + 1) % TYPES.length;
+    if (hintEl) hintEl.textContent = '渐变方向：' + TYPES[typeIdx].name;
+    draw();
+  });
+
+  var copyCssBtn = document.getElementById('copyCssBtn');
+  if (copyCssBtn) copyCssBtn.addEventListener('click', function () {
+    copy('background: ' + cssGradient() + ';');
+  });
+
+  var saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) saveBtn.addEventListener('click', function () {
+    try {
+      var out = document.createElement('canvas');
+      out.width = 1600; out.height = 900;
+      var o = out.getContext('2d');
+      var t = TYPES[typeIdx].id;
+      var g;
+      if (t === 'radial') {
+        g = o.createRadialGradient(560, 315, 0, 560, 315, 1200);
+      } else {
+        var rad = angle * Math.PI / 180;
+        g = o.createLinearGradient(800 - Math.cos(rad) * 800, 450 - Math.sin(rad) * 450, 800 + Math.cos(rad) * 800, 450 + Math.sin(rad) * 450);
+      }
+      for (var i = 0; i < stops.length; i++) g.addColorStop(stops.length === 1 ? 0 : i / (stops.length - 1), stops[i]);
+      o.fillStyle = g;
+      o.fillRect(0, 0, 1600, 900);
+
+      var name = 'gradient-' + new Date().toISOString().slice(0, 10) + '-' + Date.now() % 10000 + '.png';
+      out.toBlob(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+        setHint('已保存 ' + name);
+      }, 'image/png');
+    } catch (e) { }
+  });
+
+  /* 调色板：从挑好的颜色里选一个作为主色重新生成 */
+  var pk = window.PaletteKit.mount(document.getElementById('pk'), {
+    value: '#635bff',
+    onChange: function (c) {
+      var d = window.PaletteKit.derive(c, 42, 0.08, 0.16);
+      stops = [d[0], d[1], d[2]];
+      draw();
+      renderCodes();
+      setHint('主色 ' + c.toUpperCase());
+    }
+  });
+
+  /* ---------------- 启动 ---------------- */
+  window.addEventListener('resize', draw);
+  refresh();
+})();
+</script>
+</body>
+</html>
