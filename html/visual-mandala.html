@@ -154,6 +154,15 @@
   function bgColor() { return inkMode ? '#12161c' : '#faf7f2'; }
 
   function resize() {
+    // 先留住旧内容，避免旋转屏幕 / 调整窗口时作品被清空
+    var oldCv = null, oldDpr = DPR;
+    if (cv.width > 0 && cv.height > 0) {
+      oldCv = document.createElement('canvas');
+      oldCv.width = cv.width;
+      oldCv.height = cv.height;
+      oldCv.getContext('2d').drawImage(cv, 0, 0);
+    }
+
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     W = window.innerWidth;
     H = window.innerHeight;
@@ -161,6 +170,8 @@
     cv.height = Math.round(H * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     paintBg();
+    // 把旧内容按旧尺寸贴回来（画布坐标 1:1，不做拉伸）
+    if (oldCv) ctx.drawImage(oldCv, 0, 0, oldCv.width / oldDpr, oldCv.height / oldDpr);
   }
 
   function paintBg() {
@@ -387,14 +398,9 @@
 
   /* ---------------- 启动 ---------------- */
   window.addEventListener('resize', function () {
-    // 画布内容会丢，先快照再恢复
-    var keep = snaps.length ? null : null;
-    var old = null;
-    try { old = ctx.getImageData(0, 0, cv.width, cv.height); } catch (e) { }
+    // resize() 内部已负责保留旧内容并贴回，
+    // 之前这里的「快照 + 尺寸相同才恢复」永远不成立（尺寸一变就不等）
     resize();
-    if (old && old.width === cv.width && old.height === cv.height) {
-      ctx.putImageData(old, 0, 0);
-    }
   }, { passive: true });
   window.addEventListener('orientationchange', function () { setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 240); });
 

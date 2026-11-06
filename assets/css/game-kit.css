@@ -41,7 +41,9 @@ body.gk-page > canvas {
 /* ---------- 返回 ---------- */
 .gk-back {
   position: fixed;
-  z-index: 20;
+  /* 必须高于 .gk-overlay(30) 与 .gk-tools(40)：
+     暂停 / 结束面板弹出时，返回键仍要能点，否则玩家只能刷新页面 */
+  z-index: 50;
   top: calc(14px + env(safe-area-inset-top));
   left: calc(14px + env(safe-area-inset-left));
   width: 36px;
@@ -178,6 +180,10 @@ body.gk-page > canvas {
 
 .gk-card {
   width: min(320px, 100%);
+  /* 横屏 / 矮屏时面板会超出屏幕，底部按钮点不到 —— 允许滚动 */
+  max-height: min(86vh, 640px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 26px 24px 22px;
   border-radius: 20px;
   background: rgba(17, 21, 30, .92);

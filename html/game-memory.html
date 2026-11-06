@@ -68,6 +68,7 @@
   var first = -1;                       // 第一张翻开的下标
   var second = -1;
   var busy = false;                     // 等待翻回
+  var flipTimer = 0;                    // 待翻回定时器（重开/换难度时必须取消）
   var moves = 0;
   var matched = 0;
   var elapsed = 0;
@@ -144,6 +145,11 @@
   function resetGame(a) {
     var g = a || api;
     var L = LV[level];
+    // 取消上一局未执行的翻回定时器，否则它会在新局里乱翻牌
+    clearTimeout(flipTimer);
+    flipTimer = 0;
+    busy = false;
+    first = -1; second = -1;
     cols = L.cols; rows = L.rows;
     cw = (BW - GAP * (cols - 1)) / cols;
     // 竖版 6 行时把卡片压扁一点，整体高度不超 BH
@@ -227,7 +233,9 @@
 
     // 不匹配：等一会翻回去
     busy = true;
-    setTimeout(function () {
+    clearTimeout(flipTimer);          // 只允许一个待翻回定时器
+    flipTimer = setTimeout(function () {
+      flipTimer = 0;
       if (cards[first]) cards[first].target = 0;
       if (cards[second]) cards[second].target = 0;
       first = -1; second = -1; busy = false;

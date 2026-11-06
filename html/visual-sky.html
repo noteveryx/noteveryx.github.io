@@ -125,29 +125,42 @@
 
   function currentPalette() {
     var now = new Date();
-    var hour = now.getHours() + now.getMinutes() / 60;
+    return paletteAt(now.getHours() + now.getMinutes() / 60);
+  }
+
+  /* hour 为「小时 + 小数」，参数化后便于测试各时段边界的过渡效果 */
+  function paletteAt(hour) {
     var p = PHASES[phaseOf(hour)];
     var ph = phaseOf(hour);
 
-    // 相邻时段过渡：每个时段前后 0.75 小时内渐变
+    /* 相邻时段过渡：
+       · 进入时段的前 0.6 小时 —— 从「上一时段」过渡到当前时段
+       · 离开时段前的 0.6 小时 —— 从当前时段过渡到「下一时段」
+       注意 hour > endHour 时 endHour-hour 是负数，必须排除，
+       否则整晚都会被判成「快到 endHour」，blend 被钳到 0.6，
+       深夜时段永远带着 60% 的黎明色。 */
+    var prev = PHASES[(ph + PHASES.length - 1) % PHASES.length];
     var next = PHASES[(ph + 1) % PHASES.length];
-    var k = 0;
-    var edge = (hour - (now.getHours() - 0.5)) % 1;   // 粗略：不在边界就不混
-    var blend = 0;
+    var blend = 0, from = p, to = next;
     var startHour = [0, 4.5, 6.5, 8.5, 11, 14, 17, 19.2][ph];
     var endHour = [4.5, 6.5, 8.5, 11, 14, 17, 19.2, 24][ph];
-    if (hour - startHour < 0.6) blend = (0.6 - (hour - startHour)) / 0.6;
-    else if (endHour - hour < 0.6) blend = (0.6 - (endHour - hour)) / 0.6;
+    if (hour - startHour < 0.6) {
+      blend = (0.6 - (hour - startHour)) / 0.6;
+      from = prev; to = p;          // 上一时段 → 当前时段
+    } else if (hour < endHour && endHour - hour < 0.6) {
+      blend = (0.6 - (endHour - hour)) / 0.6;
+      from = p; to = next;          // 当前时段 → 下一时段
+    }
     blend = Math.max(0, Math.min(0.6, blend));
 
     var pal = {
-      top: mixHex(p.top, next.top, blend),
-      mid: mixHex(p.mid, next.mid, blend),
-      bot: mixHex(p.bot, next.bot, blend),
-      sun: mixHex(p.sun, next.sun, blend),
-      star: p.star + (next.star - p.star) * blend,
-      elev: p.elev + (next.elev - p.elev) * blend,
-      name: blend > 0.3 ? (next.name === '深夜' ? p.name : next.name) : p.name
+      top: mixHex(from.top, to.top, blend),
+      mid: mixHex(from.mid, to.mid, blend),
+      bot: mixHex(from.bot, to.bot, blend),
+      sun: mixHex(from.sun, to.sun, blend),
+      star: from.star + (to.star - from.star) * blend,
+      elev: from.elev + (to.elev - from.elev) * blend,
+      name: blend > 0.3 ? (to.name === '深夜' && from.name !== '深夜' ? from.name : to.name) : from.name
     };
     if (tint) {
       pal.sun = accentHex;
@@ -155,6 +168,15 @@
       pal.mid = mixHex(pal.mid, accentHex, 0.14);
     }
     return pal;
+  }
+
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__sky = {
+      paletteAt: paletteAt,
+      phaseOf: phaseOf,
+      phases: PHASES
+    };
   }
 
   function resize() {

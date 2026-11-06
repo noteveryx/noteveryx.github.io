@@ -203,7 +203,8 @@
       ok = document.execCommand('copy');
       ta.remove();
     } catch (e) { ok = false; }
-    setHint(msg || (ok ? '已复制：' + text : '复制失败：' + text));
+    // 复制失败必须如实提示：不能一律显示「已复制」，否则用户会以为复制好了
+    setHint(ok ? (msg || ('已复制：' + text)) : ('复制失败，请手动复制：' + text));
   }
 
   var hintTimer = null;

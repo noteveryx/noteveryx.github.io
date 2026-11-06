@@ -276,6 +276,15 @@
   var SNAP_LIMIT = 8;
 
   function resize() {
+    // 先留住旧笔迹，避免旋转屏幕 / 调整窗口时作品被清空
+    var oldCv = null, oldDpr = DPR;
+    if (inkCv.width > 0 && inkCv.height > 0) {
+      oldCv = document.createElement('canvas');
+      oldCv.width = inkCv.width;
+      oldCv.height = inkCv.height;
+      oldCv.getContext('2d').drawImage(inkCv, 0, 0);
+    }
+
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     W = window.innerWidth; H = window.innerHeight;
     cv.width = Math.round(W * DPR);
@@ -283,7 +292,7 @@
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     inkCv.width = cv.width; inkCv.height = cv.height;
     ictx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    snaps.length = 0;
+    if (oldCv) ictx.drawImage(oldCv, 0, 0, oldCv.width / oldDpr, oldCv.height / oldDpr);
     repaint();
   }
 
@@ -684,8 +693,12 @@
     ictx.restore();
   }
 
+  var ptrs = new Map();
   cv.addEventListener('pointerdown', function (e) {
     try { cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } catch (err) { }
+    ptrs.set(e.pointerId, true);
+    // 多指同时按下会画出从旧点跳到新点的乱线，直接停笔
+    if (ptrs.size > 1) { drawing = false; last = null; return; }
     pushSnap();
     drawing = true;
     last = pos(e);
@@ -700,7 +713,10 @@
     repaint();
   });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
-    cv.addEventListener(ev, function () { drawing = false; last = null; });
+    cv.addEventListener(ev, function (e) {
+      if (e && e.pointerId !== undefined) ptrs.delete(e.pointerId);
+      if (ptrs.size === 0) { drawing = false; last = null; }
+    });
   });
 
   /* ---------------- 控件 ---------------- */

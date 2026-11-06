@@ -110,14 +110,20 @@
       showToast('当前浏览器不支持网页全屏，可横屏观看');
       return;
     }
-    if (API.current()) {
-      var p = API.exit.call(doc);
-      if (p && typeof p.catch === 'function') p.catch(function () { });
-    } else {
-      var q = API.enter.call(root);
-      if (q && typeof q.catch === 'function') {
-        q.catch(function () { showToast('全屏被浏览器拒绝'); });
+    // requestFullscreen 在「无用户手势 / iframe 未授权」等情况下会**同步抛异常**，
+    // 不兜住的话异常会冒泡到点击处理器，按钮点击直接报错
+    try {
+      if (API.current()) {
+        var p = API.exit.call(doc);
+        if (p && typeof p.catch === 'function') p.catch(function () { });
+      } else {
+        var q = API.enter.call(root);
+        if (q && typeof q.catch === 'function') {
+          q.catch(function () { showToast('全屏被浏览器拒绝'); });
+        }
       }
+    } catch (e) {
+      showToast('全屏被浏览器拒绝');
     }
   }
 

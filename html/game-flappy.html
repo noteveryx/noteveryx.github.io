@@ -48,6 +48,10 @@
   var clouds = [];
   var shake = 0;
   var dead = false;
+  // 特效时间轴：不能用游戏的 dt —— die() 之后 api.gameOver() 会让
+  // onUpdate 停止，游戏时间不再推进，衰减永远停在中途（画面永久抖动）
+  var fxLast = 0;
+  function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
 
   function pipeSpeed() { return BASE_SPEED + Math.min(140, score() * 4); }
   function score() { return dist; }
@@ -59,6 +63,7 @@
     dist = 0;
     shake = 0;
     dead = false;
+    fxLast = 0;
     clouds = [];
     for (var i = 0; i < 5; i++) {
       clouds.push({ x: Math.random() * LW, y: 60 + Math.random() * 380, s: 0.6 + Math.random() * 0.8, sp: 0.15 + Math.random() * 0.25 });
@@ -90,7 +95,7 @@
 
   /* ---------------- 更新 ---------------- */
   function update(dt) {
-    if (dead) { shake = Math.max(0, shake - dt * 2.2); return; }
+    if (dead) return;                 // 震动衰减交给 onRender 的特效时间轴
 
     // 物理：固定步长积分 → 与帧率无关
     bird.v += GRAVITY * dt;
@@ -271,6 +276,13 @@
     onRender: function (a, c) {
       var pal = a.colors;
 
+      // 特效时间轴：onRender 每帧都会执行，结束后依然推进
+      var now = nowMs();
+      var fdt = fxLast ? (now - fxLast) / 1000 : 0;
+      fxLast = now;
+      if (fdt > 0.25) fdt = 0.25;
+      if (dead && shake > 0) shake = Math.max(0, shake - fdt * 2.2);
+
       c.save();
       if (shake > 0) {
         var s = shake * 7;
@@ -337,6 +349,7 @@
       get pipes() { return pipes.map(function (p) { return { x: p.x, gapY: p.gapY }; }); },
       get dist() { return dist; },
       get dead() { return dead; },
+      get shake() { return shake; },
       get groundY() { return GROUND_Y; },
       flap: flap,
       reset: function () { api.restart(); }

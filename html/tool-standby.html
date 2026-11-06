@@ -916,7 +916,12 @@
   var body = document.body;
   var lines = [];
 
-  try { lines = JSON.parse(localStorage.getItem(KEY) || '[]') || []; } catch (e) { lines = []; }
+  try {
+    var rawLines = JSON.parse(localStorage.getItem(KEY) || '[]');
+    // 存储里可能是合法 JSON 但不是数组（对象/字符串/数字），
+    // 直接 .filter 会抛 TypeError，整页初始化中断
+    lines = Array.isArray(rawLines) ? rawLines : [];
+  } catch (e) { lines = []; }
   lines = lines.filter(function (s) { return typeof s === 'string' && s.trim(); });
 
   /* ---------- 文字样式（字体 / 字号 / 颜色，随跑马灯保存） ---------- */
@@ -1298,16 +1303,48 @@
   }
 
   /* ---------- 编辑面板 ---------- */
+  /* 样式控件是「即时预览」：直接改了全局 style。
+     打开编辑器时快照一份，取消 / Esc / 点遮罩时还原，
+     否则「取消」只还原文字、不还原字体颜色字号 —— 看着像没取消，
+     而且这些改动没存盘，刷新后还会再变一次。 */
+  var styleSnapshot = null;
   function openEditor() {
     ta.value = lines.join('\n');
+    styleSnapshot = {
+      font: style.font, size: style.size, color: style.color, speed: style.speed
+    };
     syncStyleUI();
     editor.classList.add('open');
     if (document.activeElement) document.activeElement.blur();
   }
   function closeEditor() {
+    if (styleSnapshot) {
+      style.font = styleSnapshot.font;
+      style.size = styleSnapshot.size;
+      style.color = styleSnapshot.color;
+      style.speed = styleSnapshot.speed;
+      styleSnapshot = null;
+      syncStyleUI();
+    }
     editor.classList.remove('open');
     render(); // 丢弃草稿预览，恢复已保存内容（含 text-full 状态）
   }
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__sb = {
+      get style() {
+        return { font: style.font, size: style.size, color: style.color, speed: style.speed };
+      },
+      openEditor: openEditor,
+      closeEditor: closeEditor,
+      setStyle: function (patch) {
+        for (var k in patch) style[k] = patch[k];
+        syncStyleUI();
+        previewMarquee();
+      }
+    };
+  }
+
   document.getElementById('btnEdit').addEventListener('click', openEditor);
   document.getElementById('btnCancel').addEventListener('click', closeEditor);
   document.getElementById('btnClear').addEventListener('click', function () { ta.value = ''; ta.focus(); });
@@ -1315,6 +1352,7 @@
     lines = ta.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
     try { localStorage.setItem(KEY, JSON.stringify(lines)); } catch (e) { /* 忽略隐私模式 */ }
     persistStyle();
+    styleSnapshot = null;      // 已保存，别在 closeEditor 里回滚掉
     closeEditor();
     render();
   });

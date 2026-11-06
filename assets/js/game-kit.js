@@ -443,7 +443,8 @@
         isRecord = (score > 0 && (best === 0 || score < best));
         if (score > 0 && (best === 0 || score < best)) { best = score; saveBest(best); }
       } else {
-        isRecord = (score > 0 && score >= best);
+        // 必须是严格大于：打平不算新纪录（用 >= 会让「与历史最佳持平」也弹新纪录）
+        isRecord = (score > 0 && score > best);
         if (score > best) { best = score; saveBest(best); }
       }
       paintHud();
@@ -498,8 +499,13 @@
     document.addEventListener('keydown', function (e) {
       if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
       var k = e.key;
-      // 调色板面板开着时，方向键归面板用，不操纵游戏
-      if (panelOpen() && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(k) >= 0) return;
+      // 焦点落在覆盖层 / 调色板面板的按钮上时，空格归那个按钮用
+      // （面板弹出时游戏已暂停或静默暂停，空格没有别的用途）
+      if (e.target && e.target.closest && e.target.closest('.gk-overlay button, .pk-panel button')) return;
+      // 调色板面板开着时，方向键归面板用，空格也不能抢
+      if (panelOpen()) {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].indexOf(k) >= 0) return;
+      }
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].indexOf(k) >= 0) e.preventDefault();
       if (k === 'Escape') {
         // 调色板面板开着时，Escape 归它用（关面板），不暂停游戏
@@ -509,6 +515,8 @@
         return;
       }
       if (k === ' ' || k === 'Spacebar') {
+        // 长按空格会不断重复 keydown，暂停/继续会反复横跳，必须挡掉
+        if (e.repeat) return;
         if (state === 'ready') { api.start(); playTone('click'); }
         else if (state === 'playing') api.pause();
         else if (state === 'paused') api.resume();
@@ -592,7 +600,7 @@
     /* ==========================================================
        循环
        ========================================================== */
-    var last = 0, acc = 0, raf = 0;
+    var last = 0, acc = 0, raf = 0, lastDraw = 0;
 
     function frame(t) {
       raf = requestAnimationFrame(frame);
@@ -611,6 +619,9 @@
         }
         if (guard >= 6) acc = 0;
       }
+      // 暂停时画面完全不变，没必要 60fps 空转（手机上很耗电），降到 4fps
+      if (state === 'paused' && t - lastDraw < 250) return;
+      lastDraw = t;
       draw();
     }
 

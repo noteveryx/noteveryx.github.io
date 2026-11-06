@@ -343,15 +343,24 @@
     thinking = true;
     api.setStat('turn', 1);
 
-    setTimeout(function () {
-      if (my !== thinkToken || over || api.state !== 'playing') return;
+    function begin() {
+      // 任何退出路径都要复位 thinking，否则玩家会永久无法落子
+      if (my !== thinkToken || over) { thinking = false; return; }
+      if (api.state !== 'playing') {
+        setTimeout(begin, 200);       // 暂停中挂起等待，而不是直接丢弃这次 AI
+        return;
+      }
       var moves = genTop(LV.limit);
-      if (!moves.length) return;
+      if (!moves.length) { thinking = false; return; }
 
       var best = moves[0], bestV = -Infinity, i = 0;
 
       function step() {
-        if (my !== thinkToken || over) return;
+        if (my !== thinkToken || over) { thinking = false; return; }
+        if (api.state !== 'playing') {
+          setTimeout(step, 200);      // 搜索途中被暂停：等恢复再继续，不在暂停里落子
+          return;
+        }
         if (i >= moves.length) {
           // 简单档加随机扰动，避免每步都最优
           if (LV.noise > 0 && Math.random() < LV.noise && moves.length > 1) {
@@ -370,7 +379,8 @@
         setTimeout(step, 0);          // 下一片
       }
       step();
-    }, 24);
+    }
+    setTimeout(begin, 24);
   }
 
   /* ==========================================================

@@ -130,7 +130,10 @@
   function copyText(txt) {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(txt);
+        var r = navigator.clipboard.writeText(txt);
+        // writeText 返回 Promise：权限被拒 / 非安全上下文会 reject，
+        // 不接 catch 会变成 unhandledrejection，污染控制台甚至打断页面
+        if (r && typeof r.catch === 'function') r.catch(function () { });
         return true;
       }
     } catch (e) { }
@@ -396,6 +399,7 @@
     /* ---------- 色轮：绘制 / 取色 ---------- */
     var WHEEL_CSS = 216;
     var ringCache = null;
+    var ringCacheDpr = 0;
 
     function wheelMetrics() {
       var R = WHEEL_CSS / 2 - 2;
@@ -434,8 +438,10 @@
       var m = wheelMetrics();
       wheel.style.width = WHEEL_CSS + 'px';
       wheel.style.height = WHEEL_CSS + 'px';
-      wheel.width = Math.round(WHEEL_CSS * dpr);
-      wheel.height = Math.round(WHEEL_CSS * dpr);
+      // 只在尺寸真的变了才重设 canvas 宽度（重设会清空并重新分配内存）
+      var targetW = Math.round(WHEEL_CSS * dpr), targetH = Math.round(WHEEL_CSS * dpr);
+      if (wheel.width !== targetW) wheel.width = targetW;
+      if (wheel.height !== targetH) wheel.height = targetH;
       var c = wheel.getContext('2d');
       c.setTransform(1, 0, 0, 1, 0, 0);
       c.clearRect(0, 0, wheel.width, wheel.height);
@@ -450,8 +456,11 @@
       c.arc(m.cx * dpr, m.cy * dpr, m.innerR * dpr, 0, 6.2832);
       c.fill();
 
-      // 色相环（缓存）
-      if (!ringCache) ringCache = buildRing(dpr);
+      // 色相环（缓存）：DPR 变了要重建，否则换屏 / 缩放后色环会糊
+      if (!ringCache || ringCacheDpr !== dpr) {
+        ringCache = buildRing(dpr);
+        ringCacheDpr = dpr;
+      }
       c.drawImage(ringCache, 0, 0);
     }
 
@@ -649,11 +658,15 @@
       var h2 = rgb2hsl(rgb.r, rgb.g, rgb.b);
       state.h = h2.h; state.s = h2.s; state.l = h2.l;
       paint();
-      try { localStorage.setItem('pk_' + key, current); } catch (e) { }
+      saveCurrent();
       if (!silent && opts.onChange) opts.onChange(current);
     }
 
-    /* 拖动过程中的高频更新：用 rAF 合并，避免页面重绘卡顿 */
+    function saveCurrent() {
+      try { localStorage.setItem('pk_' + key, current); } catch (e) { }
+    }
+
+    /* 拖动/滑动过程中的高频更新：用 rAF 合并，避免页面重绘卡顿 */
     var pending = null, rafId = 0;
     function schedule() {
       pending = current;
@@ -670,6 +683,18 @@
       current = rgb2hex(rgb.r, rgb.g, rgb.b);
       paint();
       schedule();
+      saveLater();          // 拖动结束后落盘，否则刷新会丢掉刚选的颜色
+    }
+
+    /* 拖动过程中不直接写 localStorage（高频 IO），
+       停止操作 300ms 后再存一次 */
+    var saveTimer = 0;
+    function saveLater() {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () {
+        saveTimer = 0;
+        saveCurrent();
+      }, 300);
     }
 
     /* ---------- 位置：PC 贴着触发器并自动翻转，手机走底部抽屉 ---------- */

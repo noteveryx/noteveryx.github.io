@@ -211,6 +211,15 @@
   var SNAP_LIMIT = 10;
 
   function resize() {
+    // 先留住旧内容，避免旋转屏幕 / 调整窗口 / 移动端视口变化时作品被清空
+    var oldCv = null, oldDpr = DPR;
+    if (contentCv.width > 0 && contentCv.height > 0) {
+      oldCv = document.createElement('canvas');
+      oldCv.width = contentCv.width;
+      oldCv.height = contentCv.height;
+      oldCv.getContext('2d').drawImage(contentCv, 0, 0);
+    }
+
     DPR = Math.min(window.devicePixelRatio || 1, 1.5);
     W = window.innerWidth; H = window.innerHeight;
     cv.width = Math.round(W * DPR);
@@ -218,9 +227,12 @@
     contentCv.width = cv.width;
     contentCv.height = cv.height;
     cctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    cctx.fillStyle = paper;
-    cctx.fillRect(0, 0, W, H);
-    snaps.length = 0; redos.length = 0;
+    // 内容层保持「透明 + 笔迹」：纸色由显示层负责，
+    // 这样切换纸色不会覆盖掉画作，导出时再铺纸色
+    cctx.clearRect(0, 0, W, H);
+    if (oldCv) {
+      cctx.drawImage(oldCv, 0, 0, oldCv.width / oldDpr, oldCv.height / oldDpr);
+    }
     resetView();                 // 尺寸变了，视图复位
   }
 
@@ -260,7 +272,13 @@
       p.x = Math.max(0, Math.min(contentCv.width - 1, p.x));
       p.y = Math.max(0, Math.min(contentCv.height - 1, p.y));
       var d = cctx.getImageData(p.x, p.y, 1, 1).data;
-      bgLum = d[0] * 0.299 + d[1] * 0.587 + d[2] * 0.114;
+      if (d[3] < 8) {
+        // 透明处就是纸色，按纸色亮度判断铅笔该用深墨还是浅色
+        var pc = window.PaletteKit.hex2rgb(paper);
+        bgLum = pc ? (pc.r * 0.299 + pc.g * 0.587 + pc.b * 0.114) : 255;
+      } else {
+        bgLum = d[0] * 0.299 + d[1] * 0.587 + d[2] * 0.114;
+      }
     } catch (e) { }
   }
 
@@ -358,16 +376,17 @@
   /* ---------------- 填充 ---------------- */
   function floodFill(px, py, hexColor) {
     var w = contentCv.width, h = contentCv.height;
-    var img = cctx.getImageData(0, 0, w, h);
-    var d = img.data;
     var dp = toDevice(px, py);
     var sx = dp.x, sy = dp.y;
-    if (sx < 0 || sy < 0 || sx >= w || sy >= h) return;
+    // 越界：直接返回 false，让调用方回滚刚压入的快照
+    if (sx < 0 || sy < 0 || sx >= w || sy >= h) return false;
+    var img = cctx.getImageData(0, 0, w, h);
+    var d = img.data;
     var si = (sy * w + sx) * 4;
     var tr = d[si], tg = d[si + 1], tb = d[si + 2], ta = d[si + 3];
 
     var c = window.PaletteKit.hex2rgb(hexColor) || { r: 0, g: 0, b: 0 };
-    if (Math.abs(tr - c.r) < 10 && Math.abs(tg - c.g) < 10 && Math.abs(tb - c.b) < 10 && ta === 255) return;
+    if (Math.abs(tr - c.r) < 10 && Math.abs(tg - c.g) < 10 && Math.abs(tb - c.b) < 10 && ta === 255) return false;
 
     var match = function (i) {
       return Math.abs(d[i] - tr) < 12 && Math.abs(d[i + 1] - tg) < 12 &&
@@ -395,6 +414,7 @@
     }
     cctx.putImageData(img, 0, 0);
     render();
+    return true;
   }
 
   function pickColor(px, py) {
@@ -402,7 +422,8 @@
     dp.x = Math.max(0, Math.min(contentCv.width - 1, dp.x));
     dp.y = Math.max(0, Math.min(contentCv.height - 1, dp.y));
     var d = cctx.getImageData(dp.x, dp.y, 1, 1).data;
-    var hex = window.PaletteKit.rgb2hex(d[0], d[1], d[2]);
+    // 内容层是透明的：取到透明处应得到纸色，而不是 rgb(0,0,0)
+    var hex = (d[3] < 8) ? paper : window.PaletteKit.rgb2hex(d[0], d[1], d[2]);
     penColor = hex;
     pushRecent(hex);
     var dot = document.getElementById('wDot');
@@ -471,7 +492,14 @@
 
     var p = pos(e);
     sampleBg(p.x, p.y);
-    if (mode === 'fill') { pushSnap(); floodFill(p.x, p.y, penColor); setMode('brush'); return; }
+    if (mode === 'fill') {
+      pushSnap();
+      // 越界或同色时填充什么也没做，回滚这次快照，
+      // 否则用户按一次「撤销」会毫无反应
+      if (!floodFill(p.x, p.y, penColor)) snaps.pop();
+      setMode('brush');
+      return;
+    }
     if (mode === 'pick') { pickColor(p.x, p.y); setMode('brush'); return; }
     pushSnap();
     drawing = true;
@@ -759,10 +787,8 @@
   var clearBtn = document.getElementById('clearBtn');
   if (clearBtn) clearBtn.addEventListener('click', function () {
     pushSnap();
-    cctx.setTransform(DPR, 0, 0, DPR, 0, 0);   // 内容层整张清空
-    cctx.globalCompositeOperation = 'source-over';
-    cctx.fillStyle = paper;
-    cctx.fillRect(0, 0, W, H);
+    cctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cctx.clearRect(0, 0, W, H);      // 只清笔迹层，纸色不受影响
     bgLum = 255;
     render();
   });
@@ -772,10 +798,7 @@
     paper = paper === '#ffffff' ? '#f2efe9' : '#ffffff';
     var dot = document.getElementById('bgDot');
     if (dot) dot.style.background = paper;
-    cctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    cctx.globalCompositeOperation = 'source-over';
-    cctx.fillStyle = paper;
-    cctx.fillRect(0, 0, W, H);
+    // 只换显示层底色。这里绝不能再 fillRect 覆盖内容层，否则整幅画会被抹掉
     render();
   });
 
@@ -854,11 +877,8 @@
       },
       get pixels() {
         var d = cctx.getImageData(0, 0, contentCv.width, contentCv.height).data;
-        var r = window.PaletteKit.hex2rgb(paper) || { r: 255, g: 255, b: 255 };
         var n = 0;
-        for (var i = 0; i < d.length; i += 4) {
-          if (Math.abs(d[i] - r.r) > 14 || Math.abs(d[i + 1] - r.g) > 14 || Math.abs(d[i + 2] - r.b) > 14) n++;
-        }
+        for (var i = 3; i < d.length; i += 4) if (d[i] > 8) n++;   // 统计非透明像素（笔迹）
         return n;
       }
     };
