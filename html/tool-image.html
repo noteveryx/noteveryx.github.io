@@ -22,6 +22,9 @@
   'use strict';
   var el = function () { return ToolBox.el.apply(null, arguments); };
   var MAX_EDGE = 4096;      // 超过这个边长先等比缩小，避免 canvas 超限
+  /* 实时预览用的工作尺寸：预览卡片实际显示宽度 ≈600px，
+     1400px 在 2x 屏上依然清晰，重绘一次只要几毫秒，拖滑块才跟手 */
+  var PREVIEW_MAX = 1400;
 
   function encode(canvas, mime, quality) {
     return new Promise(function (resolve, reject) {
@@ -116,12 +119,23 @@
     panel.appendChild(actCard);
 
     var lastBlob = null;
+    var previewRaf = 0;
 
     function setMeta(txt) { meta.innerHTML = txt; }
 
     function drawTo(ctx, w, h) {
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(state.img, 0, 0, w, h);
+    }
+
+    /* 把任意工作画布贴到预览 canvas 上（显示尺寸交给 CSS 的 max-width） */
+    function showCanvas(cv) {
+      canvas.width = cv.width;
+      canvas.height = cv.height;
+      var ctx = canvas.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(cv, 0, 0);
     }
 
     function showOriginal() {
@@ -135,6 +149,33 @@
         (w > MAX_EDGE || h > MAX_EDGE ? ' · 边长超过 ' + MAX_EDGE + '，处理时已等比缩小' : ''));
     }
 
+    /* 实时预览：只按预览尺寸重画一遍，不编码、不生成文件 ——
+       拖滑块才跟手。编码（toBlob）只在点按钮时做。 */
+    function refreshPreview() {
+      if (!state.img || !opts.paint) return false;
+      var cv;
+      try { cv = opts.paint(state, PREVIEW_MAX); }
+      catch (e) { return false; }
+      if (!cv) return false;
+      showCanvas(cv);
+      setMeta('实时预览 <b>' + cv.width + '×' + cv.height + '</b> · 改参数自动更新，' +
+        '点「' + (opts.runText || '处理') + '」生成可下载文件');
+      return true;
+    }
+
+    /* 一个 rAF 只画一次：滑块连续触发 input 不会把主线程打满 */
+    function schedulePreview() {
+      if (previewRaf) return;
+      previewRaf = requestAnimationFrame(function () {
+        previewRaf = 0;
+        refreshPreview();
+      });
+    }
+
+    /* 参数区事件委托：range / 文本框 / 下拉框全都能触发，不用逐个绑定 */
+    paramBody.addEventListener('input', schedulePreview);
+    paramBody.addEventListener('change', schedulePreview);
+
     function handle(file) {
       if (!file) return;
       ToolBox.readImage(file).then(function (r) {
@@ -147,6 +188,7 @@
         result.textContent = '';
         showOriginal();
         if (opts.onLoad) opts.onLoad(state);
+        refreshPreview();          /* 直接显示按当前参数处理后的效果，不用先点按钮 */
       }).catch(function (e) {
         ToolBox.toast('读取失败：' + (e && e.message ? e.message : '未知错误'));
       });
@@ -177,6 +219,8 @@
           lastBlob = out.blob;
           btnSave.disabled = false;
           result.innerHTML = out.text;
+          /* 生成完再按预览尺寸重画一次，保证预览和下载到的结果一致 */
+          refreshPreview();
         })
         .catch(function (e) {
           result.textContent = '处理失败：' + (e && e.message ? e.message : '未知错误');
@@ -193,18 +237,20 @@
     return {
       state: state, canvas: canvas, paramBody: paramBody,
       setMeta: setMeta, drawTo: drawTo, result: result,
+      refresh: refreshPreview, schedule: schedulePreview,
       setResult: function (t) { result.innerHTML = t; }
     };
   }
 
-  /* 生成一张与原图同尺寸的工作画布（超限则等比缩小） */
+  /* 生成一张与原图同尺寸的工作画布（超限则等比缩小）
+     同时把缩放比带出去：水印字号、裁剪坐标都要按这个比例换算 */
   function workCanvas(img, maxEdge) {
     var w = img.naturalWidth, h = img.naturalHeight;
     var scale = Math.min(1, maxEdge / Math.max(w, h));
     var cv = document.createElement('canvas');
     cv.width = Math.max(1, Math.round(w * scale));
     cv.height = Math.max(1, Math.round(h * scale));
-    return cv;
+    return { cv: cv, scale: scale };
   }
 
   /* ==========================================================
@@ -232,7 +278,7 @@
       run: function (state) {
         var kb = Math.max(10, parseInt(target.value, 10) || 200);
         var mime = mimeSel.value;
-        var cv = workCanvas(state.img, MAX_EDGE);
+        var cv = workCanvas(state.img, MAX_EDGE).cv;
         var ctx = cv.getContext('2d');
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(state.img, 0, 0, cv.width, cv.height);
@@ -290,26 +336,28 @@
     bf.appendChild(el('label', { text: '透明区域填充' }));
     bf.appendChild(bgSel);
 
+    /* 纯绘制：换背景色（PNG 透明区域填色）这类调整能立刻看到 */
+    function paintConvert(state, maxEdge) {
+      var cv = workCanvas(state.img, maxEdge || MAX_EDGE).cv;
+      var ctx = cv.getContext('2d');
+      var bg = bgSel.value;
+      if (bg !== '#transparent') {
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, cv.width, cv.height);
+      }
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(state.img, 0, 0, cv.width, cv.height);
+      return cv;
+    }
+
     var ui = buildPanel(panel, {
       paramTitle: '转换设置', runText: '转换并预览',
       filename: function (s) { return baseName(s.file.name) + '-converted.' + mimeSel.value.split('/')[1]; },
+      paint: paintConvert,
       run: function (state) {
         var mime = mimeSel.value;
-        var cv = workCanvas(state.img, MAX_EDGE);
-        var ctx = cv.getContext('2d');
-        var bg = bgSel.value;
-        if (bg !== '#transparent') {
-          ctx.fillStyle = bg;
-          ctx.fillRect(0, 0, cv.width, cv.height);
-        }
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(state.img, 0, 0, cv.width, cv.height);
+        var cv = paintConvert(state, MAX_EDGE);
         return encode(cv, mime, (parseInt(q.value, 10) || 90) / 100).then(function (blob) {
-          ui.canvas.width = cv.width;
-          ui.canvas.height = cv.height;
-          var c2 = ui.canvas.getContext('2d');
-          c2.clearRect(0, 0, cv.width, cv.height);
-          c2.drawImage(cv, 0, 0);
           return {
             blob: blob,
             text: '已转为 <b>' + mime.split('/')[1].toUpperCase() + '</b><br>原 <b>' +
@@ -366,51 +414,54 @@
     tf2.appendChild(tilt);
     tf2.appendChild(tLabel);
 
+    /* 纯绘制：给实时预览和「生成」共用同一份代码，所见即所得 */
+    function paintWatermark(state, maxEdge) {
+      var wc = workCanvas(state.img, maxEdge || MAX_EDGE);
+      var cv = wc.cv, k = wc.scale;
+      var ctx = cv.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(state.img, 0, 0, cv.width, cv.height);
+
+      var txt = text.value || '';
+      if (!txt) return cv;                       /* 没填文字就只显示原图 */
+
+      /* 字号跟着缩放比一起缩，否则预览小图上水印大得离谱 */
+      var fs = Math.max(4, (parseInt(size.value, 10) || 32) * k);
+      ctx.save();
+      ctx.globalAlpha = Math.max(0.05, Math.min(1, (parseInt(alpha.value, 10) || 45) / 100));
+      ctx.fillStyle = color.value || '#FFFFFF';
+      ctx.font = '700 ' + fs + 'px -apple-system,"PingFang SC",system-ui,sans-serif';
+      ctx.textBaseline = 'top';
+      var ang = (parseInt(tilt.value, 10) || 0) * Math.PI / 180;
+      var w = ctx.measureText(txt).width;
+      var pad = Math.round(fs * 0.4);
+
+      var x, y;
+      switch (pos.value) {
+        case 'tl': x = pad; y = pad; break;
+        case 'tr': x = cv.width - w - pad; y = pad; break;
+        case 'bl': x = pad; y = cv.height - fs - pad; break;
+        case 'center': x = (cv.width - w) / 2; y = (cv.height - fs) / 2; break;
+        default: x = cv.width - w - pad; y = cv.height - fs - pad;
+      }
+      if (ang !== 0) {
+        ctx.translate(x + w / 2, y + fs / 2);
+        ctx.rotate(ang);
+        ctx.fillText(txt, -w / 2, -fs / 2);
+      } else {
+        ctx.fillText(txt, x, y);
+      }
+      ctx.restore();
+      return cv;
+    }
+
     var ui = buildPanel(panel, {
       paramTitle: '水印设置', runText: '生成水印图',
       filename: function (s) { return baseName(s.file.name) + '-watermark.png'; },
+      paint: paintWatermark,
       run: function (state) {
-        var cv = workCanvas(state.img, MAX_EDGE);
-        var ctx = cv.getContext('2d');
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(state.img, 0, 0, cv.width, cv.height);
-
-        var fs = Math.max(8, parseInt(size.value, 10) || 32);
-        var txt = text.value || '';
-        if (!txt) return Promise.reject(new Error('请填写水印文字'));
-
-        ctx.save();
-        ctx.globalAlpha = Math.max(0.05, Math.min(1, (parseInt(alpha.value, 10) || 45) / 100));
-        ctx.fillStyle = color.value || '#FFFFFF';
-        ctx.font = '700 ' + fs + 'px -apple-system,"PingFang SC",system-ui,sans-serif';
-        ctx.textBaseline = 'top';
-        var ang = (parseInt(tilt.value, 10) || 0) * Math.PI / 180;
-        var w = ctx.measureText(txt).width;
-        var pad = Math.round(fs * 0.4);
-
-        var x, y;
-        switch (pos.value) {
-          case 'tl': x = pad; y = pad; break;
-          case 'tr': x = cv.width - w - pad; y = pad; break;
-          case 'bl': x = pad; y = cv.height - fs - pad; break;
-          case 'center': x = (cv.width - w) / 2; y = (cv.height - fs) / 2; break;
-          default: x = cv.width - w - pad; y = cv.height - fs - pad;
-        }
-        if (ang !== 0) {
-          ctx.translate(x + w / 2, y + fs / 2);
-          ctx.rotate(ang);
-          ctx.fillText(txt, -w / 2, -fs / 2);
-        } else {
-          ctx.fillText(txt, x, y);
-        }
-        ctx.restore();
-
-        ui.canvas.width = cv.width;
-        ui.canvas.height = cv.height;
-        var c2 = ui.canvas.getContext('2d');
-        c2.clearRect(0, 0, cv.width, cv.height);
-        c2.drawImage(cv, 0, 0);
-
+        if (!(text.value || '')) return Promise.reject(new Error('请填写水印文字'));
+        var cv = paintWatermark(state, MAX_EDGE);
         return encode(cv, 'image/png').then(function (blob) {
           return { blob: blob, text: '水印已添加 · 尺寸 ' + cv.width + '×' + cv.height + ' · <b>' + ToolBox.fmtBytes(blob.size) + '</b>' };
         });
@@ -447,69 +498,78 @@
     var btnFlipH = el('button', { class: 'tb-btn sm', type: 'button', text: '水平翻转' });
     var btnFlipV = el('button', { class: 'tb-btn sm', type: 'button', text: '垂直翻转' });
     var flipState = { h: false, v: false };
-    btnFlipH.addEventListener('click', function () { flipState.h = !flipState.h; btnFlipH.classList.toggle('on', flipState.h); });
-    btnFlipV.addEventListener('click', function () { flipState.v = !flipState.v; btnFlipV.classList.toggle('on', flipState.v); });
+    btnFlipH.addEventListener('click', function () {
+      flipState.h = !flipState.h;
+      btnFlipH.classList.toggle('on', flipState.h);
+      if (ui && ui.refresh) ui.refresh();      /* 翻转是点按钮，不走参数区的 input 事件 */
+    });
+    btnFlipV.addEventListener('click', function () {
+      flipState.v = !flipState.v;
+      btnFlipV.classList.toggle('on', flipState.v);
+      if (ui && ui.refresh) ui.refresh();
+    });
     flipRow.appendChild(btnFlipH);
     flipRow.appendChild(btnFlipV);
     var ff = el('div', { class: 'tb-field' });
     ff.appendChild(el('label', { text: '翻转' }));
     ff.appendChild(flipRow);
 
+    /* 纯绘制：实时预览与「应用裁剪」共用，改比例/角度/翻转立刻能看到 */
+    function paintCrop(state, maxEdge) {
+      var src = state.img;
+      var sw = src.naturalWidth, sh = src.naturalHeight;
+      var rot = parseInt(rotate.value, 10) || 0;
+
+      // 先按比例在原图内做中心裁剪
+      var targetRatio = ratio.value === 'free' ? null
+        : ratio.value.split(':').map(Number).reduce(function (a, b) { return a / b; });
+      var cw = sw, ch = sh;
+      if (targetRatio) {
+        var imgRatio = sw / sh;
+        if (imgRatio > targetRatio) { cw = Math.round(sh * targetRatio); ch = sh; }
+        else { cw = sw; ch = Math.round(sw / targetRatio); }
+      }
+      var sx = Math.round((sw - cw) / 2);
+      var sy = Math.round((sh - ch) / 2);
+
+      // 旋转后外接框尺寸
+      var rad = rot * Math.PI / 180;
+      var cos = Math.abs(Math.cos(rad)), sin = Math.abs(Math.sin(rad));
+      var outW = Math.round(cw * cos + ch * sin);
+      var outH = Math.round(cw * sin + ch * cos);
+      var scale = Math.min(1, (maxEdge || MAX_EDGE) / Math.max(outW, outH));
+      outW = Math.max(1, Math.round(outW * scale));
+      outH = Math.max(1, Math.round(outH * scale));
+
+      var cv = document.createElement('canvas');
+      cv.width = outW; cv.height = outH;
+      var ctx = cv.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+
+      ctx.save();
+      ctx.translate(outW / 2, outH / 2);
+      ctx.rotate(rad);
+      if (flipState.h) ctx.scale(-1, 1);
+      if (flipState.v) ctx.scale(1, -1);
+      // 按旋转后的坐标系绘制裁剪区域
+      var dw = cw * scale, dh = ch * scale;
+      ctx.drawImage(src, sx, sy, cw, ch, -dw / 2, -dh / 2, dw, dh);
+      ctx.restore();
+      return cv;
+    }
+
     var ui = buildPanel(panel, {
       paramTitle: '裁剪设置', runText: '应用裁剪',
       filename: function (s) { return baseName(s.file.name) + '-cropped.png'; },
+      paint: paintCrop,
       run: function (state) {
-        var src = state.img;
-        var sw = src.naturalWidth, sh = src.naturalHeight;
         var rot = parseInt(rotate.value, 10) || 0;
         var swap = Math.abs(rot) % 180 === 90;
-
-        // 先按比例在原图内做中心裁剪
-        var targetRatio = ratio.value === 'free' ? null
-          : ratio.value.split(':').map(Number).reduce(function (a, b) { return a / b; });
-        var cw = sw, ch = sh;
-        if (targetRatio) {
-          var imgRatio = sw / sh;
-          if (imgRatio > targetRatio) { cw = Math.round(sh * targetRatio); ch = sh; }
-          else { cw = sw; ch = Math.round(sw / targetRatio); }
-        }
-        var sx = Math.round((sw - cw) / 2);
-        var sy = Math.round((sh - ch) / 2);
-
-        // 旋转后外接框尺寸
-        var rad = rot * Math.PI / 180;
-        var cos = Math.abs(Math.cos(rad)), sin = Math.abs(Math.sin(rad));
-        var outW = Math.round(cw * cos + ch * sin);
-        var outH = Math.round(cw * sin + ch * cos);
-        var scale = Math.min(1, MAX_EDGE / Math.max(outW, outH));
-        outW = Math.max(1, Math.round(outW * scale));
-        outH = Math.max(1, Math.round(outH * scale));
-
-        var cv = document.createElement('canvas');
-        cv.width = outW; cv.height = outH;
-        var ctx = cv.getContext('2d');
-        ctx.imageSmoothingQuality = 'high';
-
-        ctx.save();
-        ctx.translate(outW / 2, outH / 2);
-        ctx.rotate(rad);
-        if (flipState.h) ctx.scale(-1, 1);
-        if (flipState.v) ctx.scale(1, -1);
-        // 按旋转后的坐标系绘制裁剪区域
-        var dw = cw * scale, dh = ch * scale;
-        ctx.drawImage(src, sx, sy, cw, ch, -dw / 2, -dh / 2, dw, dh);
-        ctx.restore();
-
-        ui.canvas.width = outW;
-        ui.canvas.height = outH;
-        var c2 = ui.canvas.getContext('2d');
-        c2.clearRect(0, 0, outW, outH);
-        c2.drawImage(cv, 0, 0);
-
+        var cv = paintCrop(state, MAX_EDGE);
         return encode(cv, 'image/png').then(function (blob) {
           return {
             blob: blob,
-            text: '输出尺寸 <b>' + outW + '×' + outH + '</b> · <b>' + ToolBox.fmtBytes(blob.size) + '</b>' +
+            text: '输出尺寸 <b>' + cv.width + '×' + cv.height + '</b> · <b>' + ToolBox.fmtBytes(blob.size) + '</b>' +
               (swap ? '<br>（已按 90° 旋转，宽高对调）' : '')
           };
         });
