@@ -32,17 +32,6 @@
       color: #666;
       font-size: 1.1em;
     }
-    /* 搜索框 */
-    .search { margin: 10px 15px; }
-    .search input {
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      outline: none;
-      font-size: 14px;
-    }
-    .search input:focus { border-color: #42b983; }
 
     /* 一级侧栏菜单固定加粗 (首页 / 电子资源 / 高性价比 / 申论 / 等)
        vue.css 默认所有 sidebar 链接 font-weight:400, 只有 .active>a 加粗.
@@ -116,61 +105,6 @@
       cursor: pointer !important;
     }
   </style>
-  <!-- docsify 搜索索引的存储保护
-       必须放在 docsify/search 插件加载之前。
-       背景: 本站语料约 20MB, docsify 生成的搜索索引约 13MB,
-             超过 localStorage 的 10MB 配额, 写入必然失败。
-             而插件的写法是「先写 expires 再写 index」:
-             index 写失败时 expires 已经落盘, 于是下次访问会读到
-             「index 为空 / 却未过期」的矛盾状态, 插件拿到 null 后
-             直接抛 TypeError —— 表现为「第二次打开首页, 全局搜索彻底失效」。
-       这里把两次写入合成一组, 保证两者始终一致:
-         - expires 先暂存, 等 index 写成功后再落盘;
-         - index 写失败(配额超限)则清掉 expires 并吞掉异常,
-           让下次访问重新构建索引 —— 搜索质量与命中范围完全不受影响;
-         - 启动时顺手清理历史上遗留的不一致状态。
-       注: 这里只是「不缓存索引」, 并未缩小搜索范围, 也没有引入任何依赖。 -->
-  <script>
-    (function () {
-      var INDEX_KEY = 'docsify.search.index';
-      var EXPIRES_KEY = 'docsify.search.expires';
-      var pendingExpires = null;
-      var origSet = Storage.prototype.setItem;
-      var origRemove = Storage.prototype.removeItem;
-
-      // 历史遗留: expires 在但 index 不在 -> 插件会读到 null 而崩溃, 直接清掉
-      try {
-        if (localStorage.getItem(INDEX_KEY) === null && localStorage.getItem(EXPIRES_KEY) !== null) {
-          origRemove.call(localStorage, EXPIRES_KEY);
-        }
-      } catch (e) { /* 隐私模式等场景忽略 */ }
-
-      Storage.prototype.setItem = function (key, value) {
-        try {
-          if (key === EXPIRES_KEY) { pendingExpires = String(value); return; }
-          if (key === INDEX_KEY) {
-            try {
-              origSet.call(this, key, value);
-            } catch (err) {
-              // 配额超限: 不再向上抛(整页不再出现未捕获异常), 同时清掉 expires 保持一致
-              pendingExpires = null;
-              try { origRemove.call(this, EXPIRES_KEY); } catch (e2) {}
-              if (window.console && console.info) {
-                console.info('[search] 搜索索引超出 localStorage 配额, 已跳过缓存; 搜索功能不受影响');
-              }
-              return;
-            }
-            if (pendingExpires !== null) {
-              try { origSet.call(this, EXPIRES_KEY, pendingExpires); } catch (e3) {}
-              pendingExpires = null;
-            }
-            return;
-          }
-        } catch (e4) { /* 忽略 */ }
-        return origSet.call(this, key, value);
-      };
-    })();
-  </script>
 </head>
 <body>
   <div id="app"></div>
@@ -187,17 +121,6 @@
       },
       subMaxLevel: 2,
       auto2top: true,
-      search: {
-        placeholder: '搜索...',
-        noData: '没有结果',
-        // 'auto' = 自动收录侧栏里的全部文档 (约 880 篇)。
-        // 注意: 全量索引约 13MB, 超过 localStorage 10MB 配额, 浏览器存不下,
-        //       所以每次打开首页都会重新抓取这些文档来建索引 (搜索质量不受影响,
-        //       只是首页会多等一会儿)。想启用索引缓存、让首页秒开, 可改成显式白名单,
-        //       例如 paths: ['/', '/docs/高性价比/', '/docs/申论/', '/docs/讲话稿/'],
-        //       但这样名单外的文档就不会出现在搜索结果里了。
-        paths: 'auto'
-      },
       // markdown 渲染支持
       markdown: {
         smartypants: true
@@ -207,7 +130,6 @@
     }
   </script>
   <script src="assets/js/docsify.min.js"></script>
-  <script src="assets/js/search.min.js"></script>
   <script src="assets/js/zoom-image.min.js"></script>
   <script src="assets/js/docsify-copy-code.min.js"></script>
   <!-- 在 docsify 核心库之后引入 -->

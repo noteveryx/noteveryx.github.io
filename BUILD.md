@@ -21,7 +21,7 @@
 | 客户端能力 | 纯 JS 插件 | docsify 钩子机制（`window.$docsify.plugins.push(fn)`） |
 | 侧栏维护脚本 | **Python 3**（`update_sidebar.py`） | 没有任何第三方依赖，stdlib-only |
 | 工作流自动化 | **workbuddy**（`.workbuddy/`，每天 10:30 跑脚本 + 同步到示例知识库） | workbuddy 由 Claw 项目托管 |
-| 搜索引擎 | docsify 自带的 `search.min.js`（全局）+ 两个**自定义** docsify 插件：<br>① `assets/js/ebook-search.js`（电子资源）<br>② `assets/js/living-better-search.js`（高性价比） | |
+| 搜索引擎 | 两个**自定义** docsify 插件：<br>① `assets/js/ebook-search.js`（电子资源）<br>② `assets/js/living-better-search.js`（高性价比）<br>全站文档检索独立成页 `html/search.html`（自己建索引，不用 docsify 的 `search.min.js`） | docsify 自带的全局搜索已停用：语料 20MB → 索引 13MB，超 localStorage 10MB 配额，且每次开首页都要重抓 880 篇 |
 | 数据集 | `assets/json/books.json`（24,071 条电子书，~6.8 MB）<br>`assets/json/living-better.json`（34 章元数据，~20 KB） | 仅做静态查询，不需要服务器 |
 
 ---
@@ -35,15 +35,19 @@ knowledge-base/
 ├── _sidebar.md                # 左侧导航（自动维护）
 ├── update_sidebar.py          # 侧栏 + README 维护脚本
 ├── syzw_personal_index.json   # （遗留，私人索引；当前未直接被 docsify 使用）
+├── x.html                     # 独立页面导航（工具 / 氛围屏速查，自带搜索框）
+├── html/                      # 独立页面（静态托管，不走 docsify）
+│   └── search.html            # 全站文档检索：自己抓 md 建索引，索引存 IndexedDB
 ├── assets/                    # docsify 静态资源
 │   ├── docsify.min.js
-│   ├── search.min.js
+│   ├── search.min.js             # （已停用，文件保留备用；不再在 index.html 引用）
 │   ├── sidebar-collapse.min.js   # 让一级菜单可点击折叠
 │   ├── docsify-copy-code.min.js
 │   ├── zoom-image.min.js
-│   ├── vue.css
+│   ├── vue.css                  # 主题；字体已本地化（@font-face 指向 ../fonts/）
 │   ├── ebook-search.js
 │   ├── living-better-search.js
+│   ├── fonts/                   # 本地 woff2（Source Sans Pro ×3 + Roboto Mono，~56 KB）
 │   ├── books.json                # 电子资源数据
 │   └── living-better.json        # 高性价比章节元数据
 └── docs/                      # 一切 markdown 内容（每个子目录 = 一个栏目）
@@ -223,7 +227,52 @@ LOCKED_ENTRIES = [
 - 一级 `<a>` 和 `<p>`（无链接标题）都加 `cursor: pointer !important` + `text-decoration: underline !important` on hover
 - 用 `:not(:has(ul))` 排除掉「包里嵌了子项的 `<p>`」（首页那种），避免下划线继承到子项
 
-### 7.4 修改自定义后
+### 7.4 `html/search.html`：全站文档检索（独立页）
+
+**为什么不用 docsify 自带的全局搜索**：
+- 语料约 20MB（880 篇 md），docsify 生成的搜索索引约 13MB，**超过 localStorage 的 10MB 配额**，
+  索引永远存不进缓存；而插件「先写 expires 再写 index」，index 写失败后 expires 已落盘，
+  下次访问插件读到 `null` 直接抛 `TypeError` —— 表现为**第二次打开首页，全局搜索彻底失效**。
+- 更要命的是，为了建这个索引，每次打开首页都要抓 880 篇 md（约 20MB），首页要等十几秒。
+- 既然「速度第一」，就把搜索整个搬走：首页不再挂 `search.min.js`，首页零开销。
+
+**独立页怎么工作**：
+1. 读 `_sidebar.md` 拿到全站文档清单（880 个 md 路径）—— 侧栏本来就是全站目录，不用另建索引。
+2. 并发（8 路）抓每篇 md，本地做轻量 Markdown → 纯文本转换，内存里建索引。
+3. 整份索引用 `CompressionStream('gzip')` 压成**一条**记录存进 IndexedDB
+   （逐篇存会有 883 次事务/反序列化，实测要 100 秒以上；压成 1 条后读写都是毫秒级）。
+4. 再次打开：先读本地缓存 → **立刻可搜**，同时后台用 `If-Modified-Since` 条件请求静默同步，
+   只有变了的文件才会被替换。
+
+**实测数据（2026-11，本机 + 内存预读静态服务器，排除 Defender 实时扫描干扰）**：
+
+| 场景 | 结果 |
+| --- | --- |
+| 首页 md 请求数 | **2 个**（README.md + _sidebar.md）—— 移除全局搜索前是 **883 个** |
+| 首页零外网请求 / 零 JS 报错 | ✅ |
+| 搜索页首次建索引 | 882 篇 · 4.6MB 正文 · **1.9 ~ 4.2 秒**可搜 |
+| 搜索页二次打开 | **285 ~ 750 ms** 可搜（走 IndexedDB），后台同步 882 个请求全部命中 **304** |
+| 搜索页首轮加载页面资源 | 888 个请求（1 个 HTML + 3 个 CSS/JS + 883 个 md + 1 个 sidebar） |
+
+**踩过的坑（改这个文件前先看）**：
+- 提取标题的正则**不能**写成 `/^\s{0,3}#{1,3}\s+(.+)$/m`：`\s` 含换行，`(.+)$` 匹配失败后会**跨行回溯**，
+  880 篇文档能白白吃掉 100 多秒。行首/行尾的空白一律用 `[ \t]`。
+  现在 `pickTitle()` 直接按行扫、只匹配单行，不存在跨行回溯。
+- **标题要优先取第一个 Markdown 标题行**（`#` / `##` / `###`）：
+  有 36 篇文档第一行是「[← 回XX总目录](/docs/XX)」这种跳转链接，
+  只取「首个非空行」会让搜索结果的标题变成一串链接文本，完全没法看。
+  纯链接行要在 fallback 时跳过。
+- Markdown → 纯文本那 12 条正则同理，行首空白都用 `[ \t]`。
+- 进度条不要每篇都刷一次 DOM（重排 + 过渡动画），要节流到 ~8 次/秒。
+- 抓文件一律 `cache: 'no-cache'`：默认缓存会把 883 个响应写进磁盘缓存，
+  在 Windows 上逐个落盘 + 实时扫描，能把 8 秒的抓取拖成 2 分钟。
+- **并发池不能让「promise 链推进」来决定进度**：早期版本用 `pool.then(next).then(next)` 串行推进，
+  结果 882 篇里有 7 篇的响应没能结算，整批**永远卡在 875/882**，而且既没有超时也没有 unhandledrejection。
+  现在 `runPool()` 让每个请求**独立结算 + 独立兜底**，882 篇全部拿到，3.4 秒收工。
+- `window.__perf` 这种打点对象要先 `window.__perf = window.__perf || {}` 建好：
+  在 `'use strict'` 下给 `undefined` 赋值属性会抛 TypeError，被 `try/catch` 吞掉后**所有打点静默失效**。
+
+### 7.5 修改自定义后
 **`Ctrl+Shift+R` 硬刷浏览器**绕开缓存。如果改动大，浏览器开发者工具 → Application → Clear storage → 也清一下。
 
 ---
@@ -240,6 +289,12 @@ LOCKED_ENTRIES = [
 | 搜索「电子资源」返回空白 | 1) `assets/json/books.json` 是否还在；2) DevTools 看 Network 里 `assets/json/books.json` 是不是 200；3) 直接访问 `/assets/json/books.json` 看是否 JSON 合法 |
 | 「高性价比」卡片 hover 整片变成手型 | 上一次会话改过 `assets/js/ebook-search.js`；它的卡片渲染层从 `<div>` 升级成了 `<a>`，确保手里那一份也是升级版 |
 | 更新脚本报 SHA256 mismatch 或 _sidebar 被改坏 | 用 build_kb.sh 备份恢复，或从 git 看 diff |
+| 全站搜索页一直卡在「正在建立索引 x / 882…」 | 检查 `html/search.html` 里有没有把行首空白写成 `\s`（含换行会跨行回溯，见 7.4）；或 `_sidebar.md` 是否正常返回 |
+| 全站搜索页打不开、报 404 | 确认文件在 `html/search.html`（不是 `docs/` 下），且 `x.html` 里的链接是 `html/search.html` |
+| 搜索页搜不到某篇新文档 | 该文档还没进 `_sidebar.md`；跑一次 `update_sidebar.py`，或在搜索页点「重建索引」 |
+| 首页首屏卡住、字体没出来 | 检查 `assets/css/vue.css` 顶部的 `@font-face` 是否指向 `../fonts/*.woff2`，且 `assets/fonts/` 里的文件在不在 |
+| 搜索结果标题显示成「[← 回XX总目录](/docs/XX)」 | `pickTitle()` 没优先取 Markdown 标题行，退化成了「首个非空行」（见 7.4 的坑列表） |
+| 搜索页二次打开变成全量重建、慢到十几秒 | 上一次的 IndexedDB 写入没完成就被关页了；或点过「重建索引」把缓存清了。等写入完成再关页，或直接重开 |
 
 ---
 

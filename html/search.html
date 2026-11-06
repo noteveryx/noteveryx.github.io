@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>全站搜索</title>
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<link rel="stylesheet" href="../assets/css/themes.css">
+<link rel="stylesheet" href="../assets/css/toolbox.css">
+<style>
+/* 搜索页专属样式：复用 toolbox.css 的骨架，只补搜索相关部分 */
+.sq-card { margin-bottom: 14px; }
+.sq-input {
+  width: 100%;
+  padding: 13px 15px;
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg1);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.sq-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ghost-bg);
+}
+.sq-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.sq-status {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.sq-progress {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+  margin-top: 10px;
+}
+.sq-progress > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width .12s linear;
+}
+.sq-item {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 13px 15px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  transition: border-color .16s ease, transform .12s ease;
+}
+.sq-item:hover { border-color: var(--accent); transform: translateY(-1px); }
+.sq-item h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.45;
+}
+.sq-path {
+  font-size: 11.5px;
+  color: var(--muted);
+  word-break: break-all;
+  margin-bottom: 6px;
+}
+.sq-snip {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+  word-break: break-word;
+}
+.sq-item mark {
+  background: var(--accent-ghost-bg);
+  color: var(--accent);
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 700;
+}
+.sq-empty {
+  text-align: center;
+  padding: 46px 16px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.9;
+}
+.sq-empty b { color: var(--text); }
+.sq-tip {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.9;
+  margin: 0;
+}
+.sq-tip kbd {
+  font-family: inherit;
+  font-size: 11.5px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 6px;
+  color: var(--text);
+}
+</style>
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
+<script src="../assets/js/theme-kit.js" defer></script>
+</head>
+<body class="tb-page">
+<div class="tb-wrap">
+
+  <header class="tb-head">
+    <a class="tb-back" href="../" title="返回首页" aria-label="返回首页">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </a>
+    <div>
+      <h1>全站搜索</h1>
+      <p class="tb-sub">检索知识库全部文档 · 索引在本地建立，文件不离开你的浏览器</p>
+    </div>
+  </header>
+
+  <section class="tb-card sq-card">
+    <input id="q" class="sq-input" type="search" placeholder="输入关键词，例如：时间管理 / 合同 / 软考" autocomplete="off" spellcheck="false">
+    <div class="sq-bar">
+      <span id="status" class="sq-status">准备中…</span>
+      <span id="synctip" class="sq-status"></span>
+      <button id="reindex" class="tb-btn sm" type="button">重建索引</button>
+    </div>
+    <div class="sq-progress"><i id="prog"></i></div>
+    <p class="sq-tip" style="margin-top:10px">首次打开要把全部文档抓下来建索引（约 880 篇、20MB），本地要等十几秒；之后直接用本地缓存，秒开。索引只存在你自己的浏览器里，不上传任何内容。</p>
+  </section>
+
+  <div id="results"></div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* 站点根路径（带尾斜杠）。独立页可能部署在子目录下，所以不能写死 "/" */
+  var BASE = new URL('../', location.href).pathname;
+  var DB_NAME = 'kb-search', DB_STORE = 'blob';
+  var HAS_CS = (typeof CompressionStream !== 'undefined') && (typeof DecompressionStream !== 'undefined');
+  /* 并发数: 浏览器对同域 HTTP/1.1 只有 6 条连接, 发太多反而全在排队;
+     GitHub Pages 走 HTTP/2 可以更高, 取 8 两头都稳 */
+  var CONC = 8;
+  /* 单篇超时: 任何一个请求挂起都不该拖死整个建索引 */
+  var TIMEOUT = 20000;
+
+  var qEl = document.getElementById('q');
+  var statusEl = document.getElementById('status');
+  var resultsEl = document.getElementById('results');
+  var progEl = document.getElementById('prog');
+  var syncTipEl = document.getElementById('synctip');
+  var reindexBtn = document.getElementById('reindex');
+
+  var docs = [];          /* {path, title, text, mtime} */
+  var ready = false;
+  var timer = 0;
+
+  /* ---------------- IndexedDB 缓存 ----------------
+     整份索引压成 1 条记录存:
+     逐篇存会有 883 次事务/反序列化开销, 实测要 100 秒以上;
+     压成 1 条后读写都是毫秒级。 */
+  var dbPromise = null;
+  function openDB() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function (resolve) {
+      if (!window.indexedDB) return resolve(null);
+      var rq;
+      try { rq = indexedDB.open(DB_NAME, 1); } catch (e) { return resolve(null); }
+      rq.onupgradeneeded = function () {
+        var db = rq.result;
+        if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
+      };
+      rq.onsuccess = function () { resolve(rq.result); };
+      rq.onerror = function () { resolve(null); };
+      rq.onblocked = function () { resolve(null); };
+    });
+    return dbPromise;
+  }
+  function idbGet(key) {
+    return openDB().then(function (db) {
+      if (!db) return null;
+      return new Promise(function (resolve) {
+        try {
+          var tx = db.transaction(DB_STORE, 'readonly');
+          var rq = tx.objectStore(DB_STORE).get(key);
+          rq.onsuccess = function () { resolve(rq.result || null); };
+          rq.onerror = function () { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+    });
+  }
+  function idbPut(key, val) {
+    return openDB().then(function (db) {
+      if (!db) return;
+      return new Promise(function (resolve) {
+        try {
+          var tx = db.transaction(DB_STORE, 'readwrite');
+          tx.objectStore(DB_STORE).put(val, key);
+          tx.oncomplete = function () { resolve(); };
+          tx.onerror = function () { resolve(); };
+          tx.onabort = function () { resolve(); };
+        } catch (e) { resolve(); }
+      });
+    });
+  }
+  /* 读缓存 -> 文档数组 */
+  function cacheLoad() {
+    return idbGet('index').then(function (rec) {
+      if (!rec) return null;
+      if (rec.buf && HAS_CS) {
+        return new Response(new Blob([rec.buf]).stream().pipeThrough(new DecompressionStream('gzip')))
+          .text().then(function (t) { return JSON.parse(t); })
+          .catch(function () { return null; });
+      }
+      if (rec.text) {
+        try { return JSON.parse(rec.text); } catch (e) { return null; }
+      }
+      return null;
+    });
+  }
+  /* 写缓存 -> 压缩成 1 条 */
+  function cacheSave(list) {
+    var json = JSON.stringify(list);
+    if (HAS_CS) {
+      return new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip')))
+        .arrayBuffer()
+        .then(function (buf) { return idbPut('index', { v: 1, buf: buf }); })
+        .catch(function () { });
+    }
+    return idbPut('index', { v: 1, text: json });
+  }
+
+  /* ---------------- Markdown -> 纯文本 ---------------- */
+  function toText(md) {
+    var t = String(md || '');
+    t = t.replace(/```[\s\S]*?```/g, function (m) { return m.replace(/```[^\n]*\n?/g, ''); });
+    t = t.replace(/`([^`]*)`/g, '$1');
+    t = t.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1');
+    t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+    t = t.replace(/<[^>]+>/g, ' ');
+    /* 行首/行尾的空白一律用 [ \t], 不要用 \s —— \s 含换行, 配合 (.+)$ 之类会跨行回溯,
+       实测在 880 篇文档上能白白吃掉 100 多秒 */
+    t = t.replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm, '');
+    t = t.replace(/^[ \t]{0,3}>[ \t]?/gm, '');
+    t = t.replace(/^[ \t]*[-*+][ \t]+/gm, '');
+    t = t.replace(/^[ \t]*\d+[.)][ \t]+/gm, '');
+    t = t.replace(/^[ \t]*\|.*\|[ \t]*$/gm, function (m) { return m.replace(/\|/g, ' '); });
+    t = t.replace(/\*\*([^*]+)\*\*/g, '$1');
+    t = t.replace(/~~([^~]+)~~/g, '$1');
+    t = t.replace(/\r/g, '');
+    t = t.replace(/[ \t]+/g, ' ');
+    t = t.replace(/\n{3,}/g, '\n\n');
+    return t.trim();
+  }
+  /* 取文档标题: 按行扫, 不用正则(避免跨行回溯)
+     优先取第一个 Markdown 标题(# / ## / ###):
+     有 36 篇文档第一行是「← 回XX总目录」这种链接, 直接取首个非空行
+     会让搜索结果的标题变成链接文本, 完全没法看 */
+  function pickTitle(md, path) {
+    var lines = String(md || '').split('\n');
+    var limit = lines.length < 40 ? lines.length : 40;
+    var fallback = '';
+    for (var i = 0; i < limit; i++) {
+      var raw = lines[i].replace(/\r$/, '').trim();
+      if (!raw) continue;
+      var h = raw.match(/^[ \t]{0,3}#{1,3}[ \t]+(.*)$/);
+      if (h) {
+        var t = h[1].replace(/[*_`]/g, '').trim();
+        if (t) return t;
+        continue;
+      }
+      if (fallback) continue;
+      if (raw.charAt(0) === '>' || raw.charAt(0) === '|') continue;
+      if (/^\[[^\]]*\]\([^)]*\)$/.test(raw)) continue;   /* 纯链接行(回目录), 不当标题 */
+      fallback = raw.replace(/[*_`]/g, '').trim();
+    }
+    if (fallback) return fallback;
+    var seg = path.split('/').pop().replace(/\.md$/, '');
+    try { seg = decodeURIComponent(seg); } catch (e) { }
+    return seg;
+  }
+
+  /* ---------------- 抓取 ---------------- */
+  function fetchSidebar() {
+    return fetch(BASE + '_sidebar.md', { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) throw new Error('侧栏读取失败 ' + r.status);
+      return r.text();
+    });
+  }
+  function parseSidebar(md) {
+    var out = [], re = /\]\(([^)]+\.md)\)/g, m;
+    while ((m = re.exec(md))) {
+      var p = m[1];
+      try { p = decodeURIComponent(p); } catch (e) { }
+      if (p.charAt(0) !== '/') p = '/' + p;
+      if (out.indexOf(p) < 0) out.push(p);
+    }
+    out.unshift('/README.md');   /* 首页正文也纳入索引 */
+    return out;
+  }
+  /* 性能打点: 排查建索引各阶段耗时
+     注意 window.__perf 必须先建好 —— 直接给 undefined 赋值属性会抛 TypeError,
+     在 'use strict' 下被 try/catch 吞掉后所有打点都会静默失效 */
+  try { window.__perf = window.__perf || {}; } catch (e) { }
+  function mark(n) {
+    try { window.__perf[n] = Math.round(performance.now()); } catch (e) { }
+  }
+  var acc = { fetch: 0, body: 0, text: 0, title: 0, n: 0, timeout: 0, failed: 0 };
+
+  /* 抓单篇文档
+     注意: 一律用 cache:'no-cache' —— 默认缓存会把 883 个响应写进磁盘缓存,
+     在 Windows 上逐个落盘 + 实时扫描, 实测能把 8 秒的抓取拖成 2 分钟;
+     索引本来就存在 IndexedDB 里, 不需要浏览器再缓存一份原文。 */
+  function fetchDoc(path, mtime) {
+    var opt = { cache: 'no-cache' };
+    if (mtime) opt.headers = { 'If-Modified-Since': mtime };
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    if (ctrl) opt.signal = ctrl.signal;
+    var timer = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) { } }, TIMEOUT) : 0;
+    var t0 = performance.now();
+    return withTimeout(fetch(BASE + path.replace(/^\//, ''), opt), TIMEOUT).then(function (r) {
+      var t1 = performance.now();
+      acc.fetch += t1 - t0; acc.n++;
+      if (!r) { acc.timeout++; return null; }
+      if (r.status === 304) return null;
+      if (!r.ok) return null;
+      var lm = r.headers.get('Last-Modified') || '';
+      return withTimeout(r.text(), TIMEOUT).then(function (t) {
+        if (t === null) { acc.timeout++; return null; }
+        var t2 = performance.now();
+        acc.body += t2 - t1;
+        var tx = toText(t);
+        var t3 = performance.now();
+        acc.text += t3 - t2;
+        var ti = pickTitle(t, path);
+        acc.title += performance.now() - t3;
+        return { path: path, title: ti, text: tx, mtime: lm };
+      });
+    }).catch(function (e) {
+      if (e && e.name === 'AbortError') acc.timeout++;
+      return null;
+    }).then(function (v) {
+      if (timer) clearTimeout(timer);
+      return v;
+    });
+  }
+  /* 给任意 promise 加超时: 超了就当没拿到, 绝不让页面挂在上面 */
+  function withTimeout(p, ms) {
+    return new Promise(function (resolve) {
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (!settled) { settled = true; resolve(null); }
+      }, ms);
+      p.then(function (v) {
+        if (!settled) { settled = true; clearTimeout(timer); resolve(v); }
+      }, function () {
+        if (!settled) { settled = true; clearTimeout(timer); resolve(null); }
+      });
+    });
+  }
+
+  /* ---------------- 状态 ---------------- */
+  function setStatus(txt, ratio) {
+    statusEl.textContent = txt;
+    progEl.style.width = Math.max(0, Math.min(1, ratio || 0)) * 100 + '%';
+  }
+  /* 进度更新要节流: 每篇都改一次 DOM 会触发重排 + 过渡动画, 883 篇能白白吃掉几十秒 */
+  var lastPaint = 0;
+  function setProgress(done, total) {
+    var now = Date.now();
+    if (now - lastPaint < 120) return;
+    lastPaint = now;
+    setStatus('正在建立索引 ' + done + ' / ' + total + '…', total ? done / total : 0);
+  }
+  function totalBytes(list) {
+    var n = 0;
+    for (var i = 0; i < list.length; i++) n += list[i].text.length;
+    return n;
+  }
+
+  /* ---------------- 建索引 ---------------- */
+  function build(useCache) {
+    mark('build_start');
+    setStatus('正在读取本地缓存…', 0);
+    return cacheLoad().then(function (cached) {
+      mark('cache_loaded');
+      if (useCache && cached && cached.length) {
+        /* 有缓存: 立刻可用, 后台再悄悄同步 */
+        docs = cached;
+        ready = true;
+        setStatus('索引就绪（本地缓存）· ' + cached.length + ' 篇', 1);
+        renderResults([], '');
+        search(qEl.value);
+        mark('ready_from_cache');
+        sync(cached);
+        return;
+      }
+      return fetchAll().then(function (list) {
+        mark('fetch_all_done');
+        docs = list;
+        ready = true;
+        var tip = acc.timeout ? (' · ' + acc.timeout + ' 篇超时未取到') : '';
+        setStatus('索引就绪 · ' + list.length + ' 篇 · ' + (totalBytes(list) / 1024 / 1024).toFixed(1) + ' MB 正文' + tip, 1);
+        renderResults([], '');
+        search(qEl.value);
+        mark('ready');
+        cacheSave(list).then(function () { mark('cache_saved'); });   /* 写缓存放后台, 不阻塞搜索 */
+      });
+    }).catch(function (e) {
+      setStatus('索引建立失败：' + (e && e.message ? e.message : e), 0);
+    });
+  }
+
+  /* 批量抓取: 每个请求独立结算、独立兜底
+     不用 promise 链串行推进 —— 任何一个请求出问题(抛异常 / 永不结束)都不该拖住其他请求。
+     并发上限 CONC, 单请求超时 TIMEOUT(在 fetchDoc 里), 整体再兜一层 maxAll。 */
+  function runPool(todo, worker, onStep, maxAll) {
+    return new Promise(function (resolve) {
+      var out = [];
+      var i = 0, running = 0, done = 0, settled = false;
+      var limit = maxAll || 120000;
+      function finish() {
+        if (settled) return;
+        settled = true;
+        resolve(out);
+      }
+      function pump() {
+        while (!settled && running < CONC && i < todo.length) {
+          var it = todo[i++];
+          running++;
+          (function (item) {
+            var p;
+            try { p = Promise.resolve(worker(item)); }
+            catch (e) { p = Promise.resolve(null); }
+            p.then(function (nd) { if (nd) out.push(nd); }, function () { })
+              .then(function () {
+                running--;
+                done++;
+                if (onStep) onStep(done, todo.length);
+                if (i >= todo.length && running === 0) finish();
+                else pump();
+              });
+          })(it);
+        }
+      }
+      pump();
+      /* 兜底: 到点就收工, 宁可少几篇也不能让页面永远转圈 */
+      setTimeout(finish, limit);
+    });
+  }
+
+  /* 全量抓取 */
+  function fetchAll() {
+    return fetchSidebar().then(parseSidebar).then(function (paths) {
+      mark('sidebar_done');
+      var todo = paths.map(function (p) { return { path: p, mtime: '' }; });
+      setStatus('正在建立索引 0 / ' + todo.length + '…', 0);
+      return runPool(todo, function (it) {
+        /* 失败重试一次: 网络抖动很常见, 重试一次基本都能拿到 */
+        return fetchDoc(it.path, '').then(function (nd) {
+          if (nd) return nd;
+          acc.failed++;
+          return fetchDoc(it.path, '').then(function (nd2) {
+            if (!nd2) { acc.failed++; (acc.list = acc.list || []).push(it.path); }
+            return nd2;
+          });
+        });
+      }, setProgress, 120000).then(function (out) {
+        try {
+          window.__acc = {
+            fetch: Math.round(acc.fetch), body: Math.round(acc.body), text: Math.round(acc.text),
+            title: Math.round(acc.title), n: acc.n, timeout: acc.timeout, failed: acc.failed,
+            list: (acc.list || []).slice(0, 12)
+          };
+        } catch (e) { }
+        return out;
+      });
+    });
+  }
+
+  /* 后台增量同步: 只把变了的文件换掉
+     进度写进独立的提示行, 不覆盖主状态（主状态是「索引就绪」） */
+  function sync(cached) {
+    var map = {}, i;
+    for (i = 0; i < cached.length; i++) map[cached[i].path] = cached[i];
+    return fetchSidebar().then(parseSidebar).then(function (paths) {
+      var todo = paths.map(function (p) { return { path: p, mtime: map[p] ? map[p].mtime : '' }; });
+      var changed = 0;
+      return runPool(todo, function (it) {
+        return fetchDoc(it.path, it.mtime).then(function (nd) {
+          if (nd) { changed++; return nd; }
+          return map[it.path] || null;
+        });
+      }, function (done, total) {
+        syncTipEl.textContent = '正在后台同步 ' + done + ' / ' + total + '…（可先搜索）';
+      }, 120000).then(function (out) {
+        if (changed) {
+          docs = out;
+          ready = true;
+          setStatus('索引已更新（' + changed + ' 篇有变动）· ' + out.length + ' 篇', 1);
+          search(qEl.value);
+          cacheSave(out);
+          syncTipEl.textContent = '';
+        } else {
+          syncTipEl.textContent = '已是最新';
+        }
+      });
+    }).catch(function () { });
+  }
+
+  /* ---------------- 搜索 ---------------- */
+  function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function docHref(path) {
+    var route = path.replace(/\.md$/, '');
+    if (route === '/README.md') route = '/';
+    return BASE + '#' + route;
+  }
+  function search(kw) {
+    kw = String(kw || '').trim();
+    if (!kw) { renderResults([], ''); return; }
+    if (!ready) { renderResults([], kw); return; }
+    var words = kw.split(/\s+/).filter(Boolean);
+    var qRe = new RegExp(escapeRe(kw), 'i');
+    var wRes = words.map(function (w) { return new RegExp(escapeRe(w), 'i'); });
+    var hits = [];
+    for (var i = 0; i < docs.length; i++) {
+      var d = docs[i];
+      var score = 0, all = true, pos = -1, j;
+      for (j = 0; j < wRes.length; j++) {
+        var m = wRes[j].exec(d.text);
+        if (m) { score += 10; if (pos < 0) pos = m.index; } else { all = false; }
+      }
+      if (qRe.test(d.title)) score += 120;
+      if (qRe.test(d.text)) score += 25;
+      if (score === 0) continue;
+      if (all) score += 60;
+      hits.push({ d: d, score: score, pos: pos });
+    }
+    hits.sort(function (a, b) { return b.score - a.score; });
+    renderResults(hits, kw);
+  }
+
+  function snippet(text, pos, kw) {
+    if (pos < 0) pos = 0;
+    var start = Math.max(0, pos - 50);
+    var end = Math.min(text.length, pos + kw.length + 90);
+    var s = text.slice(start, end).replace(/\s+/g, ' ').trim();
+    return (start > 0 ? '…' : '') + s + (end < text.length ? '…' : '');
+  }
+  function mark(text, kw) {
+    var esc = escapeHtml(text);
+    var words = String(kw).split(/\s+/).filter(Boolean);
+    for (var i = 0; i < words.length; i++) {
+      if (!words[i]) continue;
+      var re = new RegExp('(' + escapeRe(escapeHtml(words[i])) + ')', 'gi');
+      esc = esc.replace(re, '<mark>$1</mark>');
+    }
+    return esc;
+  }
+
+  function renderResults(hits, kw) {
+    resultsEl.innerHTML = '';
+    if (!kw) {
+      resultsEl.innerHTML = '<div class="sq-empty">'
+        + '<p><b>输入关键词开始检索</b></p>'
+        + '<p class="sq-tip">支持空格分隔的多关键词（需全部命中）· 按 <kbd>/</kbd> 聚焦搜索框 · 按 <kbd>Esc</kbd> 清空</p>'
+        + '</div>';
+      return;
+    }
+    if (!ready) {
+      resultsEl.innerHTML = '<div class="sq-empty"><p>索引还在建立，稍等一下就好…</p></div>';
+      return;
+    }
+    if (!hits.length) {
+      resultsEl.innerHTML = '<div class="sq-empty"><p>没有找到「' + escapeHtml(kw) + '」</p>'
+        + '<p class="sq-tip">换个关键词试试，或用更短的词</p></div>';
+      return;
+    }
+    var head = document.createElement('div');
+    head.className = 'sq-empty';
+    head.style.padding = '10px 2px 12px';
+    head.style.textAlign = 'left';
+    head.innerHTML = '<b>命中 ' + hits.length + ' 条</b>';
+    resultsEl.appendChild(head);
+
+    var limit = Math.min(hits.length, 60);
+    for (var i = 0; i < limit; i++) {
+      var h = hits[i], d = h.d;
+      var a = document.createElement('a');
+      a.className = 'sq-item';
+      a.href = docHref(d.path);
+      var t = document.createElement('h3');
+      t.innerHTML = mark(d.title, kw);
+      var p = document.createElement('div');
+      p.className = 'sq-path';
+      p.textContent = d.path;
+      var s = document.createElement('div');
+      s.className = 'sq-snip';
+      s.innerHTML = mark(snippet(d.text, h.pos, kw), kw);
+      a.appendChild(t); a.appendChild(p); a.appendChild(s);
+      resultsEl.appendChild(a);
+    }
+    if (hits.length > limit) {
+      var more = document.createElement('div');
+      more.className = 'sq-empty';
+      more.style.padding = '14px 2px 30px';
+      more.innerHTML = '还有 ' + (hits.length - limit) + ' 条，请细化关键词';
+      resultsEl.appendChild(more);
+    }
+  }
+
+  /* ---------------- 事件 ---------------- */
+  qEl.addEventListener('input', function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () { search(qEl.value); }, 180);
+  });
+  qEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { qEl.value = ''; search(''); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '/' && document.activeElement !== qEl) {
+      e.preventDefault();
+      qEl.focus();
+      qEl.select();
+    }
+  });
+  reindexBtn.addEventListener('click', function () {
+    reindexBtn.disabled = true;
+    setStatus('正在清空缓存并重建索引…', 0);
+    idbPut('index', null).then(function () { return build(false); }).then(function () {
+      reindexBtn.disabled = false;
+      search(qEl.value);
+    });
+  });
+
+  /* ---------------- 启动 ---------------- */
+  renderResults([], '');
+  build(true).then(function () {
+    try { qEl.focus(); } catch (e) { }
+  });
+})();
+</script>
+</body>
+</html>
