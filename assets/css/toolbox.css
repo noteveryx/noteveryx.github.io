@@ -185,6 +185,16 @@
   box-shadow: 0 0 0 3px var(--accent-ghost-bg);
 }
 .tb-in.short { width: 110px; }
+
+/* 行内控件：输入框/下拉放在 flex 行里时应占满剩余空间，
+   否则 .tb-in 的 width:100% 会把同行的色块挤到下一行 */
+.tb-row > .tb-in:not(.short),
+.tb-row > .tb-ta,
+.tb-row > .tb-sel {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .tb-sel {
   appearance: none;
   -webkit-appearance: none;
