@@ -9,6 +9,16 @@
    --text / --muted / --line —— 与 themes.css 的五套主题对齐。
    ========================================================== */
 
+/* 盒模型归一：必须放在最前面
+   —— .tb-ta / .tb-in / .tb-sel 都写了 width:100%，但没归一 box-sizing 时，
+   它们的实际宽度 = 100% + 左右 padding + 左右 border，会溢出容器。
+   实测：文本对比页并排的两个 textarea 各自溢出 26px，而列间距只有 12px，
+   于是左边的框直接压到右边的框上（用户截图里就是"糊成一片"）。 */
+.tb-page,
+.tb-page *,
+.tb-page *::before,
+.tb-page *::after { box-sizing: border-box; }
+
 .tb-page {
   margin: 0;
   width: 100%;
@@ -119,20 +129,26 @@
   margin-bottom: 14px;
 }
 .tb-card > .tb-card-title {
-  margin: 0 0 12px;
-  font-size: 13.5px;
+  margin: 0 0 16px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: .01em;
+  line-height: 1.4;
   display: flex;
   align-items: center;
   gap: 8px;
+  /* 标题是整块卡片的「锚」，必须压在内容之上：
+     内容一旦因为换行/缩放/字体放大而顶上来，标题不会被盖住 */
+  position: relative;
+  z-index: 1;
 }
 .tb-card-title::before {
   content: "";
   width: 3px;
-  height: 13px;
+  height: 14px;
   border-radius: 2px;
   background: var(--accent);
+  flex: 0 0 auto;
 }
 
 .tb-grid { display: grid; gap: 12px; }
@@ -175,7 +191,13 @@
   outline: none;
   transition: border-color .16s ease, box-shadow .16s ease;
 }
-.tb-ta { resize: vertical; min-height: 120px; }
+.tb-ta {
+  /* textarea 的 UA 默认样式是 inline-block，会带一段基线间隙，
+     在卡片里跟标题栏贴得很近。改成 block 让它规规矩矩占一整行 */
+  display: block;
+  resize: vertical;
+  min-height: 120px;
+}
 .tb-ta.mono, .tb-out.mono, .tb-in.mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
   font-size: 13px;
@@ -185,6 +207,18 @@
   box-shadow: 0 0 0 3px var(--accent-ghost-bg);
 }
 .tb-in.short { width: 110px; }
+
+/* 滑块（range）
+   Chrome 的 UA 默认样式给 input[type=range] 加了 margin:2px，
+   配合 width:100% 就会横向溢出容器 2px；
+   移动端再把字号提到 16px，滑块轨道和拇指也跟着变大更好按。 */
+.tb-page input[type="range"] {
+  margin: 0;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  accent-color: var(--accent);
+}
 
 /* 行内控件：输入框/下拉放在 flex 行里时应占满剩余空间，
    否则 .tb-in 的 width:100% 会把同行的色块挤到下一行 */
@@ -414,4 +448,45 @@
 @media (max-width: 640px) {
   .tb-diff { font-size: 11.5px; }
   .tb-diff .cell { padding: 3px 8px; }
+}
+
+/* ==========================================================
+   移动端适配（≤ 640px）
+   ------------------------------------------------------------
+   1) 输入控件字号必须 ≥ 16px。
+      iOS Safari 聚焦字号 < 16px 的输入框时会自动放大整页，
+      页面被撑大、滚动位置跳走 —— 这是移动端最常见的「样式炸了」。
+   2) 收紧卡片内边距，把宽度让给正文。
+   ========================================================== */
+@media (max-width: 640px) {
+  .tb-wrap { padding: 0 max(12px, env(safe-area-inset-left)); }
+  .tb-head { padding: 20px 0 10px; gap: 10px; }
+  .tb-head h1 { font-size: 19px; }
+  .tb-head .tb-sub { font-size: 12px; }
+  .tb-back { width: 34px; height: 34px; }
+
+  .tb-card { padding: 14px; border-radius: 14px; }
+  .tb-card > .tb-card-title { margin-bottom: 13px; }
+
+  /* 窄屏放不下一排 tab，横滑会把最后一个切掉一半 —— 改成换行，全部可见 */
+  .tb-tabs { gap: 8px; padding: 4px 0 10px; flex-wrap: wrap; overflow: visible; }
+  .tb-tab { padding: 9px 15px; font-size: 13.5px; }
+
+  /* iOS 聚焦自动放大整页的根因：字号小于 16px */
+  .tb-ta, .tb-in, .tb-sel { font-size: 16px; }
+  .tb-ta.mono, .tb-in.mono { font-size: 16px; }
+  .tb-page input[type="range"] { font-size: 16px; }
+  .tb-ta { min-height: 140px; }
+
+  .tb-stats { gap: 8px; }
+  .tb-stat { flex: 1 1 calc(50% - 4px); }
+  .tb-btn { padding: 10px 14px; }
+  .tb-btn.sm { padding: 8px 12px; }
+  .tb-seg button { padding: 9px 13px; }
+}
+
+/* 超窄屏（iPhone SE / 老安卓）：两列网格挤成一行 */
+@media (max-width: 380px) {
+  .tb-grid.c3, .tb-grid.c4 { grid-template-columns: 1fr; }
+  .tb-stat { flex: 1 1 100%; }
 }

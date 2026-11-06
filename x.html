@@ -522,12 +522,13 @@
     .nav-link:active { transform: scale(.97); }
 
     /* ---------- 快捷导航搜索框 ---------- */
-    .nav-search { position: relative; margin: 14px 0 4px; }
+    .nav-search { position: relative; margin: 16px 0 6px; }
     .nav-search input {
       width: 100%;
       font-family: inherit;
-      font-size: .88rem;
-      padding: 11px 40px 11px 38px;
+      font-size: .9rem;
+      line-height: 1.5;
+      padding: 11px 42px 11px 38px;
       border-radius: 12px;
       border: 1px solid var(--line);
       background: var(--card);
@@ -548,6 +549,7 @@
       pointer-events: none;
       display: flex;
       line-height: 0;
+      z-index: 2;
     }
     .nav-search .ico svg { width: 15px; height: 15px; }
     .nav-search .clear {
@@ -562,14 +564,20 @@
       padding: 6px 9px;
       border-radius: 9px;
       display: none;
+      z-index: 2;
     }
     .nav-search .clear:hover { color: var(--text); background: var(--brand-soft); }
     .nav-search.has .clear { display: block; }
+    /* 提示行: 与输入框拉开距离并压在输入框之上，
+       否则在深色主题下这行灰字会紧贴输入框下边框，看着像被「切掉半行」 */
     .nav-search .hint {
-      font-size: .76rem;
+      font-size: .78rem;
+      line-height: 1.55;
       color: var(--muted);
-      margin: 8px 2px 0;
-      min-height: 1.2em;
+      margin: 11px 2px 0;
+      min-height: 1.55em;
+      position: relative;
+      z-index: 1;
     }
     .nav-group.hidden, .nav-link.hidden { display: none !important; }
 
@@ -889,6 +897,16 @@
       .theme-btn-label { display: none; }
       .theme-btn { padding: 0 12px; }
       .theme-panel { width: 190px; }
+
+      /* 快捷导航搜索框（移动端）
+         字号必须 ≥ 16px: iOS Safari 聚焦小于 16px 的输入框会自动放大整页，
+         页面被撑大、滚动位置跳走。点击区也一并放大，方便手指点。 */
+      .nav-search { margin: 14px 0 6px; }
+      .nav-search input { font-size: 16px; padding: 13px 42px 13px 40px; }
+      .nav-search .ico { left: 13px; }
+      .nav-search .ico svg { width: 17px; height: 17px; }
+      .nav-search .clear { right: 5px; padding: 9px 12px; font-size: 1.3rem; }
+      .nav-search .hint { font-size: .8rem; margin-top: 12px; }
     }
 
     @media (max-width: 380px) {

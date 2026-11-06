@@ -272,7 +272,43 @@ LOCKED_ENTRIES = [
 - `window.__perf` 这种打点对象要先 `window.__perf = window.__perf || {}` 建好：
   在 `'use strict'` 下给 `undefined` 赋值属性会抛 TypeError，被 `try/catch` 吞掉后**所有打点静默失效**。
 
-### 7.5 修改自定义后
+### 7.5 工具箱页面的布局规范（`assets/css/toolbox.css`）
+
+改工具页样式前先看这一节，能少踩很多坑。
+
+**1. 必须归一盒模型**
+```css
+.tb-page, .tb-page *, .tb-page *::before, .tb-page *::after { box-sizing: border-box; }
+```
+`.tb-ta` / `.tb-in` / `.tb-sel` 都写了 `width: 100%`，不归一时实际宽度 = 100% + 左右 padding + 左右 border，
+**必然溢出容器**。实测：文本对比页并排的两个 textarea 各自溢出 26px，而列间距只有 12px ——
+左边的框直接压到右边的框上，PC 和手机端都糊成一片。
+
+**2. 输入控件字号必须 ≥ 16px（移动端）**
+iOS Safari 聚焦字号小于 16px 的输入框时会**自动放大整个页面**，页面被撑大、滚动位置跳走。
+`.tb-ta` / `.tb-in` / `.tb-sel` 在 `max-width: 640px` 下一律提到 16px。
+（`checkbox` / `radio` / `file` 有显式尺寸，不受字号影响，不在此列。）
+
+**3. `input[type="range"]` 要清掉 UA 的 `margin: 2px`**
+Chrome 默认给 range 加了 `margin: 2px`，配合 `width: 100%` 就会横向溢出 2px。
+
+**4. 卡片标题栏要「压得住」**
+`.tb-card-title` 是 `display: flex`，加上继承来的 `line-height: 1.6`，
+13.5px 的字在 21.6px 行盒里居中 —— 视觉上文字下半截紧贴下方控件的边框，看着像被「切掉一半」。
+现在：`line-height: 1.4`、`margin-bottom: 16px`、`position: relative; z-index: 1`。
+
+**5. `textarea` 要 `display: block`**
+UA 默认是 `inline-block`，会带一段基线间隙，在卡片里跟标题贴得更近。
+
+**6. 窄屏 tab 换行**
+5 个子工具的 tab 在 390px 宽下横滑会把最后一个切掉一半，改成 `flex-wrap: wrap` 全部可见。
+
+**验证方式**（改完必跑）：
+`layout-regress` 检测脚本扫 320/360/390/414/480/640/768/1024/1280/1920 十档宽度 × 5 套主题，
+查三类问题：横向溢出、标题文字被下方元素压住（间距 < 6px）、移动端输入框字号 < 16px。
+修复前 178 个问题，修复后 **0 个**。
+
+### 7.6 修改自定义后
 **`Ctrl+Shift+R` 硬刷浏览器**绕开缓存。如果改动大，浏览器开发者工具 → Application → Clear storage → 也清一下。
 
 ---
@@ -295,6 +331,10 @@ LOCKED_ENTRIES = [
 | 首页首屏卡住、字体没出来 | 检查 `assets/css/vue.css` 顶部的 `@font-face` 是否指向 `../fonts/*.woff2`，且 `assets/fonts/` 里的文件在不在 |
 | 搜索结果标题显示成「[← 回XX总目录](/docs/XX)」 | `pickTitle()` 没优先取 Markdown 标题行，退化成了「首个非空行」（见 7.4 的坑列表） |
 | 搜索页二次打开变成全量重建、慢到十几秒 | 上一次的 IndexedDB 写入没完成就被关页了；或点过「重建索引」把缓存清了。等写入完成再关页，或直接重开 |
+| 工具页里输入框压到旁边的框 / 超出卡片边框 | `box-sizing` 没归一，见 7.5 第 1 条（`.tb-page` 作用域内加一条全局 `border-box`） |
+| 手机上点输入框整个页面被放大 | 输入框字号 < 16px，iOS Safari 会自动放大整页，见 7.5 第 2 条 |
+| 手机上 tab 栏最后一个被切掉一半 | 窄屏改 `flex-wrap: wrap`，见 7.5 第 6 条 |
+| 卡片标题看起来被下面的输入框「切掉半行」 | 标题是 flex + `line-height: 1.6`，字在行盒里居中；见 7.5 第 4 条 |
 
 ---
 
