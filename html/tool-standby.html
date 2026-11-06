@@ -725,7 +725,15 @@
   .tech-copy.done { background: var(--brand-soft); color: var(--brand); }
   .tech-copy.failed { background: var(--muted); color: #fff; }
 
-  /* ---------- 主题（theme-kit）：翡翠绿 / 暖阳橙 / 紫罗兰 / 墨石青，默认深海蓝 ---------- */
+  /* ---------- 主题（theme-kit）：翡翠绿 / 深海蓝 / 暖阳橙 / 紫罗兰 / 墨石青，默认深海蓝 ----------
+     深海蓝这一套以前是缺的：防闪脚本默认就是 midnight，
+     但没有对应的变量块 → 首次访问「深海蓝」根本不生效，只能回落到 :root 的翡翠绿。 */
+  html[data-theme="midnight"]{
+    --bg1:#0f1626; --bg2:#0a101c; --panel:#151f2e; --line:#232f40;
+    --text:#e7eef8; --muted:#7f8fa4; --brand:#5b9dff; --brand-soft:rgba(91,157,255,.14);
+    --glass:rgba(255,255,255,.05); --scrim:rgba(9,13,22,.9);
+    --glow1:rgba(91,157,255,.08); --glow2:rgba(56,200,240,.05); --logo-glow:rgba(91,157,255,.3);
+  }
   html[data-theme="emerald"]{
     --bg1:#f4faf7; --bg2:#e7f1eb; --panel:#ffffff; --line:rgba(22,36,29,.12);
     --text:#16241d; --muted:#6d8177; --brand:#2f9e6d; --brand-soft:rgba(47,158,109,.14);

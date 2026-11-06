@@ -1,0 +1,99 @@
+/* ==========================================================
+   themes.css —— 公共主题变量（theme-kit 的 5 套主题）
+
+   为什么抽出来：
+   主题清单原本在三个地方各写一遍 —— theme-kit.js 的 THEMES 数组、
+   每个页面的防闪脚本、每个页面的 html[data-theme] 覆盖块。
+   三份清单各自维护，必然漂移：一度有 5 个页面漏了 violet，
+   导致「切到紫罗兰没反应」；tool-standby 漏了 midnight，
+   导致「切到深海蓝没反应」。
+
+   现在只维护这一份：
+     · 页面引本文件 → 五套主题变量自动齐全，不会再漏
+     · 页面保留自己独有的变量时，写在自己的 <style> 里即可
+       （同名变量以页面 <style> 为准，因为它在后面）
+   ========================================================== */
+
+/* ---------- 默认（紫罗兰）：data-theme 缺失时的兜底 ---------- */
+:root {
+  --bg1: #f7f9fd; --bg2: #eef1f9; --card: #fff; --text: #16192b; --muted: #6b7590;
+  --line: rgba(22, 25, 43, .08); --accent: #635bff; --accent2: #00b8d9;
+  --accent-hi: #7d6dff; --accent-hi-2: #8b7bff;
+  --accent-ghost-bg: rgba(99, 91, 255, .09); --accent-ghost-line: rgba(99, 91, 255, .14);
+  --accent-shadow: 0 6px 18px rgba(99, 91, 255, .28);
+  --glow1: rgba(99, 91, 255, .22); --glow2: rgba(0, 184, 217, .20);
+  --glass: rgba(255, 255, 255, .82); --focus-bg: #f2f4fa;
+  --ghost-active: #f2f4fa; --ghost-bg: #fbfbfe;
+  --toast-bg: rgba(22, 25, 43, .94); --foot-note: #b9c1c9;
+  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(22, 25, 43, .18);
+}
+
+/* ---------- 翡翠绿 ---------- */
+html[data-theme="emerald"] {
+  --bg1: #f5faf7; --bg2: #e8f1ec; --card: #fff; --text: #16241d; --muted: #6d8177;
+  --line: rgba(22, 36, 29, .08); --accent: #2f9e6d; --accent2: #31b8a4;
+  --accent-hi: #43b983; --accent-hi-2: #4ccf9a;
+  --accent-ghost-bg: rgba(47, 158, 109, .09); --accent-ghost-line: rgba(47, 158, 109, .16);
+  --accent-shadow: 0 6px 18px rgba(47, 158, 109, .28);
+  --glow1: rgba(66, 185, 131, .20); --glow2: rgba(49, 184, 164, .16);
+  --glass: rgba(255, 255, 255, .82); --focus-bg: #f2faf6;
+  --ghost-active: #edf5f0; --ghost-bg: #fbfdfc;
+  --toast-bg: rgba(22, 36, 29, .94); --foot-note: #a9b8b0;
+  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(22, 36, 29, .18);
+}
+
+/* ---------- 深海蓝 ---------- */
+html[data-theme="midnight"] {
+  --bg1: #0f1626; --bg2: #0a101c; --card: #151f2e; --text: #e7eef8; --muted: #7f8fa4;
+  --line: #232f40; --accent: #5b9dff; --accent2: #38c8f0;
+  --accent-hi: #7bb0ff; --accent-hi-2: #8bc0ff;
+  --accent-ghost-bg: rgba(91, 157, 255, .10); --accent-ghost-line: rgba(91, 157, 255, .20);
+  --accent-shadow: 0 6px 18px rgba(0, 0, 0, .4);
+  --glow1: rgba(91, 157, 255, .14); --glow2: rgba(56, 200, 240, .10);
+  --glass: rgba(255, 255, 255, .05); --focus-bg: #1a2534;
+  --ghost-active: #1a2433; --ghost-bg: #182231;
+  --toast-bg: rgba(0, 0, 0, .75); --foot-note: #5c6b80;
+  --logo-border: rgba(255, 255, 255, .10); --logo-shadow: 0 4px 14px rgba(0, 0, 0, .5);
+}
+
+/* ---------- 暖阳橙 ---------- */
+html[data-theme="sunset"] {
+  --bg1: #fdf8f4; --bg2: #f7ece2; --card: #fff; --text: #33231a; --muted: #96796a;
+  --line: rgba(51, 35, 26, .09); --accent: #f2762e; --accent2: #f5a623;
+  --accent-hi: #ff8f4d; --accent-hi-2: #ff9f66;
+  --accent-ghost-bg: rgba(242, 118, 46, .09); --accent-ghost-line: rgba(242, 118, 46, .16);
+  --accent-shadow: 0 6px 18px rgba(242, 118, 46, .28);
+  --glow1: rgba(242, 118, 46, .20); --glow2: rgba(245, 166, 35, .16);
+  --glass: rgba(255, 255, 255, .82); --focus-bg: #fdf5ee;
+  --ghost-active: #f6efe8; --ghost-bg: #fefcf9;
+  --toast-bg: rgba(51, 35, 26, .94); --foot-note: #c2ab9c;
+  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(80, 45, 20, .18);
+}
+
+/* ---------- 紫罗兰（5 个页面原本都缺这一套） ---------- */
+html[data-theme="violet"] {
+  --bg1: #f7f9fd; --bg2: #eef1f9; --card: #fff; --text: #16192b; --muted: #6b7590;
+  --line: rgba(22, 25, 43, .08); --accent: #635bff; --accent2: #00b8d9;
+  --accent-hi: #7d6dff; --accent-hi-2: #8b7bff;
+  --accent-ghost-bg: rgba(99, 91, 255, .09); --accent-ghost-line: rgba(99, 91, 255, .14);
+  --accent-shadow: 0 6px 18px rgba(99, 91, 255, .28);
+  --glow1: rgba(99, 91, 255, .22); --glow2: rgba(0, 184, 217, .20);
+  --glass: rgba(255, 255, 255, .82); --focus-bg: #f2f4fa;
+  --ghost-active: #f2f4fa; --ghost-bg: #fbfbfe;
+  --toast-bg: rgba(22, 25, 43, .94); --foot-note: #b9c1c9;
+  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(22, 25, 43, .18);
+}
+
+/* ---------- 墨石青 ---------- */
+html[data-theme="ink"] {
+  --bg1: #0e1517; --bg2: #0a1012; --card: #131b1e; --text: #e2edee; --muted: #7d9194;
+  --line: #212e31; --accent: #2dd4bf; --accent2: #38bdf8;
+  --accent-hi: #4ae3cf; --accent-hi-2: #5ce9d6;
+  --accent-ghost-bg: rgba(45, 212, 191, .10); --accent-ghost-line: rgba(45, 212, 191, .20);
+  --accent-shadow: 0 6px 18px rgba(0, 0, 0, .4);
+  --glow1: rgba(45, 212, 191, .12); --glow2: rgba(56, 189, 248, .10);
+  --glass: rgba(255, 255, 255, .05); --focus-bg: #172326;
+  --ghost-active: #172024; --ghost-bg: #161f22;
+  --toast-bg: rgba(0, 0, 0, .75); --foot-note: #5a6c6f;
+  --logo-border: rgba(255, 255, 255, .10); --logo-shadow: 0 4px 14px rgba(0, 0, 0, .5);
+}

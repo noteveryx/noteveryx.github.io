@@ -141,7 +141,12 @@
           if (plain(shown[j]) === current) { cs[j].classList.add('on'); break; }
         }
       }
-      if (isCustom && input.value.trim() !== current) input.value = current;
+      // 用户正在输入时不要覆盖输入框：
+      // 提交过一次自定义后 isCustom 会一直是 true，
+      // 之后任何一次 sync() 都会把用户新输入的字冲掉
+      if (isCustom && document.activeElement !== input && input.value.trim() !== current) {
+        input.value = current;
+      }
     }
 
     function emit() {
@@ -162,6 +167,7 @@
         isCustom = true;
         input.value = current;
         sync();
+        emit();          // 与 selectQuote 保持一致：外部改值也要通知外部
       },
       selectQuote: function (i) {
         if (!shown[i]) return;

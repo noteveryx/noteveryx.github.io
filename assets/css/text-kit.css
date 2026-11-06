@@ -3,6 +3,13 @@
    横向（.tk-bar）或竖向（.tk-bar.tk-list）排布的句子切换 + 自定义输入
    ========================================================== */
 
+/* ---------- 兜底值集中定义一次，规则里不必重复写 var(--x, 默认值) ---------- */
+:root{
+  --card:#fff; --bg1:#f7f9fd; --bg2:#eef1f9;
+  --text:#16192b; --muted:#98a0b0; --accent:#635bff;
+  --line:rgba(0,0,0,.08); --line-strong:rgba(0,0,0,.16);
+}
+
 /* ---------- 横向句子条（文字形变 / 粒子文字等全屏页） ---------- */
 .tk-bar{
   display:flex;flex-wrap:wrap;align-items:center;gap:6px;
@@ -75,22 +82,22 @@
 
 /* ---------- 浅色主题页面（海报 / 句子收藏） ---------- */
 body.tk-light .tk-bar{
-  background:var(--card,#fff);border-color:var(--line,rgba(0,0,0,.08));box-shadow:none;
+  background:var(--card);border-color:var(--line);box-shadow:none;
 }
 body.tk-light .tk-bar.tk-list{background:transparent;border:none;box-shadow:none;}
 body.tk-light .tk-chip{
-  background:var(--bg1,#f7f9fd);color:var(--text,#16192b);border-color:var(--line,rgba(0,0,0,.08));
+  background:var(--bg1);color:var(--text);border-color:var(--line);
 }
-body.tk-light .tk-chip:hover{background:var(--bg2,#eef1f9);}
-body.tk-light .tk-chip.on{border-color:var(--accent,#635bff);color:var(--accent,#635bff);background:var(--bg1,#f7f9fd);}
+body.tk-light .tk-chip:hover{background:var(--bg2);}
+body.tk-light .tk-chip.on{border-color:var(--accent);color:var(--accent);background:var(--bg1);}
 body.tk-light .tk-input{
-  color:var(--text,#16192b);background:var(--bg1,#f7f9fd);border-color:var(--line,rgba(0,0,0,.16));
+  color:var(--text);background:var(--bg1);border-color:var(--line-strong);
 }
-body.tk-light .tk-input::placeholder{color:var(--muted,#98a0b0);}
+body.tk-light .tk-input::placeholder{color:var(--muted);}
 body.tk-light .tk-ok{
-  background:var(--bg1,#f7f9fd);border-color:var(--line,rgba(0,0,0,.1));color:var(--text,#16192b);
+  background:var(--bg1);border-color:var(--line);color:var(--text);
 }
-body.tk-light .tk-ok:hover{background:var(--bg2,#eef1f9);}
+body.tk-light .tk-ok:hover{background:var(--bg2);}
 
 /* ---------- 折叠：收起后只剩一个小箭头 ---------- */
 .tk-fold{
@@ -109,7 +116,7 @@ body.tk-light .tk-ok:hover{background:var(--bg2,#eef1f9);}
 .tk-bar.tk-folded .tk-fold{background:rgba(255,255,255,.12);color:#fff;}
 .tk-bar.tk-folded .tk-fold svg{transform:rotate(180deg);}
 body.tk-light .tk-fold{
-  border-color:var(--line,rgba(0,0,0,.12));background:var(--bg1,#f7f9fd);color:var(--text,#16192b);
+  border-color:var(--line);background:var(--bg1);color:var(--text);
 }
 body.tk-light .tk-fold:hover{background:var(--bg2,#eef1f9);}
 body.tk-light .tk-bar.tk-folded .tk-fold{background:var(--bg2,#eef1f9);}

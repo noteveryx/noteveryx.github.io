@@ -13,7 +13,11 @@
 (function () {
   'use strict';
 
-  var SITE = 'https://noteveryx.github.io';
+  /* docsify 会把相对链接当内部路由改写，所以首页卡片必须用绝对地址。
+     本地开发时可在 URL 上加 ?site=http://localhost:8000/knowledge-base/ 指向本地，
+     否则点了卡片会跳到线上旧版本，改了本地代码也看不到效果。 */
+  var SITE = (new URLSearchParams(location.search).get('site') || 'https://noteveryx.github.io')
+    .replace(/\/+$/, '');
 
   var PAGES = [
     {
@@ -241,9 +245,14 @@
   if (window.$docsify) {
     window.$docsify.plugins = (window.$docsify.plugins || []).concat(plugin);
   } else {
+    // 轮询等待 docsify 加载；加最大重试次数，
+    // 避免 $docsify 一直没来时每 50ms 永久空转
+    var tries = 0;
     var waitDocsify = setInterval(function () {
       if (window.$docsify) {
         window.$docsify.plugins = (window.$docsify.plugins || []).concat(plugin);
+        clearInterval(waitDocsify);
+      } else if (++tries > 200) {   // 10 秒还没加载出来就放弃
         clearInterval(waitDocsify);
       }
     }, 50);

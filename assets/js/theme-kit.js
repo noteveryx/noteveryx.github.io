@@ -33,7 +33,13 @@
       var t = localStorage.getItem(KEY);
       for (var i = 0; i < THEMES.length; i++) if (THEMES[i].id === t) return THEMES[i];
     } catch (e) { /* 隐私模式等 */ }
-    // 与页面防闪脚本的默认值一致：紫罗兰
+    // 本地没有记录时，沿用页面防闪脚本已经写到 html[data-theme] 上的默认值。
+    // 否则本套件会用自己的默认值（紫罗兰）覆盖掉页面自己的选择
+    //（例如 tool-standby 的深海蓝），造成首屏闪一下，
+    // 且主题面板勾选的项和屏幕实际配色对不上。
+    var attr = document.documentElement.getAttribute('data-theme');
+    for (var j = 0; j < THEMES.length; j++) if (THEMES[j].id === attr) return THEMES[j];
+    // 兜底：紫罗兰
     return THEMES[3];
   }
 
