@@ -22,6 +22,11 @@
 (function () {
   'use strict';
 
+  /* 「配色方案」tab 的对外接口：
+     屏幕取色 / 图片取色拿到颜色后调 setBase()，直接同步成配色方案的主色。
+     （这些 tab 的 render 先于配色方案执行，挂载时已就绪） */
+  var harmonyApi = null;
+
   /* ---------------- 颜色工具 ---------------- */
   function hex2rgb(h) {
     var s = String(h || '').replace('#', '').trim();
@@ -197,6 +202,7 @@
         current = res.sRGBHex.toUpperCase();
         manual.set(current);
         refresh(current);
+        if (harmonyApi) harmonyApi.setBase(current);   /* 同步到「配色方案」主色 */
         ToolBox.toast('取色成功');
       }).catch(function () {
         ToolBox.toast('已取消取色');
@@ -389,7 +395,8 @@
           });
           b.addEventListener('click', function () {
             ToolBox.copy(p.hex);
-            ToolBox.toast('已复制 ' + p.hex);
+            if (harmonyApi) harmonyApi.setBase(p.hex);   /* 同步到「配色方案」主色 */
+            ToolBox.toast('已复制 ' + p.hex + '，并设为配色方案主色');
           });
           sw.appendChild(b);
         });
@@ -402,34 +409,100 @@
   }
 
   /* ==========================================================
-     Tab 4 · 配色方案（复用 palette-kit 的派生逻辑）
+  /* ==========================================================
+     Tab 4 · 配色方案
+     ------------------------------------------------------------
+     之前的版本色块全是黑的，原因是单位错配：
+       · 本文件的 rgb2hsl() 返回 s/l 是 0~100（为了显示 hsl(50%, 50%)）
+       · 但 harmony() 是从 palette-kit 照抄的，那边 rgb2hsl() 返回 0~1
+       · 于是 b.s(=100) 被 Math.min(1, ...) 截成 1，b.l(=56) 被截成 0.88，
+         再送进本文件按 0~100 换算的 hsl2rgb()（内部要除以 100）
+         → 饱和度 0.01、亮度 0.0088 → 渲染出来全是 #020202。
+     现在统一约定：色相用「度」，饱和度/明度一律用「百分点(0~100)」。
      ========================================================== */
+  var HARMONIES = [
+    {
+      id: 'analogous', name: '类似色',
+      desc: '主色两侧的邻近色相，柔和统一，适合大面积铺陈。',
+      cols: [
+        { h: -56, s: 10, l: -14 }, { h: -28, s: 5, l: -9 }, { h: 0, s: 0, l: 0, main: true },
+        { h: 28, s: 5, l: 9 }, { h: 56, s: 10, l: 14 }
+      ]
+    },
+    {
+      id: 'complement', name: '互补色',
+      desc: '色相环正对面的颜色，反差最大，适合只做强调色。',
+      cols: [{ h: 0, s: 0, l: 0, main: true }, { h: 180, s: -4, l: -8 }]
+    },
+    {
+      id: 'triad', name: '三分色',
+      desc: '色相环等分三份，三色都能当主角，活泼但不乱。',
+      cols: [{ h: 0, s: 0, l: 0, main: true }, { h: 120, s: 5, l: -6 }, { h: 240, s: -5, l: 6 }]
+    },
+    {
+      id: 'split', name: '分裂互补',
+      desc: '互补色两侧的邻居，反差接近互补但更耐看。',
+      cols: [{ h: 0, s: 0, l: 0, main: true }, { h: 150, s: 5, l: -7 }, { h: 210, s: -5, l: 7 }]
+    },
+    {
+      id: 'mono', name: '单色',
+      desc: '同一色相的明度梯度，最稳，做深浅层次用。',
+      cols: [
+        { h: 0, s: -14, l: 24 }, { h: 0, s: -7, l: 12 }, { h: 0, s: 0, l: 0, main: true },
+        { h: 0, s: 7, l: -12 }, { h: 0, s: 14, l: -24 }
+      ]
+    }
+  ];
+
+  /* 主色 → 一组协调色
+     s/l 用百分点，与本文件 rgb2hsl() / hsl2rgb() 的 0~100 约定一致 */
+  function harmonyColors(baseHex, kindId) {
+    var kind = null, i;
+    for (i = 0; i < HARMONIES.length; i++) if (HARMONIES[i].id === kindId) kind = HARMONIES[i];
+    var c = hex2rgb(baseHex);
+    if (!c || !kind) return [];
+    var b = rgb2hsl(c.r, c.g, c.b);            /* h:0~360  s/l:0~100 */
+    var gray = b.s < 6;                        /* 灰阶主色：衍生色保持无彩 */
+    var out = [];
+    kind.cols.forEach(function (k) {
+      /* 主色原样输出：绕 HSL 转一圈会有 ±1 的量化误差
+         （#635BFF → #645CFF），用户输入什么就得显示什么 */
+      if (k.main) { out.push(rgb2hex(c.r, c.g, c.b)); return; }
+      var h = (b.h + k.h + 360) % 360;
+      var s = gray ? 0 : Math.max(8, Math.min(100, b.s + k.s));
+      var l = Math.max(14, Math.min(88, b.l + k.l));
+      var rgb = hsl2rgb(h, s, l);              /* hsl2rgb 期望 s/l 为 0~100 */
+      out.push(rgb2hex(rgb.r, rgb.g, rgb.b));
+    });
+    return out;
+  }
+
   function renderHarmony(panel) {
     var card = el('div', { class: 'tb-card' });
     card.appendChild(el('div', { class: 'tb-card-title', text: '配色方案' }));
 
     var base = '#635BFF';
-    var sw = el('div', { class: 'tb-swatches' });
-    var input = el('input', { class: 'tb-in mono', type: 'text', value: base, maxlength: '7' });
-    var field = el('div', { class: 'tb-field' });
-    field.appendChild(el('label', { text: '主色' }));
-    field.appendChild(input);
-    card.appendChild(field);
-    card.appendChild(el('div', { style: 'height:12px' }));
-    card.appendChild(sw);
+    var baseRow = colorRow('主色', base, function (v) { base = v; draw(); });
+    card.appendChild(baseRow.field);
 
+    var row = el('div', { class: 'tb-row', style: 'margin-top:12px' });
+    var pickBtn = el('button', { class: 'tb-btn sm', type: 'button', text: '屏幕取色选主色' });
+    var copyAllBtn = el('button', { class: 'tb-btn sm', type: 'button', text: '复制全部色值' });
+    row.appendChild(pickBtn);
+    row.appendChild(copyAllBtn);
+    card.appendChild(row);
+
+    var sw = el('div', { class: 'tb-pal-grid', style: 'margin-top:14px' });
+    var note = el('p', { class: 'tb-pal-note' });
+    card.appendChild(sw);
+    card.appendChild(note);
+
+    /* 方案切换 */
     var seg = el('div', { class: 'tb-seg', style: 'margin-top:14px' });
-    var kinds = [
-      { id: 'analogous', name: '类似色' },
-      { id: 'complement', name: '互补色' },
-      { id: 'triad', name: '三分色' },
-      { id: 'split', name: '分裂互补' },
-      { id: 'mono', name: '单色' }
-    ];
-    var kind = kinds[0];
+    var kind = HARMONIES[0];
     var buttons = [];
-    kinds.forEach(function (k) {
-      var b = el('button', { type: 'button', text: k.name });
+    HARMONIES.forEach(function (k) {
+      var b = el('button', { type: 'button', text: k.name, title: k.desc });
       b.addEventListener('click', function () {
         kind = k;
         buttons.forEach(function (x) { x.classList.toggle('on', x === b); });
@@ -442,48 +515,79 @@
     card.appendChild(seg);
     panel.appendChild(card);
 
-    function draw() {
-      var v = input.value.trim();
-      if (v[0] !== '#') v = '#' + v;
-      var rgb = hex2rgb(v);
-      if (!rgb) { ToolBox.toast('颜色值无效'); return; }
-      input.value = rgb2hex(rgb.r, rgb.g, rgb.b);
-      var cols = window.PaletteKit ? harmony(kind.id, input.value) : [];
-      sw.innerHTML = '';
-      cols.forEach(function (c) {
-        var b = el('button', {
-          class: 'tb-swatch', type: 'button',
-          style: 'background:' + c + ';width:56px;height:56px', title: c
+    var current = [];
+    /* 色块 DOM 只建一次，后面只改样式和文字。
+       之前每次 draw() 都 sw.innerHTML='' 重建，结果是：
+       在主色输入框里输完字直接点色块 → 失焦触发 change → draw() 重建 DOM
+       → 鼠标按下时还是旧元素、抬起时已是新元素 → click 不触发 → 复制失灵。 */
+    var items = [];
+    function ensureItems(n) {
+      while (items.length < n) {
+        var item = el('div', { class: 'tb-pal-item' });
+        var chip = el('button', { class: 'tb-pal-chip', type: 'button' });
+        var hex = el('div', { class: 'tb-pal-hex' });
+        chip.addEventListener('click', function () {
+          var v = chip.getAttribute('data-hex');
+          if (!v) return;
+          ToolBox.copy(v);
+          ToolBox.toast('已复制 ' + v);
         });
-        b.addEventListener('click', function () { ToolBox.copy(c); ToolBox.toast('已复制 ' + c); });
-        sw.appendChild(b);
-      });
-    }
-
-    /* 与 palette-kit 内部一致的和色规则 */
-    var HARMONIES = {
-      analogous: { hues: [0, 28, -28, 56, -56], sat: [0, .06, -.06, .12, -.12], lig: [0, .09, -.09, .14, -.14] },
-      complement: { hues: [0, 180, 24, 204, 156], sat: [0, .04, .06, -.04, .02], lig: [0, -.08, .1, -.14, .12] },
-      triad: { hues: [0, 120, 240, 60, 300], sat: [0, .05, -.05, .1, -.1], lig: [0, .06, -.06, .12, -.12] },
-      split: { hues: [0, 150, 210, 30, 330], sat: [0, .05, -.05, .08, -.08], lig: [0, .07, -.07, .13, -.13] },
-      mono: { hues: [0, 0, 0, 0, 0], sat: [.14, .07, 0, -.07, -.14], lig: [.24, .12, 0, -.12, -.24] }
-    };
-    function harmony(kindId, baseHex) {
-      var k = HARMONIES[kindId];
-      var b = rgb2hsl.apply(null, (function (c) { return [c.r, c.g, c.b]; })(hex2rgb(baseHex)));
-      var out = [];
-      for (var i = 0; i < 5; i++) {
-        var h = (b.h + k.hues[i] + 360) % 360;
-        var s = Math.max(0.08, Math.min(1, b.s + k.sat[i]));
-        var l = Math.max(0.14, Math.min(0.88, b.l + k.lig[i]));
-        var c = hsl2rgb(h, s, l);
-        out.push(rgb2hex(c.r, c.g, c.b));
+        item.appendChild(chip);
+        item.appendChild(hex);
+        sw.appendChild(item);
+        items.push({ item: item, chip: chip, hex: hex });
       }
-      return out;
+      for (var i = 0; i < items.length; i++) {
+        var on = i < n;
+        items[i].item.style.display = on ? '' : 'none';
+        /* 隐藏的项要把旧色值清干净，否则残留上一次方案的色值 */
+        if (!on) {
+          items[i].chip.removeAttribute('data-hex');
+          items[i].chip.style.background = '';
+          items[i].hex.textContent = '';
+        }
+      }
     }
 
-    input.addEventListener('change', draw);
-    input.addEventListener('blur', draw);
+    function draw() {
+      current = harmonyColors(base, kind.id);
+      ensureItems(current.length);
+      items.forEach(function (x, i) {
+        var c = current[i];
+        if (!c) return;
+        x.chip.setAttribute('data-hex', c);
+        x.chip.style.background = c;
+        x.chip.title = c + '（点击复制）';
+        x.hex.textContent = c;
+      });
+      note.innerHTML = '<b>' + kind.name + '</b> · ' + kind.desc;
+    }
+
+    pickBtn.addEventListener('click', function () {
+      if (!window.EyeDropper) { ToolBox.toast('当前浏览器不支持屏幕取色'); return; }
+      var ed = new window.EyeDropper();
+      ed.open().then(function (res) {
+        baseRow.set(res.sRGBHex.toUpperCase());
+        ToolBox.toast('已设为配色方案主色');
+      }).catch(function () {
+        ToolBox.toast('已取消取色');
+      });
+    });
+
+    copyAllBtn.addEventListener('click', function () {
+      if (!current.length) { ToolBox.toast('没有可复制的色值'); return; }
+      ToolBox.copy(current.join(', '));
+      ToolBox.toast('已复制 ' + current.length + ' 个色值');
+    });
+
+    /* 其他 tab 取到的颜色同步过来（屏幕取色 / 图片取色） */
+    harmonyApi = {
+      setBase: function (hex) {
+        if (!hex2rgb(hex)) return;
+        baseRow.set(String(hex).toUpperCase());
+      }
+    };
+
     draw();
   }
 

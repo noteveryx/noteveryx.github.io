@@ -356,6 +356,41 @@
 }
 .tb-swatch:hover { transform: scale(1.06); }
 
+/* ---------------- 配色方案 ---------------- */
+.tb-pal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 10px;
+}
+.tb-pal-item { min-width: 0; }
+.tb-pal-chip {
+  display: block;
+  width: 100%;
+  height: 58px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.tb-pal-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .16);
+}
+.tb-pal-hex {
+  margin-top: 6px;
+  text-align: center;
+  font: 600 11px/1.3 ui-monospace, Menlo, Consolas, monospace;
+  color: var(--muted);
+  word-break: break-all;
+}
+.tb-pal-note {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+.tb-pal-note b { color: var(--text); font-weight: 700; }
+
 /* ---------------- 提示条 ---------------- */
 .tb-toast {
   position: fixed;
@@ -483,6 +518,12 @@
   .tb-btn { padding: 10px 14px; }
   .tb-btn.sm { padding: 8px 12px; }
   .tb-seg button { padding: 9px 13px; }
+
+  /* 60px 下 5 个色块正好排满一行（340px 宽的手机容器），不会留一个孤行；
+     auto-fit 在 2/3 色的方案里会自动拉宽，色块更好点 */
+  .tb-pal-grid { grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: 8px; }
+  .tb-pal-chip { height: 48px; border-radius: 10px; }
+  .tb-pal-hex { font-size: 10.5px; }
 }
 
 /* 超窄屏（iPhone SE / 老安卓）：两列网格挤成一行 */
