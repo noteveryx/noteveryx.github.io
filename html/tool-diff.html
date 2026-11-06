@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>文本对比</title>
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<link rel="stylesheet" href="../assets/css/themes.css">
+<link rel="stylesheet" href="../assets/css/toolbox.css">
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
+<script src="../assets/js/theme-kit.js" defer></script>
+<script src="../assets/js/toolbox.js" defer></script>
+</head>
+<body class="tb-page">
+<div id="tbRoot"></div>
+
+<script>
+(function () {
+  'use strict';
+  var el = function () { return ToolBox.el.apply(null, arguments); };
+
+  /* ---------------- 通用 LCS 差异序列 ---------------- */
+  function diffSeq(a, b) {
+    var n = a.length, m = b.length;
+    if (n * m > 4000000) {
+      // 行数太多，DP 内存吃不住 → 退化成「整体替换」
+      var out0 = [];
+      a.forEach(function (v) { out0.push({ op: 'del', a: v }); });
+      b.forEach(function (v) { out0.push({ op: 'ins', b: v }); });
+      return out0;
+    }
+    var w = m + 1;
+    var dp = new Uint16Array((n + 1) * w);
+    for (var i = n - 1; i >= 0; i--) {
+      for (var j = m - 1; j >= 0; j--) {
+        dp[i * w + j] = a[i] === b[j]
+          ? dp[(i + 1) * w + j + 1] + 1
+          : Math.max(dp[(i + 1) * w + j], dp[i * w + j + 1]);
+      }
+    }
+    var out = [];
+    var x = 0, y = 0;
+    while (x < n && y < m) {
+      if (a[x] === b[y]) { out.push({ op: 'eq', a: a[x], b: b[y] }); x++; y++; }
+      else if (dp[(x + 1) * w + y] >= dp[x * w + y + 1]) { out.push({ op: 'del', a: a[x] }); x++; }
+      else { out.push({ op: 'ins', b: b[y] }); y++; }
+    }
+    while (x < n) { out.push({ op: 'del', a: a[x++] }); }
+    while (y < m) { out.push({ op: 'ins', b: b[y++] }); }
+    return out;
+  }
+
+  /* 把连续的删/增配成「修改」行 */
+  function toRows(ops) {
+    var rows = [];
+    var i = 0;
+    while (i < ops.length) {
+      if (ops[i].op === 'eq') {
+        rows.push({ type: 'same', left: ops[i].a, right: ops[i].b });
+        i++;
+        continue;
+      }
+      var dels = [], inss = [];
+      while (i < ops.length && ops[i].op === 'del') { dels.push(ops[i].a); i++; }
+      while (i < ops.length && ops[i].op === 'ins') { inss.push(ops[i].b); i++; }
+      var k = Math.max(dels.length, inss.length);
+      for (var j = 0; j < k; j++) {
+        var hasL = j < dels.length, hasR = j < inss.length;
+        rows.push({
+          type: hasL && hasR ? 'change' : (hasL ? 'del' : 'ins'),
+          left: hasL ? dels[j] : undefined,
+          right: hasR ? inss[j] : undefined
+        });
+      }
+    }
+    return rows;
+  }
+
+  /* 词级差异（把修改行里的不同片段标出来） */
+  function markWords(left, right) {
+    var lw = left.split(/(\s+)/);
+    var rw = right.split(/(\s+)/);
+    var ops = diffSeq(lw, rw);
+    var lHtml = '', rHtml = '';
+    function esc(s) {
+      return ToolBox.esc(s);
+    }
+    ops.forEach(function (o) {
+      if (o.op === 'eq') { lHtml += esc(o.a); rHtml += esc(o.b); }
+      else if (o.op === 'del') lHtml += '<del>' + esc(o.a) + '</del>';
+      else rHtml += '<ins>' + esc(o.b) + '</ins>';
+    });
+    return { left: lHtml, right: rHtml };
+  }
+
+  /* ---------------- 页面 ---------------- */
+  function boot() {
+    ToolBox.mount(document.getElementById('tbRoot'), {
+      title: '文本对比',
+      sub: '左右两栏逐行比对，差异高亮标出改了什么',
+      storageKey: 'tb_diff',
+      tabs: [
+        { id: 'main', name: '对比', render: renderMain }
+      ]
+    });
+  }
+
+  function renderMain(panel) {
+    var card = el('div', { class: 'tb-card' });
+    card.appendChild(el('div', { class: 'tb-card-title', text: '两段文本' }));
+
+    var split = el('div', { class: 'tb-split' });
+    var left = el('textarea', { class: 'tb-ta', placeholder: '原始文本…', spellcheck: 'false' });
+    var right = el('textarea', { class: 'tb-ta', placeholder: '修改后的文本…', spellcheck: 'false' });
+    left.style.minHeight = '190px';
+    right.style.minHeight = '190px';
+    split.appendChild(left);
+    split.appendChild(right);
+    card.appendChild(split);
+
+    /* 选项 */
+    var optRow = el('div', { class: 'tb-row', style: 'margin-top:12px' });
+    function mkCheck(label, def) {
+      var cb = el('input', { type: 'checkbox' });
+      cb.checked = !!def;
+      var lab = el('label', { class: 'tb-check' });
+      lab.appendChild(cb);
+      lab.appendChild(el('span', { text: label }));
+      optRow.appendChild(lab);
+      return cb;
+    }
+    var ignoreWs = mkCheck('忽略空白差异', false);
+    var ignoreCase = mkCheck('忽略大小写', false);
+    var onlyDiff = mkCheck('只看差异行', false);
+    var wordLevel = mkCheck('标出具体改动词', true);
+
+    var bar = el('div', { class: 'tb-row', style: 'margin-top:12px' });
+    var btnRun = el('button', { class: 'tb-btn primary', type: 'button', text: '开始对比' });
+    var btnSwap = el('button', { class: 'tb-btn', type: 'button', text: '⇅ 交换两边' });
+    var btnSample = el('button', { class: 'tb-btn', type: 'button', text: '填入示例' });
+    var btnClear = el('button', { class: 'tb-btn', type: 'button', text: '清空' });
+    bar.appendChild(btnRun);
+    bar.appendChild(btnSwap);
+    bar.appendChild(btnSample);
+    bar.appendChild(btnClear);
+    card.appendChild(optRow);
+    card.appendChild(bar);
+    panel.appendChild(card);
+
+    /* 统计 */
+    var statCard = el('div', { class: 'tb-card' });
+    statCard.appendChild(el('div', { class: 'tb-card-title', text: '差异统计' }));
+    var stats = el('div', { class: 'tb-stats' });
+    statCard.appendChild(stats);
+    panel.appendChild(statCard);
+
+    /* 结果 */
+    var resCard = el('div', { class: 'tb-card' });
+    resCard.appendChild(el('div', { class: 'tb-card-title', text: '对比结果' }));
+    var grid = el('div', { class: 'tb-diff' });
+    grid.appendChild(el('div', { class: 'dh', text: '原始文本' }));
+    grid.appendChild(el('div', { class: 'dh', text: '修改后' }));
+    resCard.appendChild(grid);
+    panel.appendChild(resCard);
+
+    function run() {
+      var a = left.value, b = right.value;
+      if (!a && !b) { ToolBox.toast('请至少输入一侧内容'); return; }
+
+      var aLines = a.split(/\r?\n/), bLines = b.split(/\r?\n/);
+      if (ignoreWs.checked) {
+        aLines = aLines.map(function (s) { return s.replace(/\s+/g, ' ').trim(); });
+        bLines = bLines.map(function (s) { return s.replace(/\s+/g, ' ').trim(); });
+      }
+      if (ignoreCase.checked) {
+        aLines = aLines.map(function (s) { return s.toLowerCase(); });
+        bLines = bLines.map(function (s) { return s.toLowerCase(); });
+      }
+
+      var rows = toRows(diffSeq(aLines, bLines));
+      var added = 0, removed = 0, changed = 0;
+      rows.forEach(function (r) {
+        if (r.type === 'ins') added++;
+        else if (r.type === 'del') removed++;
+        else if (r.type === 'change') changed++;
+      });
+
+      // 统计条
+      stats.innerHTML = '';
+      [['新增行', added], ['删除行', removed], ['修改行', changed], ['总行数', aLines.length + ' → ' + bLines.length]]
+        .forEach(function (it) {
+          var s = el('div', { class: 'tb-stat' });
+          s.appendChild(el('div', { class: 'v', text: String(it[1]) }));
+          s.appendChild(el('div', { class: 'k', text: it[0] }));
+          stats.appendChild(s);
+        });
+
+      // 结果网格
+      grid.innerHTML = '';
+      grid.appendChild(el('div', { class: 'dh', text: '原始文本' }));
+      grid.appendChild(el('div', { class: 'dh', text: '修改后' }));
+
+      var shown = 0;
+      rows.forEach(function (r) {
+        if (onlyDiff.checked && r.type === 'same') return;
+        shown++;
+        var lc, rc;
+        if (r.type === 'change' && wordLevel.checked) {
+          var m = markWords(r.left, r.right);
+          lc = m.left; rc = m.right;
+        } else {
+          lc = r.left === undefined ? '' : ToolBox.esc(r.left);
+          rc = r.right === undefined ? '' : ToolBox.esc(r.right);
+        }
+        var lCell = el('div', { class: 'cell ' + (r.left === undefined ? 'blank' : (r.type === 'same' ? '' : 'del')) });
+        var rCell = el('div', { class: 'cell ' + (r.right === undefined ? 'blank' : (r.type === 'same' ? '' : 'ins')) });
+        lCell.innerHTML = lc || '';
+        rCell.innerHTML = rc || '';
+        grid.appendChild(lCell);
+        grid.appendChild(rCell);
+      });
+      if (!shown) {
+        grid.appendChild(el('div', { class: 'cell', style: 'grid-column:1/-1;color:var(--muted)', text: '两边完全一致，没有差异' }));
+      }
+    }
+
+    btnRun.addEventListener('click', run);
+    btnSwap.addEventListener('click', function () {
+      var t = left.value; left.value = right.value; right.value = t;
+      run();
+    });
+    btnClear.addEventListener('click', function () {
+      left.value = ''; right.value = '';
+      stats.innerHTML = '';
+      grid.innerHTML = '';
+      grid.appendChild(el('div', { class: 'dh', text: '原始文本' }));
+      grid.appendChild(el('div', { class: 'dh', text: '修改后' }));
+    });
+    btnSample.addEventListener('click', function () {
+      left.value = 'function greet(name) {\n  return "Hello, " + name;\n}\n\n// 旧版本\nvar msg = "hi";';
+      right.value = 'function greet(name, greeting = "Hello") {\n  return `${greeting}, ${name}!`;\n}\n\n// 新版本：改成 const 和模板字符串\nconst msg = `hi ${Date.now()}`;';
+      run();
+    });
+
+    [ignoreWs, ignoreCase, onlyDiff, wordLevel].forEach(function (cb) {
+      cb.addEventListener('change', run);
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>

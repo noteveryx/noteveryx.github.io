@@ -115,6 +115,7 @@
 <div class="ui label" id="label">Aurora · <b>极光</b></div>
 
 <script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/save-kit.js"></script>
 <script>
 (function () {
   'use strict';
@@ -339,6 +340,15 @@
   resize();
   if (!reduceMotion) start();
 })();
+</script>
+<script>
+  /* 统一「保存为壁纸」入口：导出当前画面，分辨率 = CSS 尺寸 × devicePixelRatio */
+  SaveKit.mountButton({
+    canvas: document.getElementById('cv'),
+    filename: 'aurora',
+    container: document.querySelector('.ui.tools'),
+    title: '保存为壁纸'
+  });
 </script>
 </body>
 </html>

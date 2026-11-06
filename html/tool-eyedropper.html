@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>取色器 · 对比度检测</title>
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<link rel="stylesheet" href="../assets/css/themes.css">
+<link rel="stylesheet" href="../assets/css/toolbox.css">
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
+<script src="../assets/js/theme-kit.js" defer></script>
+<script src="../assets/js/toolbox.js" defer></script>
+<script src="../assets/js/palette-kit.js" defer></script>
+</head>
+<body class="tb-page">
+<div id="tbRoot"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------------- 颜色工具 ---------------- */
+  function hex2rgb(h) {
+    var s = String(h || '').replace('#', '').trim();
+    if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2];
+    if (!/^[0-9a-fA-F]{6}$/.test(s)) return null;
+    var n = parseInt(s, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  function rgb2hex(r, g, b) {
+    function f(v) { return ('0' + Math.round(v).toString(16)).slice(-2); }
+    return ('#' + f(r) + f(g) + f(b)).toUpperCase();
+  }
+  function rgb2hsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    var mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    var h = 0, s = 0, l = (mx + mn) / 2, d = mx - mn;
+    if (d) {
+      s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+      if (mx === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (mx === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+    }
+    return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
+  }
+  function hsl2rgb(h, s, l) {
+    h = ((h % 360) + 360) % 360; s /= 100; l /= 100;
+    var c = (1 - Math.abs(2 * l - 1)) * s;
+    var x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    var m = l - c / 2, r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; }
+    else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; }
+    else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    return { r: Math.round((r + m) * 255), g: Math.round((g + m) * 255), b: Math.round((b + m) * 255) };
+  }
+
+  /* WCAG 相对亮度与对比度 */
+  function luminance(rgb) {
+    var a = [rgb.r, rgb.g, rgb.b].map(function (c) {
+      c /= 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+  function contrastRatio(c1, c2) {
+    var l1 = luminance(c1), l2 = luminance(c2);
+    var hi = Math.max(l1, l2), lo = Math.min(l1, l2);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+  function grade(ratio) {
+    // ratio = 1 → 21
+    if (ratio >= 7) return { aa: true, aaa: true, label: 'AAA', tone: 'ok' };
+    if (ratio >= 4.5) return { aa: true, aaa: false, label: 'AA', tone: 'ok' };
+    if (ratio >= 3) return { aa: false, aaa: false, label: '仅大字 AA', tone: 'warn' };
+    return { aa: false, aaa: false, label: '不达标', tone: 'bad' };
+  }
+
+  var el = function () { return ToolBox.el.apply(null, arguments); };
+
+  /* 颜色输入行：色块 + HEX 输入 */
+  function colorRow(label, value, onChange) {
+    var input = el('input', { class: 'tb-in mono', type: 'text', maxlength: '7', value: value, spellcheck: 'false' });
+    var chip = el('span', { class: 'tb-swatch', style: 'width:34px;height:34px;border-radius:9px;background:' + value });
+    var row = el('div', { class: 'tb-row tight' }, '');
+    row.appendChild(chip);
+    row.appendChild(input);
+
+    var field = el('div', { class: 'tb-field' });
+    field.appendChild(el('label', { text: label }));
+    field.appendChild(row);
+
+    function commit() {
+      var v = input.value.trim();
+      if (!v) v = '#000000';
+      if (v[0] !== '#') v = '#' + v;
+      if (!hex2rgb(v)) { ToolBox.toast('颜色值无效'); input.value = value; return; }
+      value = rgb2hex(hex2rgb(v).r, hex2rgb(v).g, hex2rgb(v).b);
+      input.value = value;
+      chip.style.background = value;
+      onChange(value);
+    }
+    input.addEventListener('change', commit);
+    input.addEventListener('blur', commit);
+    chip.addEventListener('click', function () {
+      ToolBox.copy(value);
+      ToolBox.toast('已复制 ' + value);
+    });
+    chip.title = '点击复制';
+    return { field: field, set: function (v) { value = v; input.value = v; chip.style.background = v; onChange(v); } };
+  }
+
+  /* ---------------- 公共：当前色展示块 ---------------- */
+  function colorReadout(hex) {
+    var rgb = hex2rgb(hex) || { r: 0, g: 0, b: 0 };
+    var hsl = rgb2hsl(rgb.r, rgb.g, rgb.b);
+    var big = el('div', {
+      class: 'tb-out',
+      style: 'background:' + hex + ';color:' + (luminance(rgb) > 0.35 ? '#111' : '#fff') +
+        ';font:800 26px/1.2 ui-monospace,Menlo,Consolas,monospace;text-align:center;min-height:96px;display:flex;align-items:center;justify-content:center;letter-spacing:.02em;'
+    }, hex);
+    var stats = el('div', { class: 'tb-stats' });
+    var items = [
+      ['HEX', hex],
+      ['RGB', rgb.r + ', ' + rgb.g + ', ' + rgb.b],
+      ['HSL', 'hsl(' + hsl.h + ', ' + hsl.s + '%, ' + hsl.l + '%)'],
+      ['亮度', luminance(rgb).toFixed(3)]
+    ];
+    items.forEach(function (it) {
+      var s = el('div', { class: 'tb-stat' });
+      s.appendChild(el('div', { class: 'v', style: 'font-size:14px;font-family:ui-monospace,Menlo,monospace', text: String(it[1]) }));
+      s.appendChild(el('div', { class: 'k', text: it[0] }));
+      stats.appendChild(s);
+    });
+    return { big: big, stats: stats };
+  }
+
+  /* ==========================================================
+     Tab 1 · 屏幕取色
+     ========================================================== */
+  function renderPick(panel) {
+    var card = el('div', { class: 'tb-card' });
+    card.appendChild(el('div', { class: 'tb-card-title', text: '屏幕取色' }));
+
+    var current = '#635BFF';
+    var read = colorReadout(current);
+    card.appendChild(read.big);
+    card.appendChild(el('div', { style: 'height:10px' }));
+    card.appendChild(read.stats);
+
+    var row = el('div', { class: 'tb-row', style: 'margin-top:14px' });
+    var pickBtn = el('button', { class: 'tb-btn primary', type: 'button', text: '开始取色' });
+    var copyBtn = el('button', { class: 'tb-btn', type: 'button', text: '复制色值' });
+    row.appendChild(pickBtn);
+    row.appendChild(copyBtn);
+    card.appendChild(row);
+
+    var manual = colorRow('手动输入', current, function (v) { current = v; refresh(v); });
+    card.appendChild(el('div', { style: 'height:12px' }));
+    card.appendChild(manual.field);
+
+    card.appendChild(el('p', {
+      class: 'tb-hint', style: 'margin-top:12px',
+      html: '「开始取色」需要浏览器支持 <b>EyeDropper</b>（Chrome / Edge 桌面版）。不支持时可用上面的手动输入，或到「图片取色」页从截图取色。'
+    }));
+    panel.appendChild(card);
+
+    function refresh(v) {
+      var rgb = hex2rgb(v);
+      if (!rgb) return;
+      var hsl = rgb2hsl(rgb.r, rgb.g, rgb.b);
+      read.big.textContent = v;
+      read.big.style.background = v;
+      read.big.style.color = luminance(rgb) > 0.35 ? '#111' : '#fff';
+      var vs = read.stats.querySelectorAll('.tb-stat .v');
+      vs[0].textContent = v;
+      vs[1].textContent = rgb.r + ', ' + rgb.g + ', ' + rgb.b;
+      vs[2].textContent = 'hsl(' + hsl.h + ', ' + hsl.s + '%, ' + hsl.l + '%)';
+      vs[3].textContent = luminance(rgb).toFixed(3);
+    }
+
+    copyBtn.addEventListener('click', function () {
+      ToolBox.copy(current);
+      ToolBox.toast('已复制 ' + current);
+    });
+
+    pickBtn.addEventListener('click', function () {
+      if (!window.EyeDropper) {
+        ToolBox.toast('当前浏览器不支持屏幕取色');
+        return;
+      }
+      var ed = new window.EyeDropper();
+      ed.open().then(function (res) {
+        current = res.sRGBHex.toUpperCase();
+        manual.set(current);
+        refresh(current);
+        ToolBox.toast('取色成功');
+      }).catch(function () {
+        ToolBox.toast('已取消取色');
+      });
+    });
+  }
+
+  /* ==========================================================
+     Tab 2 · 对比度检测（WCAG）
+     ========================================================== */
+  function renderWcag(panel) {
+    var card = el('div', { class: 'tb-card' });
+    card.appendChild(el('div', { class: 'tb-card-title', text: '前景 / 背景 对比度' }));
+
+    var fg = '#16192B';
+    var bg = '#FFFFFF';
+
+    var row1 = colorRow('前景色（文字）', fg, function (v) { fg = v; update(); });
+    var row2 = colorRow('背景色', bg, function (v) { bg = v; update(); });
+    card.appendChild(row1.field);
+    card.appendChild(el('div', { style: 'height:10px' }));
+    card.appendChild(row2.field);
+
+    var swapBtn = el('button', { class: 'tb-btn sm', type: 'button', text: '⇅ 交换前后景' });
+    swapBtn.addEventListener('click', function () {
+      var t = fg; fg = bg; bg = t;
+      row1.set(fg); row2.set(bg);
+    });
+    card.appendChild(el('div', { class: 'tb-row', style: 'margin-top:10px' }, ''));
+    card.lastChild.appendChild(swapBtn);
+
+    panel.appendChild(card);
+
+    /* 预览 */
+    var prev = el('div', { class: 'tb-card' });
+    prev.appendChild(el('div', { class: 'tb-card-title', text: '效果预览' }));
+    var bigText = el('div', {
+      style: 'border-radius:14px;padding:26px 20px;text-align:center;border:1px solid var(--line);' +
+        'font-size:17px;font-weight:700;margin-bottom:10px;'
+    }, '这是一段示例文字 The quick brown fox');
+    var smallText = el('div', {
+      style: 'border-radius:14px;padding:14px 20px;font-size:12px;border:1px solid var(--line);'
+    }, '这是小字号文字，正文说明性文字一般用 12~14px');
+    prev.appendChild(bigText);
+    prev.appendChild(smallText);
+    panel.appendChild(prev);
+
+    /* 判定 */
+    var res = el('div', { class: 'tb-card' });
+    res.appendChild(el('div', { class: 'tb-card-title', text: 'WCAG 判定' }));
+    var ratioBox = el('div', { class: 'tb-out', style: 'font:800 30px/1.2 ui-monospace,Menlo,monospace;text-align:center;min-height:70px;display:flex;align-items:center;justify-content:center' });
+    var badgeRow = el('div', { class: 'tb-row', style: 'margin-top:12px' });
+    var badges = [];
+    ['普通文字 AA (4.5:1)', '普通文字 AAA (7:1)', '大字 AA (3:1)'].forEach(function (t) {
+      var b = el('span', {
+        class: 'tb-btn sm',
+        style: 'pointer-events:none;border-radius:999px;padding:5px 11px'
+      }, t);
+      badges.push(b);
+      badgeRow.appendChild(b);
+    });
+    var suggest = el('p', { class: 'tb-hint', style: 'margin-top:12px' });
+    res.appendChild(ratioBox);
+    res.appendChild(badgeRow);
+    res.appendChild(suggest);
+    panel.appendChild(res);
+
+    function update() {
+      var c1 = hex2rgb(fg), c2 = hex2rgb(bg);
+      if (!c1 || !c2) return;
+      var ratio = contrastRatio(c1, c2);
+      var g = grade(ratio);
+
+      bigText.style.background = bg;
+      bigText.style.color = fg;
+      smallText.style.background = bg;
+      smallText.style.color = fg;
+
+      ratioBox.textContent = ratio.toFixed(2) + ' : 1';
+      ratioBox.style.color = g.tone === 'ok' ? 'var(--accent)' : (g.tone === 'warn' ? '#d97706' : '#dc2626');
+
+      var pass = [ratio >= 4.5, ratio >= 7, ratio >= 3];
+      badges.forEach(function (b, i) {
+        var ok = pass[i];
+        b.style.borderColor = ok ? 'var(--accent)' : 'var(--line)';
+        b.style.color = ok ? 'var(--accent)' : 'var(--muted)';
+        b.style.background = ok ? 'var(--accent-ghost-bg)' : 'transparent';
+        b.textContent = (ok ? '✓ ' : '✕ ') + b.textContent.replace(/^[✓✕] /, '');
+      });
+
+      // 建议：保持背景不变，给出更合适的文字色
+      var best = null;
+      ['#000000', '#FFFFFF', '#16192B', '#FFFFFF'].forEach(function (cand) {
+        var r = contrastRatio(hex2rgb(cand), c2);
+        if (!best || r > best.r) best = { c: cand, r: r };
+      });
+      suggest.innerHTML = '当前组合判定：<b>' + g.label + '</b>。' +
+        '若背景不变，建议文字色用 <b>' + best.c + '</b>（对比度 ' + best.r.toFixed(2) + ':1）。';
+    }
+    update();
+  }
+
+  /* ==========================================================
+     Tab 3 · 图片取色（提取主色）
+     ========================================================== */
+  function renderImage(panel) {
+    var card = el('div', { class: 'tb-card' });
+    card.appendChild(el('div', { class: 'tb-card-title', text: '从图片提取颜色' }));
+
+    var drop = el('div', { class: 'tb-drop' });
+    drop.appendChild(el('div', { class: 'big', text: '🖼' }));
+    drop.appendChild(el('div', { class: 't', text: '点击选择图片，或直接拖进来' }));
+    drop.appendChild(el('div', { class: 's', text: '全部在本地处理，不会上传到任何服务器' }));
+    var fileInput = el('input', { type: 'file', accept: 'image/*', style: 'display:none' });
+    card.appendChild(drop);
+    card.appendChild(fileInput);
+    panel.appendChild(card);
+
+    var out = el('div', { class: 'tb-card' });
+    out.appendChild(el('div', { class: 'tb-card-title', text: '主色' }));
+    var sw = el('div', { class: 'tb-swatches' });
+    var info = el('div', { class: 'tb-out', style: 'margin-top:12px' });
+    out.appendChild(sw);
+    out.appendChild(info);
+    panel.appendChild(out);
+
+    drop.addEventListener('click', function () { fileInput.click(); });
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); });
+    });
+    drop.addEventListener('drop', function (e) {
+      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) handle(f);
+    });
+    fileInput.addEventListener('change', function () {
+      if (fileInput.files && fileInput.files[0]) handle(fileInput.files[0]);
+    });
+
+    function handle(file) {
+      ToolBox.readImage(file).then(function (r) {
+        var cv = document.createElement('canvas');
+        var max = 160;                       // 缩到 160px 内统计，够准且快
+        var scale = Math.min(1, max / Math.max(r.w, r.h));
+        cv.width = Math.max(1, Math.round(r.w * scale));
+        cv.height = Math.max(1, Math.round(r.h * scale));
+        var c = cv.getContext('2d', { willReadFrequently: true });
+        c.drawImage(r.img, 0, 0, cv.width, cv.height);
+        var data;
+        try { data = c.getImageData(0, 0, cv.width, cv.height).data; }
+        catch (e) { ToolBox.toast('无法读取像素（跨域图片？）'); return; }
+
+        // 颜色量化：每通道 4 bit → 4096 个桶，统计频次
+        var buckets = {};
+        for (var i = 0; i < data.length; i += 4) {
+          if (data[i + 3] < 125) continue;                       // 跳过透明像素
+          var key = ((data[i] >> 4) << 8) | ((data[i + 1] >> 4) << 4) | (data[i + 2] >> 4);
+          var b = buckets[key];
+          if (!b) { b = buckets[key] = { n: 0, r: 0, g: 0, bl: 0 }; }
+          b.n++; b.r += data[i]; b.g += data[i + 1]; b.bl += data[i + 2];
+        }
+        var list = Object.keys(buckets).map(function (k) {
+          var b = buckets[k];
+          return { n: b.n, hex: rgb2hex(b.r / b.n, b.g / b.n, b.bl / b.n) };
+        }).sort(function (a, b) { return b.n - a.n; });
+
+        if (!list.length) { ToolBox.toast('没有可用的颜色'); return; }
+
+        // 相近色合并（距离 < 40 视为同一个色）
+        var picked = [];
+        list.forEach(function (item) {
+          var rgb = hex2rgb(item.hex);
+          var near = picked.some(function (p) {
+            var q = hex2rgb(p.hex);
+            var d = Math.sqrt(Math.pow(p.rgb.r - q.r, 2) + Math.pow(p.rgb.g - q.g, 2) + Math.pow(p.rgb.b - q.b, 2));
+            return d < 40;
+          });
+          if (!near && picked.length < 8) picked.push({ hex: item.hex, rgb: rgb, pct: item.n });
+        });
+
+        var totalPx = cv.width * cv.height;
+        sw.innerHTML = '';
+        picked.forEach(function (p) {
+          var b = el('button', {
+            class: 'tb-swatch', type: 'button',
+            style: 'background:' + p.hex + ';width:56px;height:56px',
+            title: p.hex + '（' + (p.pct * 100 / totalPx).toFixed(1) + '%）'
+          });
+          b.addEventListener('click', function () {
+            ToolBox.copy(p.hex);
+            ToolBox.toast('已复制 ' + p.hex);
+          });
+          sw.appendChild(b);
+        });
+
+        info.textContent = '图片尺寸 ' + r.w + '×' + r.h + ' · 共提取 ' + picked.length + ' 个主色（点击色块复制）';
+      }).catch(function (e) {
+        ToolBox.toast('读取失败：' + (e && e.message ? e.message : '未知错误'));
+      });
+    }
+  }
+
+  /* ==========================================================
+     Tab 4 · 配色方案（复用 palette-kit 的派生逻辑）
+     ========================================================== */
+  function renderHarmony(panel) {
+    var card = el('div', { class: 'tb-card' });
+    card.appendChild(el('div', { class: 'tb-card-title', text: '配色方案' }));
+
+    var base = '#635BFF';
+    var sw = el('div', { class: 'tb-swatches' });
+    var input = el('input', { class: 'tb-in mono', type: 'text', value: base, maxlength: '7' });
+    var field = el('div', { class: 'tb-field' });
+    field.appendChild(el('label', { text: '主色' }));
+    field.appendChild(input);
+    card.appendChild(field);
+    card.appendChild(el('div', { style: 'height:12px' }));
+    card.appendChild(sw);
+
+    var seg = el('div', { class: 'tb-seg', style: 'margin-top:14px' });
+    var kinds = [
+      { id: 'analogous', name: '类似色' },
+      { id: 'complement', name: '互补色' },
+      { id: 'triad', name: '三分色' },
+      { id: 'split', name: '分裂互补' },
+      { id: 'mono', name: '单色' }
+    ];
+    var kind = kinds[0];
+    var buttons = [];
+    kinds.forEach(function (k) {
+      var b = el('button', { type: 'button', text: k.name });
+      b.addEventListener('click', function () {
+        kind = k;
+        buttons.forEach(function (x) { x.classList.toggle('on', x === b); });
+        draw();
+      });
+      buttons.push(b);
+      seg.appendChild(b);
+    });
+    buttons[0].classList.add('on');
+    card.appendChild(seg);
+    panel.appendChild(card);
+
+    function draw() {
+      var v = input.value.trim();
+      if (v[0] !== '#') v = '#' + v;
+      var rgb = hex2rgb(v);
+      if (!rgb) { ToolBox.toast('颜色值无效'); return; }
+      input.value = rgb2hex(rgb.r, rgb.g, rgb.b);
+      var cols = window.PaletteKit ? harmony(kind.id, input.value) : [];
+      sw.innerHTML = '';
+      cols.forEach(function (c) {
+        var b = el('button', {
+          class: 'tb-swatch', type: 'button',
+          style: 'background:' + c + ';width:56px;height:56px', title: c
+        });
+        b.addEventListener('click', function () { ToolBox.copy(c); ToolBox.toast('已复制 ' + c); });
+        sw.appendChild(b);
+      });
+    }
+
+    /* 与 palette-kit 内部一致的和色规则 */
+    var HARMONIES = {
+      analogous: { hues: [0, 28, -28, 56, -56], sat: [0, .06, -.06, .12, -.12], lig: [0, .09, -.09, .14, -.14] },
+      complement: { hues: [0, 180, 24, 204, 156], sat: [0, .04, .06, -.04, .02], lig: [0, -.08, .1, -.14, .12] },
+      triad: { hues: [0, 120, 240, 60, 300], sat: [0, .05, -.05, .1, -.1], lig: [0, .06, -.06, .12, -.12] },
+      split: { hues: [0, 150, 210, 30, 330], sat: [0, .05, -.05, .08, -.08], lig: [0, .07, -.07, .13, -.13] },
+      mono: { hues: [0, 0, 0, 0, 0], sat: [.14, .07, 0, -.07, -.14], lig: [.24, .12, 0, -.12, -.24] }
+    };
+    function harmony(kindId, baseHex) {
+      var k = HARMONIES[kindId];
+      var b = rgb2hsl.apply(null, (function (c) { return [c.r, c.g, c.b]; })(hex2rgb(baseHex)));
+      var out = [];
+      for (var i = 0; i < 5; i++) {
+        var h = (b.h + k.hues[i] + 360) % 360;
+        var s = Math.max(0.08, Math.min(1, b.s + k.sat[i]));
+        var l = Math.max(0.14, Math.min(0.88, b.l + k.lig[i]));
+        var c = hsl2rgb(h, s, l);
+        out.push(rgb2hex(c.r, c.g, c.b));
+      }
+      return out;
+    }
+
+    input.addEventListener('change', draw);
+    input.addEventListener('blur', draw);
+    draw();
+  }
+
+  /* ---------------- 启动 ---------------- */
+  function boot() {
+    ToolBox.mount(document.getElementById('tbRoot'), {
+      title: '取色器',
+      sub: '屏幕取色 · 对比度检测 · 图片主色提取 · 配色方案',
+      storageKey: 'tb_eyedropper',
+      tabs: [
+        { id: 'pick', name: '屏幕取色', render: renderPick },
+        { id: 'wcag', name: '对比度检测', render: renderWcag },
+        { id: 'image', name: '图片取色', render: renderImage },
+        { id: 'harmony', name: '配色方案', render: renderHarmony }
+      ]
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>图片处理台</title>
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<link rel="stylesheet" href="../assets/css/themes.css">
+<link rel="stylesheet" href="../assets/css/toolbox.css">
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
+<script src="../assets/js/theme-kit.js" defer></script>
+<script src="../assets/js/toolbox.js" defer></script>
+</head>
+<body class="tb-page">
+<div id="tbRoot"></div>
+
+<script>
+(function () {
+  'use strict';
+  var el = function () { return ToolBox.el.apply(null, arguments); };
+  var MAX_EDGE = 4096;      // 超过这个边长先等比缩小，避免 canvas 超限
+
+  function encode(canvas, mime, quality) {
+    return new Promise(function (resolve, reject) {
+      canvas.toBlob(function (b) {
+        if (b) resolve(b); else reject(new Error('编码失败'));
+      }, mime, quality);
+    });
+  }
+
+  /* 二分搜索质量，压到目标体积以内 */
+  function compressTo(canvas, targetBytes, mime) {
+    return encode(canvas, mime, 0.92).then(function (first) {
+      if (first.size <= targetBytes) return { blob: first, q: 0.92 };
+      var lo = 0.05, hi = 0.92, best = null;
+      function step() {
+        var mid = (lo + hi) / 2;
+        return encode(canvas, mime, mid).then(function (b) {
+          if (b.size <= targetBytes) { lo = mid; best = b; }
+          else hi = mid;
+          if (hi - lo < 0.02) return best;
+          return step();
+        });
+      }
+      return step().then(function (b) {
+        return { blob: b || first, q: lo };
+      });
+    });
+  }
+
+  function downloadBlob(blob, name) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+  }
+
+  function baseName(name) {
+    return String(name || 'image').replace(/\.[^.]+$/, '');
+  }
+
+  /* ==========================================================
+     通用面板：上传 → 预览 → 参数 → 处理 → 下载
+     ========================================================== */
+  function buildPanel(panel, opts) {
+    opts = opts || {};
+    var state = { img: null, file: null, w: 0, h: 0 };
+
+    /* --- 上传区 --- */
+    var drop = el('div', { class: 'tb-drop' });
+    drop.appendChild(el('div', { class: 'big', text: '📁' }));
+    drop.appendChild(el('div', { class: 't', text: '点击选择图片，或拖进来' }));
+    drop.appendChild(el('div', { class: 's', text: '所有处理都在你的浏览器里完成，图片不会上传' }));
+    var fileInput = el('input', { type: 'file', accept: 'image/*', style: 'display:none' });
+    var upCard = el('div', { class: 'tb-card' });
+    upCard.appendChild(drop);
+    upCard.appendChild(fileInput);
+    panel.appendChild(upCard);
+
+    /* --- 预览区 --- */
+    var prevCard = el('div', { class: 'tb-card' });
+    prevCard.appendChild(el('div', { class: 'tb-card-title', text: '预览' }));
+    var prevBox = el('div', { class: 'tb-preview' });
+    var canvas = el('canvas', { style: 'max-width:100%;display:block' });
+    prevBox.appendChild(canvas);
+    prevCard.appendChild(prevBox);
+    var meta = el('p', { class: 'tb-hint', style: 'margin-top:8px' });
+    prevCard.appendChild(meta);
+    panel.appendChild(prevCard);
+
+    /* --- 参数区（由调用方填充） --- */
+    var paramCard = el('div', { class: 'tb-card' });
+    paramCard.appendChild(el('div', { class: 'tb-card-title', text: opts.paramTitle || '参数' }));
+    var paramBody = el('div', { class: 'tb-col' });
+    paramCard.appendChild(paramBody);
+    panel.appendChild(paramCard);
+
+    /* --- 操作区 --- */
+    var actCard = el('div', { class: 'tb-card' });
+    var bar = el('div', { class: 'tb-row' });
+    var btnRun = el('button', { class: 'tb-btn primary', type: 'button', text: opts.runText || '处理' });
+    var btnSave = el('button', { class: 'tb-btn', type: 'button', text: '下载结果' });
+    btnSave.disabled = true;
+    bar.appendChild(btnRun);
+    bar.appendChild(btnSave);
+    actCard.appendChild(bar);
+    var result = el('div', { class: 'tb-out', style: 'margin-top:12px', 'data-empty': '处理结果会显示在这里' });
+    actCard.appendChild(result);
+    panel.appendChild(actCard);
+
+    var lastBlob = null;
+
+    function setMeta(txt) { meta.innerHTML = txt; }
+
+    function drawTo(ctx, w, h) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(state.img, 0, 0, w, h);
+    }
+
+    function showOriginal() {
+      var w = state.img.naturalWidth, h = state.img.naturalHeight;
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      drawTo(ctx, w, h);
+      setMeta('原图 <b>' + state.w + '×' + state.h + '</b> · 文件 <b>' +
+        ToolBox.fmtBytes(state.file.size) + '</b>' +
+        (w > MAX_EDGE || h > MAX_EDGE ? ' · 边长超过 ' + MAX_EDGE + '，处理时已等比缩小' : ''));
+    }
+
+    function handle(file) {
+      if (!file) return;
+      ToolBox.readImage(file).then(function (r) {
+        state.img = r.img;
+        state.file = file;
+        state.w = r.w;
+        state.h = r.h;
+        lastBlob = null;
+        btnSave.disabled = true;
+        result.textContent = '';
+        showOriginal();
+        if (opts.onLoad) opts.onLoad(state);
+      }).catch(function (e) {
+        ToolBox.toast('读取失败：' + (e && e.message ? e.message : '未知错误'));
+      });
+    }
+
+    drop.addEventListener('click', function () { fileInput.click(); });
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); });
+    });
+    drop.addEventListener('drop', function (e) {
+      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) handle(f);
+    });
+    fileInput.addEventListener('change', function () {
+      if (fileInput.files && fileInput.files[0]) handle(fileInput.files[0]);
+    });
+
+    btnRun.addEventListener('click', function () {
+      if (!state.img) { ToolBox.toast('请先选择图片'); return; }
+      btnRun.disabled = true;
+      result.textContent = '处理中…';
+      Promise.resolve()
+        .then(function () { return opts.run(state, canvas); })
+        .then(function (out) {
+          lastBlob = out.blob;
+          btnSave.disabled = false;
+          result.innerHTML = out.text;
+        })
+        .catch(function (e) {
+          result.textContent = '处理失败：' + (e && e.message ? e.message : '未知错误');
+        })
+        .then(function () { btnRun.disabled = false; });
+    });
+
+    btnSave.addEventListener('click', function () {
+      if (!lastBlob) { ToolBox.toast('还没有可下载的结果'); return; }
+      downloadBlob(lastBlob, opts.filename(state));
+      ToolBox.toast('已开始下载');
+    });
+
+    return {
+      state: state, canvas: canvas, paramBody: paramBody,
+      setMeta: setMeta, drawTo: drawTo, result: result,
+      setResult: function (t) { result.innerHTML = t; }
+    };
+  }
+
+  /* 生成一张与原图同尺寸的工作画布（超限则等比缩小） */
+  function workCanvas(img, maxEdge) {
+    var w = img.naturalWidth, h = img.naturalHeight;
+    var scale = Math.min(1, maxEdge / Math.max(w, h));
+    var cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(w * scale));
+    cv.height = Math.max(1, Math.round(h * scale));
+    return cv;
+  }
+
+  /* ==========================================================
+     Tab 1 · 压缩
+     ========================================================== */
+  function renderCompress(panel) {
+    var target = el('input', { class: 'tb-in short', type: 'number', value: '200', min: '10', max: '10240' });
+    var tf = el('div', { class: 'tb-field' });
+    tf.appendChild(el('label', { text: '目标大小 (KB)' }));
+    tf.appendChild(target);
+
+    var mimeSel = el('select', { class: 'tb-sel' });
+    [['image/jpeg', 'JPEG（适合照片）'], ['image/webp', 'WebP（体积更小）'], ['image/png', 'PNG（无损，不压缩）']]
+      .forEach(function (o) {
+        var op = el('option', { value: o[0], text: o[1] });
+        mimeSel.appendChild(op);
+      });
+    var mf = el('div', { class: 'tb-field' });
+    mf.appendChild(el('label', { text: '输出格式' }));
+    mf.appendChild(mimeSel);
+
+    var ui = buildPanel(panel, {
+      paramTitle: '压缩设置', runText: '开始压缩',
+      filename: function (s) { return baseName(s.file.name) + '-compressed.' + mimeSel.value.split('/')[1]; },
+      run: function (state) {
+        var kb = Math.max(10, parseInt(target.value, 10) || 200);
+        var mime = mimeSel.value;
+        var cv = workCanvas(state.img, MAX_EDGE);
+        var ctx = cv.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(state.img, 0, 0, cv.width, cv.height);
+
+        if (mime === 'image/png') {
+          return encode(cv, mime).then(function (blob) {
+            return {
+              blob: blob,
+              text: 'PNG 为无损格式，无法通过质量参数压缩。<br>原大小 <b>' +
+                ToolBox.fmtBytes(state.file.size) + '</b> → 输出 <b>' + ToolBox.fmtBytes(blob.size) + '</b>' +
+                '。<br>若要真正减小体积，请改用 JPEG 或 WebP，或减小目标体积。'
+            };
+          });
+        }
+        return compressTo(cv, kb * 1024, mime).then(function (r) {
+          var saved = state.file.size - r.blob.size;
+          var pct = state.file.size ? Math.round(saved / state.file.size * 100) : 0;
+          return {
+            blob: r.blob,
+            text: '原大小 <b>' + ToolBox.fmtBytes(state.file.size) + '</b> → 输出 <b>' +
+              ToolBox.fmtBytes(r.blob.size) + '</b><br>节省 <b>' + ToolBox.fmtBytes(saved) + '</b>（' +
+              pct + '%）· 质量系数 ' + r.q.toFixed(2) +
+              (r.blob.size > kb * 1024 ? '<br><span style="color:#d97706">已到该格式的体积下限，再压会明显糊</span>' : '')
+          };
+        });
+      }
+    });
+    ui.paramBody.appendChild(tf);
+    ui.paramBody.appendChild(mf);
+  }
+
+  /* ==========================================================
+     Tab 2 · 格式转换
+     ========================================================== */
+  function renderConvert(panel) {
+    var mimeSel = el('select', { class: 'tb-sel' });
+    [['image/jpeg', 'JPEG (.jpg)'], ['image/png', 'PNG (.png)'], ['image/webp', 'WebP (.webp)']]
+      .forEach(function (o) { mimeSel.appendChild(el('option', { value: o[0], text: o[1] })); });
+    var mf = el('div', { class: 'tb-field' });
+    mf.appendChild(el('label', { text: '目标格式' }));
+    mf.appendChild(mimeSel);
+
+    var q = el('input', { type: 'range', min: '10', max: '100', value: '90', style: 'width:100%' });
+    var qLabel = el('span', { class: 'tb-hint', text: '质量 90' });
+    q.addEventListener('input', function () { qLabel.textContent = '质量 ' + q.value; });
+    var qf = el('div', { class: 'tb-field' });
+    qf.appendChild(el('label', { text: '压缩质量（PNG 忽略此项）' }));
+    qf.appendChild(q);
+    qf.appendChild(qLabel);
+
+    var bgSel = el('select', { class: 'tb-sel' });
+    [['#ffffff', '白色（默认）'], ['#000000', '黑色'], ['#transparent', '保持透明（仅 PNG/WebP）']]
+      .forEach(function (o) { bgSel.appendChild(el('option', { value: o[0], text: o[1] })); });
+    var bf = el('div', { class: 'tb-field' });
+    bf.appendChild(el('label', { text: '透明区域填充' }));
+    bf.appendChild(bgSel);
+
+    var ui = buildPanel(panel, {
+      paramTitle: '转换设置', runText: '转换并预览',
+      filename: function (s) { return baseName(s.file.name) + '-converted.' + mimeSel.value.split('/')[1]; },
+      run: function (state) {
+        var mime = mimeSel.value;
+        var cv = workCanvas(state.img, MAX_EDGE);
+        var ctx = cv.getContext('2d');
+        var bg = bgSel.value;
+        if (bg !== '#transparent') {
+          ctx.fillStyle = bg;
+          ctx.fillRect(0, 0, cv.width, cv.height);
+        }
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(state.img, 0, 0, cv.width, cv.height);
+        return encode(cv, mime, (parseInt(q.value, 10) || 90) / 100).then(function (blob) {
+          ui.canvas.width = cv.width;
+          ui.canvas.height = cv.height;
+          var c2 = ui.canvas.getContext('2d');
+          c2.clearRect(0, 0, cv.width, cv.height);
+          c2.drawImage(cv, 0, 0);
+          return {
+            blob: blob,
+            text: '已转为 <b>' + mime.split('/')[1].toUpperCase() + '</b><br>原 <b>' +
+              ToolBox.fmtBytes(state.file.size) + '</b> → 输出 <b>' + ToolBox.fmtBytes(blob.size) + '</b>' +
+              '<br>尺寸 ' + cv.width + '×' + cv.height
+          };
+        });
+      }
+    });
+    ui.paramBody.appendChild(mf);
+    ui.paramBody.appendChild(qf);
+    ui.paramBody.appendChild(bf);
+  }
+
+  /* ==========================================================
+     Tab 3 · 文字水印
+     ========================================================== */
+  function renderWatermark(panel) {
+    var text = el('input', { class: 'tb-in', type: 'text', value: '© 我的水印', placeholder: '水印文字' });
+    var tf = el('div', { class: 'tb-field' });
+    tf.appendChild(el('label', { text: '水印文字' }));
+    tf.appendChild(text);
+
+    var size = el('input', { class: 'tb-in short', type: 'number', value: '32', min: '8', max: '300' });
+    var sf = el('div', { class: 'tb-field' });
+    sf.appendChild(el('label', { text: '字号 (px)' }));
+    sf.appendChild(size);
+
+    var alpha = el('input', { type: 'range', min: '5', max: '100', value: '45', style: 'width:100%' });
+    var aLabel = el('span', { class: 'tb-hint', text: '透明度 45%' });
+    alpha.addEventListener('input', function () { aLabel.textContent = '透明度 ' + alpha.value + '%'; });
+    var af = el('div', { class: 'tb-field' });
+    af.appendChild(el('label', { text: '不透明度' }));
+    af.appendChild(alpha);
+    af.appendChild(aLabel);
+
+    var color = el('input', { class: 'tb-in mono', type: 'text', value: '#FFFFFF', maxlength: '7' });
+    var cf = el('div', { class: 'tb-field' });
+    cf.appendChild(el('label', { text: '颜色' }));
+    cf.appendChild(color);
+
+    var pos = el('select', { class: 'tb-sel' });
+    [['br', '右下角'], ['bl', '左下角'], ['tr', '右上角'], ['tl', '左上角'], ['center', '居中']]
+      .forEach(function (o) { pos.appendChild(el('option', { value: o[0], text: o[1] })); });
+    var pf = el('div', { class: 'tb-field' });
+    pf.appendChild(el('label', { text: '位置' }));
+    pf.appendChild(pos);
+
+    var tilt = el('input', { type: 'range', min: '-90', max: '90', value: '0', style: 'width:100%' });
+    var tLabel = el('span', { class: 'tb-hint', text: '旋转 0°' });
+    tilt.addEventListener('input', function () { tLabel.textContent = '旋转 ' + tilt.value + '°'; });
+    var tf2 = el('div', { class: 'tb-field' });
+    tf2.appendChild(el('label', { text: '旋转角度' }));
+    tf2.appendChild(tilt);
+    tf2.appendChild(tLabel);
+
+    var ui = buildPanel(panel, {
+      paramTitle: '水印设置', runText: '生成水印图',
+      filename: function (s) { return baseName(s.file.name) + '-watermark.png'; },
+      run: function (state) {
+        var cv = workCanvas(state.img, MAX_EDGE);
+        var ctx = cv.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(state.img, 0, 0, cv.width, cv.height);
+
+        var fs = Math.max(8, parseInt(size.value, 10) || 32);
+        var txt = text.value || '';
+        if (!txt) return Promise.reject(new Error('请填写水印文字'));
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0.05, Math.min(1, (parseInt(alpha.value, 10) || 45) / 100));
+        ctx.fillStyle = color.value || '#FFFFFF';
+        ctx.font = '700 ' + fs + 'px -apple-system,"PingFang SC",system-ui,sans-serif';
+        ctx.textBaseline = 'top';
+        var ang = (parseInt(tilt.value, 10) || 0) * Math.PI / 180;
+        var w = ctx.measureText(txt).width;
+        var pad = Math.round(fs * 0.4);
+
+        var x, y;
+        switch (pos.value) {
+          case 'tl': x = pad; y = pad; break;
+          case 'tr': x = cv.width - w - pad; y = pad; break;
+          case 'bl': x = pad; y = cv.height - fs - pad; break;
+          case 'center': x = (cv.width - w) / 2; y = (cv.height - fs) / 2; break;
+          default: x = cv.width - w - pad; y = cv.height - fs - pad;
+        }
+        if (ang !== 0) {
+          ctx.translate(x + w / 2, y + fs / 2);
+          ctx.rotate(ang);
+          ctx.fillText(txt, -w / 2, -fs / 2);
+        } else {
+          ctx.fillText(txt, x, y);
+        }
+        ctx.restore();
+
+        ui.canvas.width = cv.width;
+        ui.canvas.height = cv.height;
+        var c2 = ui.canvas.getContext('2d');
+        c2.clearRect(0, 0, cv.width, cv.height);
+        c2.drawImage(cv, 0, 0);
+
+        return encode(cv, 'image/png').then(function (blob) {
+          return { blob: blob, text: '水印已添加 · 尺寸 ' + cv.width + '×' + cv.height + ' · <b>' + ToolBox.fmtBytes(blob.size) + '</b>' };
+        });
+      }
+    });
+    ui.paramBody.appendChild(tf);
+    ui.paramBody.appendChild(sf);
+    ui.paramBody.appendChild(af);
+    ui.paramBody.appendChild(cf);
+    ui.paramBody.appendChild(pf);
+    ui.paramBody.appendChild(tf2);
+  }
+
+  /* ==========================================================
+     Tab 4 · 裁剪 / 旋转 / 翻转
+     ========================================================== */
+  function renderCrop(panel) {
+    var ratio = el('select', { class: 'tb-sel' });
+    [['free', '原始比例'], ['1:1', '1:1 正方形'], ['4:3', '4:3'], ['3:4', '3:4'], ['16:9', '16:9'], ['9:16', '9:16 竖屏']]
+      .forEach(function (o) { ratio.appendChild(el('option', { value: o[0], text: o[1] })); });
+    var rf = el('div', { class: 'tb-field' });
+    rf.appendChild(el('label', { text: '裁剪比例' }));
+    rf.appendChild(ratio);
+
+    var rotate = el('input', { type: 'range', min: '-180', max: '180', value: '0', style: 'width:100%' });
+    var rLabel = el('span', { class: 'tb-hint', text: '旋转 0°' });
+    rotate.addEventListener('input', function () { rLabel.textContent = '旋转 ' + rotate.value + '°'; });
+    var rof = el('div', { class: 'tb-field' });
+    rof.appendChild(el('label', { text: '旋转' }));
+    rof.appendChild(rotate);
+    rof.appendChild(rLabel);
+
+    var flipRow = el('div', { class: 'tb-row tight' });
+    var btnFlipH = el('button', { class: 'tb-btn sm', type: 'button', text: '水平翻转' });
+    var btnFlipV = el('button', { class: 'tb-btn sm', type: 'button', text: '垂直翻转' });
+    var flipState = { h: false, v: false };
+    btnFlipH.addEventListener('click', function () { flipState.h = !flipState.h; btnFlipH.classList.toggle('on', flipState.h); });
+    btnFlipV.addEventListener('click', function () { flipState.v = !flipState.v; btnFlipV.classList.toggle('on', flipState.v); });
+    flipRow.appendChild(btnFlipH);
+    flipRow.appendChild(btnFlipV);
+    var ff = el('div', { class: 'tb-field' });
+    ff.appendChild(el('label', { text: '翻转' }));
+    ff.appendChild(flipRow);
+
+    var ui = buildPanel(panel, {
+      paramTitle: '裁剪设置', runText: '应用裁剪',
+      filename: function (s) { return baseName(s.file.name) + '-cropped.png'; },
+      run: function (state) {
+        var src = state.img;
+        var sw = src.naturalWidth, sh = src.naturalHeight;
+        var rot = parseInt(rotate.value, 10) || 0;
+        var swap = Math.abs(rot) % 180 === 90;
+
+        // 先按比例在原图内做中心裁剪
+        var targetRatio = ratio.value === 'free' ? null
+          : ratio.value.split(':').map(Number).reduce(function (a, b) { return a / b; });
+        var cw = sw, ch = sh;
+        if (targetRatio) {
+          var imgRatio = sw / sh;
+          if (imgRatio > targetRatio) { cw = Math.round(sh * targetRatio); ch = sh; }
+          else { cw = sw; ch = Math.round(sw / targetRatio); }
+        }
+        var sx = Math.round((sw - cw) / 2);
+        var sy = Math.round((sh - ch) / 2);
+
+        // 旋转后外接框尺寸
+        var rad = rot * Math.PI / 180;
+        var cos = Math.abs(Math.cos(rad)), sin = Math.abs(Math.sin(rad));
+        var outW = Math.round(cw * cos + ch * sin);
+        var outH = Math.round(cw * sin + ch * cos);
+        var scale = Math.min(1, MAX_EDGE / Math.max(outW, outH));
+        outW = Math.max(1, Math.round(outW * scale));
+        outH = Math.max(1, Math.round(outH * scale));
+
+        var cv = document.createElement('canvas');
+        cv.width = outW; cv.height = outH;
+        var ctx = cv.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+
+        ctx.save();
+        ctx.translate(outW / 2, outH / 2);
+        ctx.rotate(rad);
+        if (flipState.h) ctx.scale(-1, 1);
+        if (flipState.v) ctx.scale(1, -1);
+        // 按旋转后的坐标系绘制裁剪区域
+        var dw = cw * scale, dh = ch * scale;
+        ctx.drawImage(src, sx, sy, cw, ch, -dw / 2, -dh / 2, dw, dh);
+        ctx.restore();
+
+        ui.canvas.width = outW;
+        ui.canvas.height = outH;
+        var c2 = ui.canvas.getContext('2d');
+        c2.clearRect(0, 0, outW, outH);
+        c2.drawImage(cv, 0, 0);
+
+        return encode(cv, 'image/png').then(function (blob) {
+          return {
+            blob: blob,
+            text: '输出尺寸 <b>' + outW + '×' + outH + '</b> · <b>' + ToolBox.fmtBytes(blob.size) + '</b>' +
+              (swap ? '<br>（已按 90° 旋转，宽高对调）' : '')
+          };
+        });
+      }
+    });
+    ui.paramBody.appendChild(rf);
+    ui.paramBody.appendChild(rof);
+    ui.paramBody.appendChild(ff);
+  }
+
+  /* ---------------- 启动 ---------------- */
+  function boot() {
+    ToolBox.mount(document.getElementById('tbRoot'), {
+      title: '图片处理台',
+      sub: '压缩 · 转格式 · 加水印 · 裁剪旋转，全部在本地完成',
+      storageKey: 'tb_image',
+      tabs: [
+        { id: 'compress', name: '压缩', render: renderCompress },
+        { id: 'convert', name: '格式转换', render: renderConvert },
+        { id: 'watermark', name: '加水印', render: renderWatermark },
+        { id: 'crop', name: '裁剪旋转', render: renderCrop }
+      ]
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>

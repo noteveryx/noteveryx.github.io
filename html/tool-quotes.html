@@ -226,6 +226,35 @@
   }
 
   /* ---------- 主题：五套变量见 ../assets/css/themes.css ---------- */
+
+  /* ---------- 导出图片面板 ---------- */
+  .exp-panel{
+    display:none;
+    margin:14px 0 0;
+    padding:16px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:var(--card);
+  }
+  .exp-panel.on{display:block;}
+  .exp-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+  .exp-label{font-size:.78rem;color:var(--muted);font-weight:700;}
+  .exp-seg{display:flex;gap:6px;flex-wrap:wrap;}
+  .exp-seg button{
+    border:1px solid var(--line);background:var(--bg1);color:var(--text);
+    border-radius:9px;padding:6px 12px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+    transition:border-color .16s ease,color .16s ease,background .16s ease;
+  }
+  .exp-seg button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-ghost-bg);}
+  .exp-list{max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--bg1);}
+  .exp-item{display:flex;gap:9px;align-items:flex-start;padding:6px 8px;border-radius:8px;cursor:pointer;}
+  .exp-item:hover{background:var(--card);}
+  .exp-item input{accent-color:var(--accent);margin-top:3px;flex:0 0 auto;}
+  .exp-item span{font-size:.82rem;line-height:1.5;}
+  .exp-prev{margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:340px;background:var(--bg1);}
+  .exp-prev canvas{display:block;width:100%;height:auto;}
+  .exp-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  .exp-note{font-size:.76rem;color:var(--muted);margin:8px 0 0;line-height:1.6;}
 </style>
   <script src="../assets/js/fs-kit.js" defer></script>
 </head>
@@ -245,6 +274,29 @@
   <div class="toolbar">
     <button class="btn-all" id="copyAll" type="button">复制全部</button>
     <button class="btn-ghost" id="lucky" type="button">随机一句</button>
+    <button class="btn-ghost" id="exportBtn" type="button">导出图片</button>
+  </div>
+
+  <div class="exp-panel" id="expPanel">
+    <div class="exp-row">
+      <span class="exp-label">风格</span>
+      <div class="exp-seg" id="expStyle">
+        <button type="button" data-v="dark" class="on">深色</button>
+        <button type="button" data-v="light">浅色</button>
+        <button type="button" data-v="theme">跟随主题</button>
+      </div>
+      <span class="exp-label" style="margin-left:auto">
+        <button type="button" id="expAll" style="border:0;background:none;color:var(--accent);cursor:pointer;font:inherit;font-size:.78rem;font-weight:700">全选</button>
+        <button type="button" id="expNone" style="border:0;background:none;color:var(--muted);cursor:pointer;font:inherit;font-size:.78rem;font-weight:700">清空</button>
+      </span>
+    </div>
+    <div class="exp-list" id="expList"></div>
+    <div class="exp-prev" id="expPrev"><canvas id="expCanvas"></canvas></div>
+    <div class="exp-actions">
+      <button class="btn-all" id="expDownload" type="button">下载 PNG（合成一张）</button>
+      <button class="btn-ghost" id="expEach" type="button">逐句单独存</button>
+    </div>
+    <p class="exp-note" id="expNote">选中的句子会合成一张竖版长图，适合发朋友圈；「逐句单独存」会为每句生成一张独立图片。</p>
   </div>
   <p class="hint">点卡片复制单句 · 长按文字也可直接选中</p>
 
@@ -270,6 +322,8 @@
 <script src="../assets/js/theme-kit.js"></script>
 <!-- 句子数据（与 sentences 海报页共用）——补充句子只改这个文件 -->
 <script src="../assets/js/quotes-data.js"></script>
+<!-- 导出图片用：只取它的下载/转 Blob 能力，按钮样式仍用本页的 -->
+<script src="../assets/js/save-kit.js"></script>
 <script>
 (function () {
   'use strict';
@@ -497,6 +551,293 @@
       });
     });
   }
+
+  /* ==========================================================
+     导出为图片：canvas 排版 → PNG
+     ========================================================== */
+  (function () {
+    var panel = document.getElementById('expPanel');
+    var btn = document.getElementById('exportBtn');
+    var listEl = document.getElementById('expList');
+    var canvas = document.getElementById('expCanvas');
+    var noteEl = document.getElementById('expNote');
+    if (!panel || !btn || !listEl || !canvas) return;
+
+    var FONT = '-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif';
+    var W = 1080, PAD = 84, FONT_SIZE = 34, LINE_H = 54, NUM_SIZE = 22;
+    var style = 'dark';
+    var picked = {};          // 用下标当键：同一句话可能出现多次
+
+    function selected() {
+      var out = [];
+      cards.forEach(function (c, i) { if (picked[i]) out.push(c.text); });
+      return out;
+    }
+
+    /* ---------- 配色 ---------- */
+    function palette() {
+      var cs = getComputedStyle(document.documentElement);
+      var accent = (cs.getPropertyValue('--accent') || '').trim() || '#635bff';
+      if (style === 'dark') {
+        return {
+          bgTop: '#151a2e', bgBottom: '#0c1020', text: '#eef1f8', sub: '#98a3bd',
+          accent: accent, line: 'rgba(255,255,255,.14)'
+        };
+      }
+      if (style === 'light') {
+        return {
+          bgTop: '#ffffff', bgBottom: '#f0f3fb', text: '#16192b', sub: '#6b7590',
+          accent: accent, line: 'rgba(22,25,43,.12)'
+        };
+      }
+      return {
+        bgTop: (cs.getPropertyValue('--bg1') || '').trim() || '#f7f9fd',
+        bgBottom: (cs.getPropertyValue('--bg2') || '').trim() || '#eef1f9',
+        text: (cs.getPropertyValue('--text') || '').trim() || '#16192b',
+        sub: (cs.getPropertyValue('--muted') || '').trim() || '#6b7590',
+        accent: accent, line: 'rgba(128,128,128,.28)'
+      };
+    }
+
+    /* ---------- 折行：英文单词不拆开，中文逐字 ---------- */
+    function wrap(ctx, text, maxWidth) {
+      var tokens = String(text).match(/[A-Za-z0-9][A-Za-z0-9_'’.\-]*|\s+|[\s\S]/g) || [];
+      var lines = [], line = '';
+      for (var i = 0; i < tokens.length; i++) {
+        var t = tokens[i];
+        if (ctx.measureText(line + t).width > maxWidth && line !== '') {
+          lines.push(line);
+          line = /^\s+$/.test(t) ? '' : t;
+        } else {
+          line += t;
+        }
+      }
+      if (line !== '') lines.push(line);
+      return lines.length ? lines : [''];
+    }
+
+    /* ---------- 绘制 ---------- */
+    function drawPoster(list) {
+      var p = palette();
+      var maxTextW = W - PAD * 2 - 76;
+
+      var mctx = document.createElement('canvas').getContext('2d');
+      mctx.font = '400 ' + FONT_SIZE + 'px ' + FONT;
+      var blocks = list.map(function (t, i) {
+        return {
+          no: (i + 1 < 10 ? '0' : '') + (i + 1),
+          lines: wrap(mctx, t, maxTextW)
+        };
+      });
+
+      var headH = 260, footH = 130, gap = 44;
+      var bodyH = 0;
+      blocks.forEach(function (b) { bodyH += b.lines.length * LINE_H + gap; });
+      var H = headH + Math.max(0, bodyH - gap) + footH;
+
+      var dpr = 2;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      var ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // 背景
+      var g = ctx.createLinearGradient(0, 0, W * .4, H);
+      g.addColorStop(0, p.bgTop);
+      g.addColorStop(1, p.bgBottom);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      // 右上角装饰光晕
+      var halo = ctx.createRadialGradient(W * .82, H * .12, 0, W * .82, H * .12, W * .5);
+      halo.addColorStop(0, hexA(p.accent, .22));
+      halo.addColorStop(1, hexA(p.accent, 0));
+      ctx.fillStyle = halo;
+      ctx.fillRect(0, 0, W, H);
+
+      // 顶部
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = p.accent;
+      ctx.font = '700 ' + NUM_SIZE + 'px ' + FONT;
+      ctx.fillText('SENTENCES · 句子收藏', PAD, PAD + 10);
+
+      ctx.fillStyle = p.text;
+      ctx.font = '800 62px ' + FONT;
+      ctx.fillText(list.length + ' 句精选', PAD, PAD + 92);
+
+      ctx.strokeStyle = p.line;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(PAD, PAD + 132);
+      ctx.lineTo(W - PAD, PAD + 132);
+      ctx.stroke();
+
+      // 正文
+      var y = headH;
+      blocks.forEach(function (b) {
+        ctx.fillStyle = p.accent;
+        ctx.font = '700 ' + NUM_SIZE + 'px ' + FONT;
+        ctx.fillText(b.no, PAD, y + LINE_H * .72);
+
+        ctx.fillStyle = p.text;
+        ctx.font = '400 ' + FONT_SIZE + 'px ' + FONT;
+        for (var i = 0; i < b.lines.length; i++) {
+          ctx.fillText(b.lines[i], PAD + 76, y + LINE_H * .72 + i * LINE_H);
+        }
+        y += b.lines.length * LINE_H + gap;
+      });
+
+      // 底部
+      var d = new Date();
+      function p2(n) { return n < 10 ? '0' + n : '' + n; }
+      ctx.strokeStyle = p.line;
+      ctx.beginPath();
+      ctx.moveTo(PAD, H - footH + 30);
+      ctx.lineTo(W - PAD, H - footH + 30);
+      ctx.stroke();
+
+      ctx.fillStyle = p.sub;
+      ctx.font = '400 22px ' + FONT;
+      ctx.fillText('收藏于 ' + d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()), PAD, H - footH + 76);
+      ctx.textAlign = 'right';
+      ctx.fillText('独立页面导航', W - PAD, H - footH + 76);
+      ctx.textAlign = 'left';
+
+      return canvas;
+    }
+
+    /* #rrggbb → rgba() */
+    function hexA(hex, a) {
+      var s = String(hex).replace('#', '').trim();
+      if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2];
+      if (!/^[0-9a-fA-F]{6}$/.test(s)) return 'rgba(99,91,255,' + a + ')';
+      var n = parseInt(s, 16);
+      return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+    }
+
+    /* ---------- 交互 ---------- */
+    function buildList() {
+      listEl.innerHTML = '';
+      cards.forEach(function (c, i) {
+        var lab = document.createElement('label');
+        lab.className = 'exp-item';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!picked[i];
+        cb.addEventListener('change', function () {
+          if (cb.checked) picked[i] = true; else delete picked[i];
+          render();
+        });
+        var sp = document.createElement('span');
+        sp.textContent = c.text;
+        lab.appendChild(cb);
+        lab.appendChild(sp);
+        listEl.appendChild(lab);
+      });
+    }
+
+    function render() {
+      var list = selected();
+      if (!list.length) {
+        var ctx = canvas.getContext('2d');
+        canvas.width = 600; canvas.height = 200;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = '#f1f3fa';
+        ctx.fillRect(0, 0, 600, 200);
+        ctx.fillStyle = '#8b93a8';
+        ctx.font = '400 20px ' + FONT;
+        ctx.textAlign = 'center';
+        ctx.fillText('先勾选要导出的句子', 300, 105);
+        ctx.textAlign = 'left';
+        return;
+      }
+      drawPoster(list);
+    }
+
+    function fileStamp() {
+      var d = new Date();
+      function p2(n) { return n < 10 ? '0' + n : '' + n; }
+      return '' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + '-' + p2(d.getHours()) + p2(d.getMinutes());
+    }
+
+    function save(cv, name) {
+      return SaveKit.toBlob(cv, 'image/png').then(function (blob) {
+        SaveKit.download(blob, name);
+      }).catch(function (e) {
+        toast('导出失败：' + (e && e.message ? e.message : '未知错误'));
+      });
+    }
+
+    btn.addEventListener('click', function () {
+      var open = !panel.classList.contains('on');
+      panel.classList.toggle('on', open);
+      btn.textContent = open ? '收起导出' : '导出图片';
+      if (open) {
+        // 默认全选
+        cards.forEach(function (c, i) { picked[i] = true; });
+        buildList();
+        render();
+      }
+    });
+
+    var segEl = document.getElementById('expStyle');
+    if (segEl) {
+      segEl.addEventListener('click', function (e) {
+        var t = e.target.closest ? e.target.closest('button') : null;
+        if (!t || !t.dataset.v) return;
+        style = t.dataset.v;
+        var bs = segEl.querySelectorAll('button');
+        for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i] === t);
+        render();
+      });
+    }
+
+    var allBtn = document.getElementById('expAll');
+    var noneBtn = document.getElementById('expNone');
+    if (allBtn) allBtn.addEventListener('click', function () {
+      cards.forEach(function (c, i) { picked[i] = true; });
+      buildList(); render();
+    });
+    if (noneBtn) noneBtn.addEventListener('click', function () {
+      picked = {};
+      buildList(); render();
+    });
+
+    var dlBtn = document.getElementById('expDownload');
+    if (dlBtn) dlBtn.addEventListener('click', function () {
+      var list = selected();
+      if (!list.length) { toast('请先勾选句子'); return; }
+      drawPoster(list);
+      save(canvas, 'sentences-' + fileStamp() + '.png').then(function () {
+        toast('已导出 ' + list.length + ' 句');
+      });
+    });
+
+    var eachBtn = document.getElementById('expEach');
+    if (eachBtn) eachBtn.addEventListener('click', function () {
+      var list = selected();
+      if (!list.length) { toast('请先勾选句子'); return; }
+      eachBtn.disabled = true;
+      var i = 0;
+      (function next() {
+        if (i >= list.length) {
+          eachBtn.disabled = false;
+          toast('已逐句导出 ' + list.length + ' 张');
+          return;
+        }
+        var one = drawPoster([list[i]]);
+        save(one, 'sentence-' + fileStamp() + '-' + (i + 1) + '.png');
+        i++;
+        // 浏览器会拦截连续多次下载，间隔开
+        setTimeout(next, 420);
+      })();
+    });
+
+    if (noteEl) {
+      noteEl.textContent = '选中的句子会合成一张竖版长图，适合发朋友圈；「逐句单独存」会为每句生成一张独立图片（浏览器可能会询问是否允许批量下载）。';
+    }
+  })();
 
   /* ---------------- 复制微信号 ---------------- */
   var wxId = document.getElementById('wxId');

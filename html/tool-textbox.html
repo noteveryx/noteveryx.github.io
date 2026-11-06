@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>文本工具箱</title>
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<link rel="stylesheet" href="../assets/css/themes.css">
+<link rel="stylesheet" href="../assets/css/toolbox.css">
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
+<script src="../assets/js/theme-kit.js" defer></script>
+<script src="../assets/js/toolbox.js" defer></script>
+</head>
+<body class="tb-page">
+<div id="tbRoot"></div>
+
+<script>
+(function () {
+  'use strict';
+  var el = function () { return ToolBox.el.apply(null, arguments); };
+
+  /* ---------------- 输入 + 输出 卡片 ---------------- */
+  function ioCard(title, placeholder, hint) {
+    var card = el('div', { class: 'tb-card' });
+    card.appendChild(el('div', { class: 'tb-card-title', text: title }));
+
+    var input = el('textarea', { class: 'tb-ta', placeholder: placeholder, spellcheck: 'false' });
+    card.appendChild(input);
+
+    var bar = el('div', { class: 'tb-row', style: 'margin-top:10px' });
+    card.appendChild(bar);
+
+    var out = el('div', { class: 'tb-out', style: 'margin-top:12px', 'data-empty': '结果会显示在这里' });
+    card.appendChild(out);
+
+    if (hint) card.appendChild(el('p', { class: 'tb-hint', style: 'margin-top:10px', html: hint }));
+
+    return {
+      card: card, input: input, output: out, bar: bar,
+      set: function (t) { out.textContent = t; },
+      copy: function () {
+        if (!out.textContent) { ToolBox.toast('没有可复制的内容'); return; }
+        ToolBox.copy(out.textContent);
+        ToolBox.toast('已复制');
+      }
+    };
+  }
+
+  function actionBtn(bar, label, fn) {
+    var b = el('button', { class: 'tb-btn sm', type: 'button', text: label });
+    b.addEventListener('click', fn);
+    bar.appendChild(b);
+    return b;
+  }
+
+  /* ---------------- 转换函数 ---------------- */
+  function words(str) {
+    // 连续的非空白视为一个词（中文按字、英文按词都覆盖得到）
+    return String(str).match(/[A-Za-z0-9_]+|[^\sA-Za-z0-9_]/g) || [];
+  }
+
+  var CASE_FN = {
+    upper: function (s) { return s.toUpperCase(); },
+    lower: function (s) { return s.toLowerCase(); },
+    title: function (s) {
+      return s.replace(/[A-Za-z]+/g, function (w) {
+        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      });
+    },
+    sentence: function (s) {
+      return s.replace(/(^|[.!?。！？\n]\s*)([a-z])/g, function (m, p, c) {
+        return p + c.toUpperCase();
+      });
+    },
+    camel: function (s) {
+      return words(s).filter(function (w) { return /[A-Za-z0-9]/.test(w); })
+        .map(function (w, i) {
+          w = w.toLowerCase();
+          return i === 0 ? w : w.charAt(0).toUpperCase() + w.slice(1);
+        }).join('');
+    },
+    pascal: function (s) {
+      var c = CASE_FN.camel(s);
+      return c ? c.charAt(0).toUpperCase() + c.slice(1) : c;
+    },
+    snake: function (s) {
+      return words(s).filter(function (w) { return /[A-Za-z0-9]/.test(w); })
+        .map(function (w) { return w.toLowerCase(); }).join('_');
+    },
+    kebab: function (s) {
+      return words(s).filter(function (w) { return /[A-Za-z0-9]/.test(w); })
+        .map(function (w) { return w.toLowerCase(); }).join('-');
+    },
+    constant: function (s) { return CASE_FN.snake(s).toUpperCase(); }
+  };
+
+  /* ---------------- 全半角 ---------------- */
+  function toHalf(s) {
+    return String(s).replace(/[！-～]/g, function (ch) {
+      return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+    }).replace(/　/g, ' ');
+  }
+  function toFull(s) {
+    return String(s).replace(/[!-~]/g, function (ch) {
+      return String.fromCharCode(ch.charCodeAt(0) + 0xFEE0);
+    }).replace(/ /g, '　');
+  }
+
+  /* ---------------- 中英标点 ---------------- */
+  var CN2EN = {
+    '，': ',', '。': '.', '？': '?', '！': '!', '；': ';', '：': ':',
+    '、': ',', '（': '(', '）': ')', '【': '[', '】': ']', '《': '<', '》': '>',
+    '“': '"', '”': '"', '‘': "'", '’': "'", '—': '-', '～': '~', '·': '.'
+  };
+  var EN2CN = {
+    ',': '，', '.': '。', '?': '？', '!': '！', ';': '；', ':': '：',
+    '(': '（', ')': '）', '[': '【', ']': '】', '<': '《', '>': '》',
+    '"': '"', "'": "'", '~': '～'
+  };
+  function mapPunct(s, table) {
+    return String(s).replace(/[，。？！；：、（）【】《》""''—～·,.\?!;:\(\)\[\]<>"'~]/g, function (ch) {
+      return table[ch] || ch;
+    });
+  }
+
+  /* ==========================================================
+     Tab 1 · 大小写与命名格式
+     ========================================================== */
+  function renderCase(panel) {
+    var io = ioCard('大小写 / 命名格式', '在这里输入英文句子或标识符…');
+    panel.appendChild(io.card);
+
+    var items = [
+      ['全部大写', 'upper'], ['全部小写', 'lower'],
+      ['首字母大写', 'title'], ['句首大写', 'sentence'],
+      ['camelCase', 'camel'], ['PascalCase', 'pascal'],
+      ['snake_case', 'snake'], ['kebab-case', 'kebab'],
+      ['CONSTANT_CASE', 'constant']
+    ];
+    items.forEach(function (it) {
+      actionBtn(io.bar, it[0], function () {
+        var src = io.input.value;
+        if (!src) { ToolBox.toast('请先输入内容'); return; }
+        io.set(CASE_FN[it[1]](src));
+      });
+    });
+    actionBtn(io.bar, '复制结果', io.copy);
+    actionBtn(io.bar, '清空', function () { io.input.value = ''; io.set(''); });
+  }
+
+  /* ==========================================================
+     Tab 2 · 批量行处理
+     ========================================================== */
+  function renderLines(panel) {
+    var io = ioCard('批量处理', '每行一条内容…');
+    panel.appendChild(io.card);
+
+    var fns = {
+      dedupe: function (lines) {
+        var seen = {}, out = [];
+        lines.forEach(function (l) {
+          var k = l.trim();
+          if (!k) return;
+          if (!seen[k]) { seen[k] = 1; out.push(l); }
+        });
+        return out;
+      },
+      sortAsc: function (lines) { return lines.slice().sort(); },
+      sortDesc: function (lines) { return lines.slice().sort().reverse(); },
+      sortLen: function (lines) { return lines.slice().sort(function (a, b) { return b.length - a.length; }); },
+      uniqChar: function (lines) { return lines.map(function (l) {
+        var seen = {}, out = '';
+        for (var i = 0; i < l.length; i++) {
+          if (!seen[l[i]]) { seen[l[i]] = 1; out += l[i]; }
+        }
+        return out;
+      }); },
+      trim: function (lines) { return lines.map(function (l) { return l.trim(); }); },
+      noBlank: function (lines) { return lines.filter(function (l) { return l.trim() !== ''; }); },
+      reverse: function (lines) { return lines.slice().reverse(); },
+      number: function (lines) { return lines.map(function (l, i) { return (i + 1) + '. ' + l; }); }
+    };
+
+    var items = [
+      ['去重（保留顺序）', 'dedupe'], ['排序（升序）', 'sortAsc'], ['排序（降序）', 'sortDesc'],
+      ['按长度排序', 'sortLen'], ['每行去重字符', 'uniqChar'], ['去首尾空格', 'trim'],
+      ['删除空行', 'noBlank'], ['倒序', 'reverse'], ['加行号', 'number']
+    ];
+    items.forEach(function (it) {
+      actionBtn(io.bar, it[0], function () {
+        var src = io.input.value;
+        if (!src) { ToolBox.toast('请先输入内容'); return; }
+        io.set(fns[it[1]](src.split(/\r?\n/)).join('\n'));
+      });
+    });
+    actionBtn(io.bar, '复制结果', io.copy);
+    actionBtn(io.bar, '清空', function () { io.input.value = ''; io.set(''); });
+  }
+
+  /* ==========================================================
+     Tab 3 · 清理与标点
+     ========================================================== */
+  function renderClean(panel) {
+    var io = ioCard('清理与标点', '粘贴需要整理的文字…');
+    panel.appendChild(io.card);
+
+    var fns = {
+      multiSpace: function (s) { return s.replace(/[ \t]{2,}/g, ' '); },
+      noSpaceNL: function (s) { return s.replace(/[ \t]+$/gm, ''); },
+      cn2en: function (s) { return mapPunct(s, CN2EN); },
+      en2cn: function (s) { return mapPunct(s, EN2CN); },
+      toHalf: toHalf,
+      toFull: toFull,
+      stripTag: function (s) { return s.replace(/<[^>]*>/g, ''); },
+      stripHtml: function (s) {
+        return s.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n')
+          .replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+      },
+      noEmoji: function (s) {
+        return s.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '')
+          .replace(/[\u2190-\u21FF\u2300-\u27BF\uFE0F]/g, '');
+      },
+      oneLine: function (s) { return s.replace(/\s*\n\s*/g, ' ').trim(); },
+      lowerTrim: function (s) { return s.toLowerCase().replace(/\s+/g, ' ').trim(); }
+    };
+
+    var items = [
+      ['合并多余空格', 'multiSpace'], ['去行尾空格', 'noSpaceNL'],
+      ['中文标点 → 英文', 'cn2en'], ['英文标点 → 中文', 'en2cn'],
+      ['全角 → 半角', 'toHalf'], ['半角 → 全角', 'toFull'],
+      ['去 HTML 标签', 'stripTag'], ['HTML 转纯文本', 'stripHtml'],
+      ['去 Emoji', 'noEmoji'], ['合并为一行', 'oneLine'],
+      ['小写并去多余空白', 'lowerTrim']
+    ];
+    items.forEach(function (it) {
+      actionBtn(io.bar, it[0], function () {
+        var src = io.input.value;
+        if (!src) { ToolBox.toast('请先输入内容'); return; }
+        io.set(fns[it[1]](src));
+      });
+    });
+    actionBtn(io.bar, '复制结果', io.copy);
+    actionBtn(io.bar, '清空', function () { io.input.value = ''; io.set(''); });
+  }
+
+  /* ==========================================================
+     Tab 4 · 字数统计
+     ========================================================== */
+  function renderStats(panel) {
+    var card = el('div', { class: 'tb-card' });
+    card.appendChild(el('div', { class: 'tb-card-title', text: '字数统计' }));
+
+    var input = el('textarea', { class: 'tb-ta', placeholder: '输入或粘贴文本，统计会实时更新…', spellcheck: 'false' });
+    card.appendChild(input);
+
+    var stats = el('div', { class: 'tb-stats', style: 'margin-top:14px' });
+    card.appendChild(stats);
+    panel.appendChild(card);
+
+    var extra = el('div', { class: 'tb-card' });
+    extra.appendChild(el('div', { class: 'tb-card-title', text: '高频词' }));
+    var top = el('div', { class: 'tb-out', style: 'min-height:80px' });
+    extra.appendChild(top);
+    panel.appendChild(extra);
+
+    function update() {
+      var s = input.value;
+      var cn = (s.match(/[一-龥]/g) || []).length;
+      var enWords = (s.match(/[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*/g) || []).length;
+      var chars = Array.from(s).length;
+      var charsNoSpace = Array.from(s.replace(/\s/g, '')).length;
+      var lines = s === '' ? 0 : s.split(/\r?\n/).length;
+      var paras = s.split(/\n\s*\n/).filter(function (p) { return p.trim(); }).length;
+      var sentences = (s.match(/[.!?。！？]+/g) || []).length;
+
+      var items = [
+        ['中文字数', cn], ['英文单词', enWords],
+        ['总字符', chars], ['不含空白', charsNoSpace],
+        ['行数', lines], ['段落数', paras],
+        ['句子数', sentences], ['中英合计', cn + enWords]
+      ];
+      stats.innerHTML = '';
+      items.forEach(function (it) {
+        var s2 = el('div', { class: 'tb-stat' });
+        s2.appendChild(el('div', { class: 'v', text: ToolBox.fmtNum(it[1]) }));
+        s2.appendChild(el('div', { class: 'k', text: it[0] }));
+        stats.appendChild(s2);
+      });
+
+      // 高频词（中文按 2-gram、英文按单词）
+      var freq = {};
+      var cnSeg = (s.match(/[一-龥]+/g) || []).join('');
+      for (var i = 0; i + 2 <= cnSeg.length; i++) {
+        var g = cnSeg.substr(i, 2);
+        freq[g] = (freq[g] || 0) + 1;
+      }
+      (s.match(/[A-Za-z0-9]+/g) || []).forEach(function (w) {
+        var k = w.toLowerCase();
+        freq[k] = (freq[k] || 0) + 1;
+      });
+      var arr = Object.keys(freq).map(function (k) { return { k: k, n: freq[k] }; })
+        .filter(function (x) { return x.n > 1; })
+        .sort(function (a, b) { return b.n - a.n; })
+        .slice(0, 20);
+      top.textContent = arr.length
+        ? arr.map(function (x) { return x.k + ' × ' + x.n; }).join('    ')
+        : '（还没有重复出现的词）';
+    }
+
+    input.addEventListener('input', ToolBox.debounce(update, 120));
+    update();
+  }
+
+  /* ==========================================================
+     Tab 5 · 密码与随机串
+     ========================================================== */
+  function renderPwd(panel) {
+    var card = el('div', { class: 'tb-card' });
+    card.appendChild(el('div', { class: 'tb-card-title', text: '生成密码 / 随机串' }));
+
+    var len = el('input', { class: 'tb-in short', type: 'number', value: '16', min: '4', max: '128' });
+    var lf = el('div', { class: 'tb-field' });
+    lf.appendChild(el('label', { text: '长度' }));
+    lf.appendChild(len);
+
+    var opts = [
+      { id: 'lower', label: 'a-z 小写字母', on: true },
+      { id: 'upper', label: 'A-Z 大写字母', on: true },
+      { id: 'digit', label: '0-9 数字', on: true },
+      { id: 'symbol', label: '!@#$% 符号', on: true },
+      { id: 'noambig', label: '排除易混字符 (0O1lI)', on: false }
+    ];
+    var checks = el('div', { class: 'tb-col', style: 'gap:8px' });
+    opts.forEach(function (o) {
+      var cb = el('input', { type: 'checkbox' });
+      cb.checked = o.on;
+      var lab = el('label', { class: 'tb-check' });
+      lab.appendChild(cb);
+      lab.appendChild(el('span', { text: o.label }));
+      checks.appendChild(lab);
+      o.el = cb;
+    });
+
+    var field = el('div', { class: 'tb-field' });
+    field.appendChild(el('label', { text: '字符集' }));
+    field.appendChild(checks);
+
+    var row = el('div', { class: 'tb-row', style: 'margin-top:6px' });
+    row.appendChild(lf);
+    panel.appendChild(card);
+    card.appendChild(field);
+    card.appendChild(row);
+
+    var outCard = el('div', { class: 'tb-card' });
+    outCard.appendChild(el('div', { class: 'tb-card-title', text: '结果' }));
+    var out = el('div', { class: 'tb-out mono', style: 'min-height:64px;font-size:17px;word-break:break-all' });
+    var bar = el('div', { class: 'tb-row', style: 'margin-top:10px' });
+    var btnGen = el('button', { class: 'tb-btn primary', type: 'button', text: '生成' });
+    var btnCopy = el('button', { class: 'tb-btn', type: 'button', text: '复制' });
+    bar.appendChild(btnGen);
+    bar.appendChild(btnCopy);
+    outCard.appendChild(out);
+    outCard.appendChild(bar);
+    panel.appendChild(outCard);
+
+    var SETS = {
+      lower: 'abcdefghijklmnopqrstuvwxyz',
+      upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      digit: '0123456789',
+      symbol: '!@#$%^&*()-_=+[]{};:,.<>?/'
+    };
+    var AMBIG = /[0O1lI]/g;
+
+    function generate() {
+      var pool = '';
+      opts.forEach(function (o) {
+        if (!o.el.checked) return;
+        var set = SETS[o.id];
+        if (!set) return;
+        pool += set;
+      });
+      if (opts[4].el.checked) pool = pool.replace(AMBIG, '');
+      if (!pool) { ToolBox.toast('至少要选一种字符'); return; }
+
+      var n = Math.max(4, Math.min(128, parseInt(len.value, 10) || 16));
+      var buf = new Uint32Array(n);
+      if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(buf);
+      else for (var i = 0; i < n; i++) buf[i] = Math.floor(Math.random() * 4294967296);
+
+      var res = '';
+      for (var j = 0; j < n; j++) res += pool.charAt(buf[j] % pool.length);
+      out.textContent = res;
+    }
+
+    btnGen.addEventListener('click', generate);
+    btnCopy.addEventListener('click', function () {
+      if (!out.textContent) { ToolBox.toast('请先生成'); return; }
+      ToolBox.copy(out.textContent);
+      ToolBox.toast('已复制');
+    });
+    len.addEventListener('change', generate);
+    opts.forEach(function (o) { o.el.addEventListener('change', generate); });
+    generate();
+  }
+
+  /* ---------------- 启动 ---------------- */
+  function boot() {
+    ToolBox.mount(document.getElementById('tbRoot'), {
+      title: '文本工具箱',
+      sub: '大小写转换 · 批量处理 · 标点清理 · 字数统计 · 密码生成',
+      storageKey: 'tb_textbox',
+      tabs: [
+        { id: 'case', name: '大小写', render: renderCase },
+        { id: 'lines', name: '批量处理', render: renderLines },
+        { id: 'clean', name: '清理标点', render: renderClean },
+        { id: 'stats', name: '字数统计', render: renderStats },
+        { id: 'pwd', name: '密码生成', render: renderPwd }
+      ]
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>
