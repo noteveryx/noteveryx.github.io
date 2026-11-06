@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>五子棋</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/game-kit.css">
+<style>
+  .tip{
+    position:fixed;z-index:12;left:50%;transform:translateX(-50%);
+    bottom:calc(20px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.34);
+    pointer-events:none;user-select:none;white-space:nowrap;
+  }
+  @media (max-width:420px){ .tip{font-size:10px;letter-spacing:.02em;} }
+  .gk-label{display:none;}
+
+  #lv{
+    position:fixed;z-index:40;left:50%;transform:translateX(-50%);
+    top:calc(58px + env(safe-area-inset-top));
+    display:flex;gap:6px;padding:4px;border-radius:999px;
+    background:rgba(16,18,30,.72);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  #lv button{
+    appearance:none;border:0;cursor:pointer;
+    padding:5px 13px;border-radius:999px;
+    font:600 12px/1.2 -apple-system,"PingFang SC",system-ui,sans-serif;
+    color:rgba(255,255,255,.55);background:transparent;
+    transition:background .18s,color .18s;
+  }
+  #lv button.on{background:var(--gk-accent,#635bff);color:#fff;}
+</style>
+  <script src="../assets/js/fs-kit.js" defer></script>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="lv">
+  <button type="button" data-lv="0" class="on">简单</button>
+  <button type="button" data-lv="1">普通</button>
+  <button type="button" data-lv="2">困难</button>
+</div>
+<div class="tip">点交叉点落子 · 你执黑先行 · 右上色球换配色</div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/game-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LW = 480, LH = 720;
+  var N = 15;                    // 15×15 棋盘
+  var CELL = 30;
+  var BS = N * CELL;             // 450
+  var BX = (LW - BS) / 2;        // 15
+  var BY = 150;
+
+  var EMPTY = 0, BLACK = 1, WHITE = 2;
+  var WIN = 10000000;
+
+  var board = new Int8Array(N * N);
+  var turn = BLACK;              // 当前该谁走
+  var over = false;
+  var winLine = [];
+  var lastMove = -1;
+  var thinking = false;
+  var thinkToken = 0;
+  var ply = 0;
+  var level = 0;
+
+  var LEVELS = [
+    { name: '简单', depth: 2, limit: 8, noise: 0.30 },
+    { name: '普通', depth: 4, limit: 9, noise: 0.06 },
+    { name: '困难', depth: 6, limit: 10, noise: 0 }
+  ];
+  var LV = LEVELS[0];
+
+  var DIRS = [[1, 0], [0, 1], [1, 1], [1, -1]];
+  var lineBuf = [];
+
+  /* ==========================================================
+     胜负判定
+     ========================================================== */
+  function isWin(idx, color) {
+    var r = (idx / N) | 0, c = idx % N;
+    for (var d = 0; d < 4; d++) {
+      var dr = DIRS[d][0], dc = DIRS[d][1];
+      var n = 1, k = 1;
+      while (true) {
+        var nr = r + dr * k, nc = c + dc * k;
+        if (nr < 0 || nr >= N || nc < 0 || nc >= N || board[nr * N + nc] !== color) break;
+        n++; k++;
+      }
+      k = 1;
+      while (true) {
+        var nr2 = r - dr * k, nc2 = c - dc * k;
+        if (nr2 < 0 || nr2 >= N || nc2 < 0 || nc2 >= N || board[nr2 * N + nc2] !== color) break;
+        n++; k++;
+      }
+      if (n >= 5) return true;
+    }
+    return false;
+  }
+
+  function winPoints(idx, color) {
+    var r = (idx / N) | 0, c = idx % N;
+    for (var d = 0; d < 4; d++) {
+      var dr = DIRS[d][0], dc = DIRS[d][1];
+      var pts = [idx];
+      var k = 1;
+      while (true) {
+        var nr = r + dr * k, nc = c + dc * k;
+        if (nr < 0 || nr >= N || nc < 0 || nc >= N || board[nr * N + nc] !== color) break;
+        pts.push(nr * N + nc); k++;
+      }
+      k = 1;
+      while (true) {
+        var nr2 = r - dr * k, nc2 = c - dc * k;
+        if (nr2 < 0 || nr2 >= N || nc2 < 0 || nc2 >= N || board[nr2 * N + nc2] !== color) break;
+        pts.push(nr2 * N + nc2); k++;
+      }
+      if (pts.length >= 5) return pts.slice(0, 5);
+    }
+    return [];
+  }
+
+  /* ==========================================================
+     启发式评估
+     ------------------------------------------------------------
+     按「线」扫描而不是按「点」重复算：
+     每条线扫一遍，找出所有连续同色段（长度 L + 两端开放数），
+     一次扫描同时算出黑白双方的分值。
+     比逐点评估快一个量级（棋盘 15×15 有 60 条线）。
+     ========================================================== */
+  function shapeScore(L, opens) {
+    if (L >= 5) return 1000000;
+    if (L === 4) return opens === 2 ? 100000 : (opens === 1 ? 10000 : 100);
+    if (L === 3) return opens === 2 ? 10000 : (opens === 1 ? 1000 : 100);
+    if (L === 2) return opens === 2 ? 1000 : (opens === 1 ? 100 : 10);
+    return opens === 2 ? 100 : (opens === 1 ? 10 : 1);
+  }
+
+  function scanLine(arr, len, color) {
+    var score = 0, i = 0;
+    while (i < len) {
+      var v = arr[i];
+      if (v !== color) { i++; continue; }
+      var j = i;
+      while (j < len && arr[j] === color) j++;
+      var L = j - i;
+      var opens = 0;
+      if (i > 0 && arr[i - 1] === EMPTY) opens++;
+      if (j < len && arr[j] === EMPTY) opens++;
+      score += shapeScore(L, opens);
+      i = j;
+    }
+    return score;
+  }
+
+  function evaluate() {
+    var score = 0, r, c, d, i, n;
+
+    // 横
+    for (r = 0; r < N; r++) {
+      for (c = 0; c < N; c++) lineBuf[c] = board[r * N + c];
+      score += scanLine(lineBuf, N, WHITE) - scanLine(lineBuf, N, BLACK);
+    }
+    // 竖
+    for (c = 0; c < N; c++) {
+      for (r = 0; r < N; r++) lineBuf[r] = board[r * N + c];
+      score += scanLine(lineBuf, N, WHITE) - scanLine(lineBuf, N, BLACK);
+    }
+    // 主对角线（↘）
+    for (d = -(N - 1); d <= N - 1; d++) {
+      n = 0;
+      for (r = 0; r < N; r++) {
+        c = r + d;
+        if (c < 0 || c >= N) continue;
+        lineBuf[n++] = board[r * N + c];
+      }
+      if (n >= 5) score += scanLine(lineBuf, n, WHITE) - scanLine(lineBuf, n, BLACK);
+    }
+    // 副对角线（↙）
+    for (d = -(N - 1); d <= N - 1; d++) {
+      n = 0;
+      for (c = 0; c < N; c++) {
+        r = c - d;
+        if (r < 0 || r >= N) continue;
+        lineBuf[n++] = board[r * N + c];
+      }
+      if (n >= 5) score += scanLine(lineBuf, n, WHITE) - scanLine(lineBuf, n, BLACK);
+    }
+    return score;
+  }
+
+  /* ==========================================================
+     候选点
+     ========================================================== */
+  // 已有棋子曼哈顿距离 ≤ 2 的空点
+  function genAll() {
+    var seen = {}, list = [];
+    for (var i = 0; i < N * N; i++) {
+      if (!board[i]) continue;
+      var r = (i / N) | 0, c = i % N;
+      for (var dr = -2; dr <= 2; dr++) {
+        for (var dc = -2; dc <= 2; dc++) {
+          var nr = r + dr, nc = c + dc;
+          if (nr < 0 || nr >= N || nc < 0 || nc >= N) continue;
+          var ni = nr * N + nc;
+          if (!board[ni] && !seen[ni]) { seen[ni] = 1; list.push(ni); }
+        }
+      }
+    }
+    if (!list.length) return [7 * N + 7];     // 空棋盘 → 天元
+    return list;
+  }
+
+  // 单点价值（只用于根节点排序，不在搜索热路径里）
+  function pointValue(idx, color) {
+    var r = (idx / N) | 0, c = idx % N;
+    var total = 0;
+    for (var d = 0; d < 4; d++) {
+      var dr = DIRS[d][0], dc = DIRS[d][1];
+      var cnt = 1, opens = 0, k = 1;
+      while (true) {
+        var nr = r + dr * k, nc = c + dc * k;
+        if (nr < 0 || nr >= N || nc < 0 || nc >= N) break;
+        var v = board[nr * N + nc];
+        if (v === color) cnt++;
+        else { if (v === EMPTY) opens++; break; }
+        k++;
+      }
+      k = 1;
+      while (true) {
+        var nr2 = r - dr * k, nc2 = c - dc * k;
+        if (nr2 < 0 || nr2 >= N || nc2 < 0 || nc2 >= N) break;
+        var v2 = board[nr2 * N + nc2];
+        if (v2 === color) cnt++;
+        else { if (v2 === EMPTY) opens++; break; }
+        k++;
+      }
+      total += shapeScore(cnt, opens);
+    }
+    return total;
+  }
+
+  function genTop(k) {
+    var list = genAll();
+    list.sort(function (a, b) {
+      var sa = pointValue(a, WHITE) + pointValue(a, BLACK) * 0.6;
+      var sb = pointValue(b, WHITE) + pointValue(b, BLACK) * 0.6;
+      return sb - sa;
+    });
+    return list.slice(0, k);
+  }
+
+  /* ==========================================================
+     negamax + α-β
+     ========================================================== */
+  function search(depth, alpha, beta, me) {
+    if (depth <= 0) return evaluate();
+    var moves = genAll();
+    if (moves.length > LV.limit) moves = moves.slice(0, LV.limit);
+    if (!moves.length) return 0;
+    for (var i = 0; i < moves.length; i++) {
+      var idx = moves[i];
+      board[idx] = me;
+      if (isWin(idx, me)) { board[idx] = 0; return (me === WHITE) ? WIN : -WIN; }
+      var v = -search(depth - 1, -beta, -alpha, 3 - me);
+      board[idx] = 0;
+      if (v >= beta) return v;
+      if (v > alpha) alpha = v;
+    }
+    return alpha;
+  }
+
+  /* ==========================================================
+     战绩存档（按难度分档）
+     ========================================================== */
+  function winKey() { return 'gk_gomoku_wins_' + level; }
+  function readWins() {
+    try { return parseInt(localStorage.getItem(winKey()) || '0', 10) || 0; } catch (e) { return 0; }
+  }
+  function writeWins(v) {
+    try { localStorage.setItem(winKey(), String(v)); } catch (e) { }
+  }
+
+  /* ==========================================================
+     对局流程
+     ========================================================== */
+  function resetGame(a) {
+    var g = a || api;
+    board.fill(0);
+    turn = BLACK;
+    over = false;
+    winLine = [];
+    lastMove = -1;
+    thinking = false;
+    ply = 0;
+    thinkToken++;
+    g.setScore(readWins());
+    g.setStat('turn', 0);
+    g.setStat('ply', 0);
+  }
+
+  function place(idx, color) {
+    board[idx] = color;
+    lastMove = idx;
+    ply++;
+    api.setStat('ply', ply);
+    if (isWin(idx, color)) {
+      winLine = winPoints(idx, color);
+      over = true;
+      if (color === BLACK) {
+        var w = readWins() + 1;
+        writeWins(w);
+        api.setScore(w);
+        api.sound('win');
+        api.gameOver('你赢了！');
+      } else {
+        api.sound('die');
+        api.gameOver('电脑赢了');
+      }
+      return;
+    }
+    if (ply >= N * N) {
+      over = true;
+      api.sound('tick');
+      api.gameOver('平局');
+      return;
+    }
+    turn = (color === BLACK) ? WHITE : BLACK;
+    api.setStat('turn', turn === BLACK ? 0 : 1);
+  }
+
+  // AI 思考：分片执行，每片一步，避免阻塞主线程
+  function aiMove() {
+    var my = ++thinkToken;
+    thinking = true;
+    api.setStat('turn', 1);
+
+    setTimeout(function () {
+      if (my !== thinkToken || over || api.state !== 'playing') return;
+      var moves = genTop(LV.limit);
+      if (!moves.length) return;
+
+      var best = moves[0], bestV = -Infinity, i = 0;
+
+      function step() {
+        if (my !== thinkToken || over) return;
+        if (i >= moves.length) {
+          // 简单档加随机扰动，避免每步都最优
+          if (LV.noise > 0 && Math.random() < LV.noise && moves.length > 1) {
+            best = moves[(Math.random() * moves.length) | 0];
+          }
+          thinking = false;
+          place(best, WHITE);
+          if (!over) api.setStat('turn', 0);
+          return;
+        }
+        var idx = moves[i++];
+        board[idx] = WHITE;
+        var v = -search(LV.depth - 1, -Infinity, Infinity, BLACK);
+        board[idx] = 0;
+        if (v > bestV) { bestV = v; best = idx; }
+        setTimeout(step, 0);          // 下一片
+      }
+      step();
+    }, 24);
+  }
+
+  /* ==========================================================
+     绘制
+     ========================================================== */
+  function drawStone(c, x, y, color, r, glow) {
+    c.save();
+    if (glow) { c.shadowColor = glow; c.shadowBlur = 18; }
+    var g = c.createRadialGradient(x - r * 0.34, y - r * 0.34, r * 0.1, x, y, r);
+    if (color === BLACK) {
+      g.addColorStop(0, 'rgba(122,132,152,1)');
+      g.addColorStop(0.45, 'rgba(26,30,42,1)');
+      g.addColorStop(1, 'rgba(5,7,12,1)');
+    } else {
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.5, '#e9edf5');
+      g.addColorStop(1, '#b7c0d1');
+    }
+    c.fillStyle = g;
+    c.beginPath();
+    c.arc(x, y, r, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+
+  var api = window.GameKit.create({
+    slug: 'gomoku',
+    title: '五子棋',
+    logic: [LW, LH],
+    color: '#a855f7',
+    dpad: false,
+    hint: '你执黑先行，<b>连成五子</b>即胜<br>三档难度由弱到强，胜场数自动累计',
+    hud: [
+      { k: 'score', label: '胜场' },
+      { k: 'turn', label: '回合', fmt: function (v) { return v === 0 ? '你' : '电脑'; } },
+      { k: 'ply', label: '手数' }
+    ],
+
+    onInit: function (a) {
+      resetGame(a);
+    },
+
+    onUpdate: function (a, dt) { },
+
+    onRender: function (a, c) {
+      var pal = a.colors;
+
+      // 棋盘底
+      c.fillStyle = pal.panel;
+      c.fillRect(BX - 14, BY - 14, BS + 28, BS + 28);
+
+      // 网格线
+      c.strokeStyle = pal.muted;
+      c.lineWidth = 1;
+      c.beginPath();
+      for (var i = 0; i < N; i++) {
+        var p = BX + i * CELL + CELL / 2;
+        c.moveTo(BX + CELL / 2, p);
+        c.lineTo(BX + BS - CELL / 2, p);
+        c.moveTo(p, BY + CELL / 2);
+        c.lineTo(p, BY + BS - CELL / 2);
+      }
+      c.stroke();
+
+      // 星位
+      c.fillStyle = pal.ink3;
+      var stars = [[3, 3], [3, 11], [7, 7], [11, 3], [11, 11]];
+      for (var s = 0; s < stars.length; s++) {
+        c.beginPath();
+        c.arc(BX + stars[s][0] * CELL + CELL / 2, BY + stars[s][1] * CELL + CELL / 2, 3.2, 0, Math.PI * 2);
+        c.fill();
+      }
+
+      // 棋子
+      var R = CELL * 0.40;
+      for (var idx = 0; idx < N * N; idx++) {
+        var v = board[idx];
+        if (!v) continue;
+        var r = (idx / N) | 0, c2 = idx % N;
+        var x = BX + c2 * CELL + CELL / 2, y = BY + r * CELL + CELL / 2;
+        var inWin = winLine.indexOf(idx) >= 0;
+        drawStone(c, x, y, v, R, inWin ? (v === BLACK ? pal.glow : pal.bright) : null);
+        if (idx === lastMove) {
+          c.fillStyle = v === BLACK ? 'rgba(255,255,255,.78)' : 'rgba(28,34,50,.82)';
+          c.beginPath();
+          c.arc(x, y, R * 0.28, 0, Math.PI * 2);
+          c.fill();
+        }
+      }
+
+      // 胜利连线
+      if (winLine.length >= 5) {
+        var x0 = BX + (winLine[0] % N) * CELL + CELL / 2;
+        var y0 = BY + ((winLine[0] / N) | 0) * CELL + CELL / 2;
+        var x1 = BX + (winLine[4] % N) * CELL + CELL / 2;
+        var y1 = BY + ((winLine[4] / N) | 0) * CELL + CELL / 2;
+        c.save();
+        c.strokeStyle = pal.glow;
+        c.shadowColor = pal.glow;
+        c.shadowBlur = 16;
+        c.lineWidth = 3;
+        c.beginPath();
+        c.moveTo(x0, y0);
+        c.lineTo(x1, y1);
+        c.stroke();
+        c.restore();
+      }
+
+      // 底部状态
+      c.save();
+      c.textAlign = 'center';
+      c.font = '600 15px -apple-system,"PingFang SC",system-ui,sans-serif';
+      c.fillStyle = thinking ? pal.alt : pal.ink2;
+      c.fillText(thinking ? '电脑思考中…' : (over ? '本局结束' : (turn === BLACK ? '轮到你落子（黑）' : '电脑回合（白）')),
+        LW / 2, BY + BS + 40);
+      c.font = '500 12px -apple-system,"PingFang SC",system-ui,sans-serif';
+      c.fillStyle = pal.ink3;
+      c.fillText('难度：' + LV.name + ' · 累计胜场 ' + readWins() + ' 局', LW / 2, BY + BS + 64);
+      c.restore();
+    },
+
+    onAction: function (a, act) {
+      if (act.type !== 'tap') return;
+      if (over || thinking || turn !== BLACK) return;
+      var col = Math.round((act.x - BX - CELL / 2) / CELL);
+      var row = Math.round((act.y - BY - CELL / 2) / CELL);
+      if (col < 0 || col >= N || row < 0 || row >= N) return;
+      var cx = BX + col * CELL + CELL / 2, cy = BY + row * CELL + CELL / 2;
+      if (Math.abs(act.x - cx) > CELL * 0.55 || Math.abs(act.y - cy) > CELL * 0.55) return;
+      var idx = row * N + col;
+      if (board[idx]) return;
+      api.sound('click');
+      place(idx, BLACK);
+      if (!over) aiMove();
+    }
+  });
+
+  /* ---------------- 难度切换 ---------------- */
+  var lvBtns = document.querySelectorAll('#lv button');
+  Array.prototype.forEach.call(lvBtns, function (b) {
+    b.addEventListener('click', function () {
+      var i = +b.getAttribute('data-lv');
+      if (i === level) return;
+      level = i;
+      LV = LEVELS[level];
+      Array.prototype.forEach.call(lvBtns, function (x) {
+        x.classList.toggle('on', +x.getAttribute('data-lv') === level);
+      });
+      if (api.state === 'ready') {
+        resetGame(api);
+      } else {
+        api.restart();
+      }
+    });
+  });
+
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__gm = {
+      get board() { return Array.prototype.slice.call(board); },
+      get turn() { return turn; },
+      get over() { return over; },
+      get thinking() { return thinking; },
+      get ply() { return ply; },
+      get winLine() { return winLine.slice(); },
+      get wins() { return readWins(); },
+      get level() { return level; },
+      get depth() { return LV.depth; },
+      get limit() { return LV.limit; },
+      cellPos: function (r, c) { return { x: BX + c * CELL + CELL / 2, y: BY + r * CELL + CELL / 2 }; },
+      boardOrigin: function () { return { x: BX, y: BY, cell: CELL, n: N }; },
+      // 手动落子（测试用）：不自动触发 AI，避免异步竞态
+      put: function (r, c, color) {
+        if (r < 0 || r >= N || c < 0 || c >= N) return false;
+        var idx = r * N + c;
+        if (board[idx]) return false;
+        place(idx, color || BLACK);
+        return true;
+      },
+      // 同步让 AI 走一步（测试用，不分片）
+      aiNow: function () {
+        var moves = genTop(LV.limit);
+        if (!moves.length) return -1;
+        var best = moves[0], bestV = -Infinity;
+        for (var i = 0; i < moves.length; i++) {
+          var idx = moves[i];
+          board[idx] = WHITE;
+          var v = -search(LV.depth - 1, -Infinity, Infinity, BLACK);
+          board[idx] = 0;
+          if (v > bestV) { bestV = v; best = idx; }
+        }
+        place(best, WHITE);
+        return best;
+      },
+      // AI 搜索耗时
+      searchTime: function (depth, moves) {
+        var t0 = performance.now();
+        var m = moves || genTop(LV.limit);
+        var best = -Infinity;
+        for (var i = 0; i < m.length; i++) {
+          board[m[i]] = WHITE;
+          var v = -search((depth || LV.depth) - 1, -Infinity, Infinity, BLACK);
+          board[m[i]] = 0;
+          if (v > best) best = v;
+        }
+        return { ms: performance.now() - t0, score: best, count: m.length };
+      },
+      // 评估当前盘面
+      evalNow: function () { return evaluate(); },
+      reset: function () { api.restart(); }
+    };
+  }
+
+  void api;
+})();
+</script>
+</body>
+</html>

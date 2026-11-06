@@ -17,127 +17,127 @@
 
   var PAGES = [
     {
-      file: 'html/game-service-quotes.html',
+      file: 'html/tool-quote-copy.html',
       tag: '工具',
       name: '文案快捷复制',
       desc: '10 条接单常用话术，一键复制，手机端直接转发给客户。'
     },
     {
-      file: 'html/standby.html',
+      file: 'html/tool-standby.html',
       tag: '工具',
       name: '待机展示',
       desc: '全屏屏保页，可自定义文字循环展示，默认显示待机时钟。'
     },
     {
-      file: 'html/quotes.html',
+      file: 'html/tool-quotes.html',
       tag: '收藏',
       name: '句子收藏',
       desc: '日常摘录的句子合集，点击任意一句即可复制，可持续补充。'
     },
     {
-      file: 'html/aurora.html',
+      file: 'html/visual-aurora.html',
       tag: '氛围',
       name: '极光',
       desc: '缓慢流动的光斑与胶片颗粒，调色板选个主色，整片极光跟着变。'
     },
     {
-      file: 'html/starfield.html',
+      file: 'html/visual-starfield.html',
       tag: '氛围',
       name: '星空漫游',
       desc: '星野朝你飞来，按住屏幕进入穿越模式，星色自由调。'
     },
     {
-      file: 'html/rain.html',
+      file: 'html/visual-rain.html',
       tag: '氛围',
       name: '雨夜玻璃',
       desc: '窗外霓虹模糊成光斑，玻璃上雨珠下滑，敲一下会荡开。'
     },
     {
-      file: 'html/sky.html',
+      file: 'html/visual-sky.html',
       tag: '氛围',
       name: '实时天光',
       desc: '天空颜色跟着此刻时间走，深夜到黄昏各不相同。'
     },
     {
-      file: 'html/snow.html',
+      file: 'html/visual-snow.html',
       tag: '氛围',
       name: '雪落',
       desc: '三层视差雪花静静落下，手指划过能把雪拨开。'
     },
     {
-      file: 'html/wave-grid.html',
+      file: 'html/visual-wave-grid.html',
       tag: '交互',
       name: '波浪点阵',
       desc: '手指划过激起波纹的点阵水面，可切线框，点色自选。'
     },
     {
-      file: 'html/fractal.html',
+      file: 'html/visual-fractal.html',
       tag: '交互',
       name: '分形缩放',
       desc: '滚轮或双指无限放大曼德博集，细节层层展开。'
     },
     {
-      file: 'html/constellation.html',
+      file: 'html/visual-constellation.html',
       tag: '交互',
       name: '粒子引力场',
       desc: '粒子被指针吸引、自动连线成星座，点击炸开再聚拢。'
     },
     {
-      file: 'html/text-warp.html',
+      file: 'html/visual-text-warp.html',
       tag: '交互',
       name: '文字形变',
       desc: '鼠标靠近，字被推开还会发亮，句子可切换。'
     },
     {
-      file: 'html/particle-text.html',
+      file: 'html/visual-particle-text.html',
       tag: '交互',
       name: '粒子文字',
       desc: '一句话碎成上千颗粒子，点一下吹散，过会儿重新聚拢。'
     },
     {
-      file: 'html/poster.html',
+      file: 'html/visual-poster.html',
       tag: '生成',
       name: '句子海报',
       desc: '把收藏的句子做成 1080×1440 海报，四种模板，主色自选。'
     },
     {
-      file: 'html/mandala.html',
+      file: 'html/visual-mandala.html',
       tag: '生成',
       name: '曼陀罗',
       desc: '画一笔自动镜像出对称花纹，可随机生成，保存 PNG。'
     },
     {
-      file: 'html/gradient.html',
+      file: 'html/visual-gradient.html',
       tag: '生成',
       name: '渐变配色',
       desc: '一点就出一组好看的渐变，HEX 与 CSS 一键复制。'
     },
     {
-      file: 'html/noise.html',
+      file: 'html/visual-noise.html',
       tag: '生成',
       name: '噪声壁纸',
       desc: '分形噪声生成抽象纹理，每次都不一样，可存成手机壁纸。'
     },
     {
-      file: 'html/pixel-avatar.html',
+      file: 'html/visual-pixel-avatar.html',
       tag: '生成',
       name: '像素头像',
       desc: '输入名字生成对称像素头像，可下载当头像用。'
     },
     {
-      file: 'html/handwriting.html',
+      file: 'html/tool-handwriting.html',
       tag: '书写',
       name: '手写板',
       desc: '纸面随手写，导出透明底 PNG，签名、留言都好用。'
     },
     {
-      file: 'html/paint.html',
+      file: 'html/tool-paint.html',
       tag: '绘画',
       name: '画板',
       desc: '五种笔刷、橡皮、油漆桶、取色器、撤销重做。'
     },
     {
-      file: 'html/delta-escort.html',
+      file: 'html/tool-delta-escort.html',
       tag: '落地页',
       name: '行动突围护航社',
       desc: '纯绿双护护航落地页，正文以 V6 定稿，5 套主题一键切换。'

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>记忆翻牌</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/game-kit.css">
+<style>
+  .tip{
+    position:fixed;z-index:12;left:50%;transform:translateX(-50%);
+    bottom:calc(20px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.34);
+    pointer-events:none;user-select:none;white-space:nowrap;
+  }
+  @media (max-width:420px){ .tip{font-size:10px;letter-spacing:.02em;} }
+  .gk-label{display:none;}
+
+  /* 难度切换条（z-index 必须高于 .gk-overlay(30)，否则结束面板会挡住它） */
+  #lv{
+    position:fixed;z-index:40;left:50%;transform:translateX(-50%);
+    top:calc(58px + env(safe-area-inset-top));
+    display:flex;gap:6px;padding:4px;border-radius:999px;
+    background:rgba(16,18,30,.72);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  #lv button{
+    appearance:none;border:0;cursor:pointer;
+    padding:5px 14px;border-radius:999px;
+    font:600 12px/1.2 -apple-system,"PingFang SC",system-ui,sans-serif;
+    color:rgba(255,255,255,.55);background:transparent;
+    transition:background .18s,color .18s;
+  }
+  #lv button.on{background:var(--gk-accent,#635bff);color:#fff;}
+</style>
+  <script src="../assets/js/fs-kit.js" defer></script>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="lv">
+  <button type="button" data-lv="0" class="on">8 对</button>
+  <button type="button" data-lv="1">12 对</button>
+</div>
+<div class="tip">点击卡片翻开 · 步数越少越好 · 右上色球换配色</div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/game-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LW = 480, LH = 720;
+  var BX = 20, BY = 128, BW = 440;     // 卡牌区
+  var BH = 524;                        // 卡牌区最大高度
+  var GAP = 6;
+
+  var LV = [
+    { cols: 4, rows: 4, pairs: 8 },
+    { cols: 4, rows: 6, pairs: 12 }
+  ];
+
+  var level = 0;
+  var cards = [];                       // {r,c,pid,flip,target,matched}
+  var cols = 4, rows = 4, cw = 0, ch = 0, gridY = BY;
+  var first = -1;                       // 第一张翻开的下标
+  var second = -1;
+  var busy = false;                     // 等待翻回
+  var moves = 0;
+  var matched = 0;
+  var elapsed = 0;
+  var started = false;
+  var lastHud = -1;
+
+  /* ---------------- 图案 ---------------- */
+  // 每种图案一个绘制函数（画在 -r..r 的局部坐标里）
+  var PATTERNS = [
+    function (c, r) { c.beginPath(); c.arc(0, 0, r * 0.72, 0, Math.PI * 2); c.fill(); },
+    function (c, r) { c.beginPath(); c.moveTo(0, -r * 0.8); c.lineTo(r * 0.75, r * 0.55); c.lineTo(-r * 0.75, r * 0.55); c.closePath(); c.fill(); },
+    function (c, r) { c.beginPath(); c.rect(-r * 0.62, -r * 0.62, r * 1.24, r * 1.24); c.fill(); },
+    function (c, r) { c.beginPath(); c.moveTo(0, -r * 0.82); c.lineTo(r * 0.82, 0); c.lineTo(0, r * 0.82); c.lineTo(-r * 0.82, 0); c.closePath(); c.fill(); },
+    function (c, r) {
+      c.beginPath();
+      for (var i = 0; i < 10; i++) {
+        var ang = -Math.PI / 2 + i * Math.PI / 5;
+        var rr = (i % 2 === 0) ? r * 0.88 : r * 0.38;
+        var x = Math.cos(ang) * rr, y = Math.sin(ang) * rr;
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.closePath(); c.fill();
+    },
+    function (c, r) {
+      c.beginPath();
+      for (var i = 0; i < 6; i++) {
+        var ang = -Math.PI / 2 + i * Math.PI / 3;
+        var x = Math.cos(ang) * r * 0.8, y = Math.sin(ang) * r * 0.8;
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.closePath(); c.fill();
+    },
+    function (c, r) { c.lineWidth = r * 0.3; c.beginPath(); c.arc(0, 0, r * 0.58, 0, Math.PI * 2); c.stroke(); },
+    function (c, r) {
+      c.lineWidth = r * 0.28; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-r * 0.6, -r * 0.6); c.lineTo(r * 0.6, r * 0.6);
+      c.moveTo(r * 0.6, -r * 0.6); c.lineTo(-r * 0.6, r * 0.6); c.stroke();
+    },
+    function (c, r) {
+      c.lineWidth = r * 0.26;
+      c.beginPath(); c.arc(0, 0, r * 0.7, 0.3, Math.PI * 1.6); c.stroke();
+    },
+    function (c, r) {
+      c.lineWidth = r * 0.22; c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(-r * 0.7, -r * 0.35); c.lineTo(r * 0.7, -r * 0.35);
+      c.moveTo(-r * 0.7, r * 0.2); c.lineTo(r * 0.7, r * 0.2);
+      c.moveTo(-r * 0.35, -r * 0.7); c.lineTo(-r * 0.35, r * 0.7); c.stroke();
+    },
+    function (c, r) {
+      c.beginPath(); c.arc(0, 0, r * 0.72, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.arc(0, 0, r * 0.3, 0, Math.PI * 2); c.fill();
+    },
+    function (c, r) {
+      c.beginPath();
+      c.moveTo(-r * 0.75, r * 0.45);
+      c.quadraticCurveTo(0, -r * 0.95, r * 0.75, r * 0.45);
+      c.quadraticCurveTo(0, r * 0.1, -r * 0.75, r * 0.45);
+      c.fill();
+    }
+  ];
+
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0;
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  /* ---------------- 局面 ---------------- */
+  // 注意：onInit 是 create() 内部回调，那时外层 api 还没赋值，
+  // 所以必须用参数 a，不能引用外层 api（否则 TypeError，整页脚本中断）
+  function resetGame(a) {
+    var g = a || api;
+    var L = LV[level];
+    cols = L.cols; rows = L.rows;
+    cw = (BW - GAP * (cols - 1)) / cols;
+    // 竖版 6 行时把卡片压扁一点，整体高度不超 BH
+    var availH = BH - GAP * (rows - 1);
+    ch = Math.min(cw, availH / rows);
+    // 两种难度卡牌高度不同 → 在卡牌区内垂直居中，避免上方空一大块
+    gridY = BY + Math.max(0, (BH - (rows * ch + GAP * (rows - 1))) / 2);
+
+    var ids = [];
+    for (var i = 0; i < L.pairs; i++) { ids.push(i, i); }
+    shuffle(ids);
+
+    cards = [];
+    for (var r = 0; r < rows; r++) {
+      for (var c2 = 0; c2 < cols; c2++) {
+        cards.push({
+          r: r, c: c2,
+          pid: ids[r * cols + c2],
+          flip: 0, target: 0, matched: false
+        });
+      }
+    }
+    first = -1; second = -1; busy = false;
+    moves = 0; matched = 0; elapsed = 0; started = false; lastHud = -1;
+    g.setStat('moves', 0);
+    g.setStat('time', 0);
+  }
+
+  /* ---------------- 交互 ---------------- */
+  function cellAt(lx, ly) {
+    for (var i = 0; i < cards.length; i++) {
+      var cd = cards[i];
+      var x = BX + cd.c * (cw + GAP);
+      var y = gridY + cd.r * (ch + GAP);
+      if (lx >= x && lx <= x + cw && ly >= y && ly <= y + ch) return i;
+    }
+    return -1;
+  }
+
+  function flipUp(i) {
+    var cd = cards[i];
+    cd.target = 1;
+  }
+
+  function onTap(lx, ly) {
+    if (busy) return;
+    var i = cellAt(lx, ly);
+    if (i < 0) return;
+    var cd = cards[i];
+    if (cd.matched || cd.target === 1) return;      // 已翻开/已配对，不再响应
+
+    if (!started) { started = true; }
+
+    flipUp(i);
+    api.sound('tick');
+
+    if (first < 0) {
+      first = i;
+      return;
+    }
+    // 第二张
+    second = i;
+    moves++;
+    api.setStat('moves', moves);
+
+    if (cards[first].pid === cards[second].pid) {
+      // 配对成功
+      cards[first].matched = true;
+      cards[second].matched = true;
+      matched += 2;
+      api.sound('merge');
+      first = -1; second = -1;
+      if (matched === cards.length) {
+        api.sound('win');
+        // 步数作为成绩（越小越好）
+        api.setScore(moves);
+        api.gameOver('全部配对！');
+      }
+      return;
+    }
+
+    // 不匹配：等一会翻回去
+    busy = true;
+    setTimeout(function () {
+      if (cards[first]) cards[first].target = 0;
+      if (cards[second]) cards[second].target = 0;
+      first = -1; second = -1; busy = false;
+    }, 780);
+  }
+
+  /* ---------------- 更新 ---------------- */
+  function update(dt) {
+    // 翻转插值
+    for (var i = 0; i < cards.length; i++) {
+      var cd = cards[i];
+      var d = cd.target - cd.flip;
+      if (Math.abs(d) > 0.001) {
+        cd.flip += d * Math.min(1, dt * 13);
+        // 提前吸附：阈值太小会让动画拖一条长尾，牌永远差一点才到位
+        if (Math.abs(cd.target - cd.flip) < 0.02) cd.flip = cd.target;
+      }
+    }
+    if (started) {
+      elapsed += dt;
+      var t10 = Math.floor(elapsed * 10);
+      if (t10 !== lastHud) {
+        lastHud = t10;
+        api.setStat('time', elapsed);
+      }
+    }
+  }
+
+  /* ---------------- 绘制 ---------------- */
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function drawCard(c, cd, pal) {
+    var x = BX + cd.c * (cw + GAP);
+    var y = gridY + cd.r * (ch + GAP);
+    var f = cd.flip;                                  // 0 背 1 正
+    // 3D 翻牌：宽度必须「1 → 0 → 1」
+    // 注意是 cos(f*π)：f=0 满宽(背) → f=0.5 侧棱 → f=1 满宽(正)
+    // 之前写成 cos(f*π/2) 是单调递减的，牌翻到位时宽度趋近 0，牌面变成一条线
+    var sc = Math.abs(Math.cos(f * Math.PI));
+
+    c.save();
+    c.translate(x + cw / 2, y + ch / 2);
+    c.scale(Math.max(0.02, sc), 1);
+
+    if (f < 0.5) {
+      // 背面
+      var g = c.createLinearGradient(-cw / 2, -ch / 2, cw / 2, ch / 2);
+      g.addColorStop(0, pal.at(0, -0.06, 0.02));
+      g.addColorStop(1, pal.at(0, -0.1, -0.12));
+      c.fillStyle = g;
+      roundRect(c, -cw / 2 + 2, -ch / 2 + 2, cw - 4, ch - 4, 10);
+      c.fill();
+      // 背面纹理
+      c.strokeStyle = 'rgba(255,255,255,.05)';
+      c.lineWidth = 1.5;
+      for (var d = -ch; d < cw; d += 12) {
+        c.beginPath();
+        c.moveTo(-cw / 2 + d, ch / 2 - 2);
+        c.lineTo(-cw / 2 + d + ch, -ch / 2 + 2);
+        c.stroke();
+      }
+      // 中央菱形
+      c.globalAlpha = 0.16;
+      c.fillStyle = pal.base;
+      c.beginPath();
+      c.moveTo(0, -ch * 0.2); c.lineTo(ch * 0.2, 0); c.lineTo(0, ch * 0.2); c.lineTo(-ch * 0.2, 0);
+      c.closePath(); c.fill();
+      c.globalAlpha = 1;
+    } else {
+      // 正面
+      c.fillStyle = cd.matched ? pal.at(0, -0.14, -0.06) : pal.panel;
+      roundRect(c, -cw / 2 + 2, -ch / 2 + 2, cw - 4, ch - 4, 10);
+      c.fill();
+      c.strokeStyle = cd.matched ? pal.base : 'rgba(255,255,255,.07)';
+      c.lineWidth = cd.matched ? 2 : 1;
+      roundRect(c, -cw / 2 + 2, -ch / 2 + 2, cw - 4, ch - 4, 10);
+      c.stroke();
+
+      // 图案（12 种，按 pid 取色）
+      var hue = (cd.pid * 30) % 360;
+      c.save();
+      c.globalAlpha = cd.matched ? 1 : 0.92;
+      c.fillStyle = pal.at(hue - pal.h, 0.05, 0.02);
+      c.strokeStyle = pal.at(hue - pal.h, 0.05, 0.02);
+      c.lineJoin = 'round';
+      var r = Math.min(cw, ch) * 0.26;
+      PATTERNS[cd.pid % PATTERNS.length](c, r);
+      c.restore();
+    }
+    c.restore();
+  }
+
+  var api = window.GameKit.create({
+    slug: 'memory',
+    title: '记忆翻牌',
+    logic: [LW, LH],
+    color: '#8b5cf6',
+    dpad: false,
+    bestMode: 'min',                 // 步数越少越好
+    hint: '翻开两张相同的卡片即可配对<br>用最少的步数找出全部配对',
+    hud: [
+      { k: 'moves', label: '步数' },
+      { k: 'best', label: '最少步数', fmt: function (v) { return v ? v + ' 步' : '—'; } },
+      { k: 'time', label: '用时', fmt: function (v) { return v.toFixed(1) + 's'; } }
+    ],
+
+    onInit: function (a) {
+      resetGame(a);
+      a.setScore(0);
+    },
+
+    onUpdate: function (a, dt) { update(dt); },
+
+    onRender: function (a, c) {
+      var pal = a.colors;
+      for (var i = 0; i < cards.length; i++) drawCard(c, cards[i], pal);
+    },
+
+    onAction: function (a, act) {
+      if (act.type === 'tap') onTap(act.x, act.y);
+    }
+  });
+
+  /* 难度切换 */
+  var lvBtns = document.querySelectorAll('#lv button');
+  Array.prototype.forEach.call(lvBtns, function (b) {
+    b.addEventListener('click', function () {
+      var i = +b.getAttribute('data-lv');
+      if (i === level) return;
+      level = i;
+      Array.prototype.forEach.call(lvBtns, function (x) {
+        x.classList.toggle('on', +x.getAttribute('data-lv') === level);
+      });
+      if (api.state === 'ready') {
+        resetGame(api);
+        api.setScore(0);
+      } else {
+        api.restart();
+      }
+    });
+  });
+
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__mem = {
+      get level() { return level; },
+      get cols() { return cols; },
+      get rows() { return rows; },
+      get moves() { return moves; },
+      get matched() { return matched; },
+      get total() { return cards.length; },
+      get busy() { return busy; },
+      get elapsed() { return elapsed; },
+      box: { x: BX, y: BY, w: BW, h: BH },
+      get gridY() { return gridY; },
+      get logic() { return [LW, LH]; },
+      cellSize: function () { return { w: cw, h: ch }; },
+      // 返回每张卡的花色 id 与翻开状态
+      peek: function () {
+        return cards.map(function (c2) {
+          return { r: c2.r, c: c2.c, pid: c2.pid, flip: c2.flip, matched: c2.matched };
+        });
+      },
+      tapCell: function (r, c) {
+        for (var i = 0; i < cards.length; i++) {
+          if (cards[i].r === r && cards[i].c === c) { onTap(BX + cards[i].c * (cw + GAP) + cw / 2, gridY + cards[i].r * (ch + GAP) + ch / 2); return true; }
+        }
+        return false;
+      },
+      reset: function () { api.restart(); }
+    };
+  }
+
+  void api;
+})();
+</script>
+</body>
+</html>

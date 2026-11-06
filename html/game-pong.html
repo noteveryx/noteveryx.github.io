@@ -19,6 +19,7 @@
   @media (max-width:420px){ .tip{font-size:10px;letter-spacing:.02em;} }
   .gk-label{display:none;}
 </style>
+  <script src="../assets/js/fs-kit.js" defer></script>
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -108,8 +109,9 @@
     if (keyUp) kdir -= 1;
     if (keyDown) kdir += 1;
     if (kdir) player.y += kdir * 560 * dt;
-    else if (now() - lastPtrT < 1600) {
+    else if (api.pointer.down || now() - lastPtrT < 1600) {
       // 指针：平滑跟随
+      // 注意：lastPtrT 只在 pointermove 刷新，「按住不动」要靠 pointer.down 维持跟随
       player.y += (pointerY - player.y) * Math.min(1, dt * 16);
     }
     player.y = Math.max(PADDLE_H / 2 + 6, Math.min(LH - PADDLE_H / 2 - 6, player.y));

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>游戏中心</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<style>
+  :root{
+    --hub-accent:#635bff;
+    --hub-bg:#080a11;
+    --hub-card:rgba(255,255,255,.045);
+    --hub-line:rgba(255,255,255,.09);
+    --hub-ink:rgba(255,255,255,.92);
+    --hub-ink2:rgba(255,255,255,.55);
+    --hub-ink3:rgba(255,255,255,.32);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(120% 80% at 12% -10%, color-mix(in srgb, var(--hub-accent) 22%, transparent), transparent 60%),
+      radial-gradient(100% 70% at 92% 0%, color-mix(in srgb, var(--hub-accent) 12%, transparent), transparent 55%),
+      var(--hub-bg);
+    color:var(--hub-ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    transition:background .3s ease;
+  }
+  .wrap{
+    max-width:1080px;margin:0 auto;
+    padding:calc(22px + env(safe-area-inset-top)) 18px calc(34px + env(safe-area-inset-bottom));
+  }
+
+  /* ---------- 头部 ---------- */
+  header{
+    display:flex;align-items:center;gap:14px;
+    padding-bottom:18px;margin-bottom:18px;
+    border-bottom:1px solid var(--hub-line);
+  }
+  .back{
+    flex:none;width:38px;height:38px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--hub-line);background:var(--hub-card);
+    color:var(--hub-ink2);text-decoration:none;font-size:17px;
+    transition:transform .14s,border-color .2s,color .2s;
+  }
+  .back:hover{border-color:var(--hub-accent);color:var(--hub-ink);transform:translateX(-2px);}
+  .htitle{flex:1;min-width:0;}
+  h1{
+    margin:0;font-size:21px;font-weight:800;letter-spacing:.02em;
+    background:linear-gradient(92deg,var(--hub-ink),color-mix(in srgb,var(--hub-accent) 70%,#fff));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  #sum{margin:5px 0 0;font-size:12px;color:var(--hub-ink3);letter-spacing:.04em;}
+
+  /* ---------- 分类 ---------- */
+  .tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;}
+  .tabs button{
+    appearance:none;border:1px solid var(--hub-line);cursor:pointer;
+    background:var(--hub-card);color:var(--hub-ink2);
+    font:600 12.5px/1 inherit;padding:9px 15px;border-radius:999px;
+    transition:background .18s,color .18s,border-color .18s;
+  }
+  .tabs button:hover{color:var(--hub-ink);border-color:rgba(255,255,255,.2);}
+  .tabs button.on{
+    background:var(--hub-accent);border-color:var(--hub-accent);color:#fff;
+    box-shadow:0 4px 14px color-mix(in srgb,var(--hub-accent) 38%,transparent);
+  }
+
+  /* ---------- 卡片 ---------- */
+  .grid{
+    display:grid;gap:12px;
+    grid-template-columns:repeat(auto-fill,minmax(232px,1fr));
+  }
+  .card{
+    display:block;text-decoration:none;color:inherit;
+    padding:16px;border-radius:16px;
+    background:var(--hub-card);border:1px solid var(--hub-line);
+    transition:transform .16s cubic-bezier(.2,.9,.3,1),border-color .2s,background .2s;
+    position:relative;overflow:hidden;
+  }
+  .card::after{
+    content:'';position:absolute;inset:0;border-radius:16px;pointer-events:none;
+    background:radial-gradient(90% 60% at 100% 0%, color-mix(in srgb,var(--hub-accent) 16%,transparent), transparent 70%);
+    opacity:0;transition:opacity .22s;
+  }
+  .card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--hub-accent) 55%,transparent);}
+  .card:hover::after{opacity:1;}
+  .ico{
+    display:flex;align-items:center;justify-content:center;
+    width:42px;height:42px;border-radius:12px;margin-bottom:11px;
+    font-size:21px;line-height:1;
+    background:color-mix(in srgb,var(--hub-accent) 16%,rgba(255,255,255,.05));
+    border:1px solid color-mix(in srgb,var(--hub-accent) 26%,transparent);
+  }
+  .meta{display:flex;align-items:baseline;gap:8px;}
+  .nm{font-size:15.5px;font-weight:700;letter-spacing:.02em;}
+  .ct{
+    font-size:10.5px;color:var(--hub-ink3);
+    border:1px solid var(--hub-line);border-radius:999px;padding:2px 7px;
+  }
+  .ds{
+    margin:7px 0 11px;font-size:12px;line-height:1.62;color:var(--hub-ink2);
+  }
+  .bs{
+    display:inline-block;font-size:11.5px;font-weight:600;
+    color:var(--hub-accent);font-variant-numeric:tabular-nums;
+    padding:3px 9px;border-radius:8px;
+    background:color-mix(in srgb,var(--hub-accent) 12%,transparent);
+  }
+  .bs.none{color:var(--hub-ink3);background:rgba(255,255,255,.05);}
+
+  .empty{
+    grid-column:1/-1;text-align:center;padding:46px 0;
+    color:var(--hub-ink3);font-size:13px;
+  }
+
+  footer{
+    margin-top:26px;padding-top:16px;border-top:1px solid var(--hub-line);
+    font-size:11.5px;color:var(--hub-ink3);line-height:1.7;
+  }
+  footer b{color:var(--hub-ink2);font-weight:600;}
+
+  @media (max-width:560px){
+    .wrap{padding-left:14px;padding-right:14px;}
+    .grid{grid-template-columns:repeat(2,1fr);gap:10px;}
+    .card{padding:13px;border-radius:14px;}
+    .ico{width:36px;height:36px;font-size:18px;margin-bottom:9px;}
+    .nm{font-size:14px;}
+    .ds{font-size:11.5px;margin:6px 0 9px;line-height:1.55;}
+    h1{font-size:18px;}
+  }
+</style>
+  <script src="../assets/js/fs-kit.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="../x.html" aria-label="返回">←</a>
+    <div class="htitle">
+      <h1>游戏中心</h1>
+      <p id="sum">—</p>
+    </div>
+    <div class="pk" data-pk="game" data-placement="left"></div>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+  <main class="grid" id="grid"></main>
+
+  <footer>
+    纪录保存在本机浏览器里，<b>换设备不会同步</b>；右上角色球改配色，<b>全部游戏一起变</b>。
+    每个游戏都有玩法说明与最高分记录，玩不动了随时换一款。
+  </footer>
+</div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------------- 游戏清单 ---------------- */
+  var GAMES = [
+    { file: 'game-2048.html', slug: '2048', name: '2048', ico: '🎲', cat: '经典',
+      desc: '滑动或按方向键合并数字，目标是 2048' },
+    { file: 'game-tetris.html', slug: 'tetris', name: '俄罗斯方块', ico: '🧱', cat: '经典',
+      desc: '7-bag 随机、Hold 暂存、幽灵块预示落点' },
+    { file: 'game-minesweeper.html', slug: 'minesweeper', name: '扫雷', ico: '💣', cat: '经典',
+      desc: '三档难度，首开不炸，记录最快通关时间',
+      keys: ['gk_minesweeper_best_0', 'gk_minesweeper_best_1', 'gk_minesweeper_best_2'],
+      mode: 'min', unit: 's' },
+    { file: 'game-snake.html', slug: 'snake', name: '贪吃蛇', ico: '🐍', cat: '动作',
+      desc: '吃掉果实不断变长，撞墙或撞到自己就结束' },
+    { file: 'game-flappy.html', slug: 'flappy', name: 'Flappy', ico: '🐦', cat: '动作',
+      desc: '点击拍翅穿过管道缝隙，越往后越快' },
+    { file: 'game-pong.html', slug: 'pong', name: 'Pong', ico: '🏓', cat: '动作',
+      desc: '操控挡板先得 11 分，回合越快球速越快' },
+    { file: 'game-breakout.html', slug: 'breakout', name: '打砖块', ico: '🎳', cat: '动作',
+      desc: '移动挡板反弹小球，清空砖块进入下一关' },
+    { file: 'game-memory.html', slug: 'memory', name: '记忆翻牌', ico: '🃏', cat: '益智',
+      desc: '翻开两张相同卡片完成配对，步数越少越好',
+      mode: 'min', unit: '步' },
+    { file: 'game-slide.html', slug: 'slide', name: '数字滑块', ico: '🧮', cat: '益智',
+      desc: '把方块滑进空位排成顺序，记录最少步数',
+      mode: 'min', unit: '步' },
+    { file: 'game-wordchain.html', slug: 'wordchain', name: '中文接龙', ico: '🔗', cat: '益智',
+      desc: '上一个词的尾字接下一个词的首字，限时挑战' },
+    { file: 'game-gomoku.html', slug: 'gomoku', name: '五子棋', ico: '⚫', cat: '益智',
+      desc: '人机对弈，三档难度，胜场数自动累计',
+      unit: '局' },
+    { file: 'game-linkup.html', slug: 'linkup', name: '连连看', ico: '🧩', cat: '益智',
+      desc: '点两张相同图案消除，中间不通也能消' }
+  ];
+
+  var CATS = ['全部', '经典', '动作', '益智'];
+  var curCat = '全部';
+
+  /* ---------------- 纪录读取 ---------------- */
+  function bestOf(g) {
+    var keys = g.keys || ['gk_' + g.slug + '_best'];
+    var vals = [];
+    for (var i = 0; i < keys.length; i++) {
+      var v = parseFloat(localStorage.getItem(keys[i]));
+      if (isFinite(v) && v > 0) vals.push(v);
+    }
+    if (!vals.length) return 0;
+    return g.mode === 'min' ? Math.min.apply(null, vals) : Math.max.apply(null, vals);
+  }
+
+  function bestText(g, v) {
+    if (!v) return '还没玩过';
+    if (g.mode === 'min') {
+      return g.unit === 's' ? '最快 ' + v.toFixed(1) + 's' : '最少 ' + v + ' ' + (g.unit || '');
+    }
+    return '最高 ' + v + (g.unit ? ' ' + g.unit : '');
+  }
+
+  /* ---------------- 渲染 ---------------- */
+  var grid = document.getElementById('grid');
+  var tabs = document.getElementById('tabs');
+  var sum = document.getElementById('sum');
+
+  function render() {
+    // 分类页签
+    tabs.innerHTML = '';
+    CATS.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = c;
+      if (c === curCat) b.className = 'on';
+      b.addEventListener('click', function () { curCat = c; render(); });
+      tabs.appendChild(b);
+    });
+
+    // 卡片
+    grid.innerHTML = '';
+    var list = GAMES.filter(function (g) { return curCat === '全部' || g.cat === curCat; });
+    if (!list.length) {
+      var e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = '这一类还没有游戏';
+      grid.appendChild(e);
+    }
+    var played = 0, total = 0;
+    list.forEach(function (g) {
+      var v = bestOf(g);
+      if (v) { played++; total += v; }
+      var a = document.createElement('a');
+      a.className = 'card';
+      a.href = g.file;
+      a.setAttribute('data-cat', g.cat);
+
+      var ico = document.createElement('span');
+      ico.className = 'ico';
+      ico.textContent = g.ico;
+
+      var meta = document.createElement('div');
+      meta.className = 'meta';
+      var nm = document.createElement('span');
+      nm.className = 'nm';
+      nm.textContent = g.name;
+      var ct = document.createElement('span');
+      ct.className = 'ct';
+      ct.textContent = g.cat;
+      meta.appendChild(nm);
+      meta.appendChild(ct);
+
+      var ds = document.createElement('p');
+      ds.className = 'ds';
+      ds.textContent = g.desc;
+
+      var bs = document.createElement('span');
+      bs.className = 'bs' + (v ? '' : ' none');
+      bs.textContent = bestText(g, v);
+
+      a.appendChild(ico);
+      a.appendChild(meta);
+      a.appendChild(ds);
+      a.appendChild(bs);
+      grid.appendChild(a);
+    });
+
+    // 汇总
+    var allPlayed = 0, allSum = 0;
+    GAMES.forEach(function (g) {
+      var v = bestOf(g);
+      if (v) { allPlayed++; allSum += v; }
+    });
+    sum.textContent = list.length + ' 个游戏 · 已有 ' + allPlayed + '/' + GAMES.length + ' 项纪录 · 累计 ' + allSum;
+  }
+
+  /* ---------------- 配色 ---------------- */
+  function applyColor(hex) {
+    document.documentElement.style.setProperty('--hub-accent', hex);
+  }
+  var pkEl = document.querySelector('.pk');
+  if (window.PaletteKit && pkEl) {
+    var pk = window.PaletteKit.mount(pkEl, { value: '#635bff', onChange: applyColor });
+    if (pk && pk.get) applyColor(pk.get());
+    else applyColor('#635bff');
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

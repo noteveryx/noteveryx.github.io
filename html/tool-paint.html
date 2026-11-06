@@ -16,7 +16,8 @@
     color:#23262d;-webkit-font-smoothing:antialiased;
     touch-action:none;user-select:none;-webkit-user-select:none;
   }
-  canvas{position:fixed;inset:0;display:block;width:100%;height:100%;cursor:crosshair;}
+  /* 只作用于主画布：用 #cv 收窄，避免动态创建的缩略图 canvas 也被拉成全屏覆盖层 */
+  #cv{position:fixed;inset:0;display:block;width:100%;height:100%;cursor:crosshair;}
   .ui{position:fixed;z-index:5;opacity:1;transition:opacity .5s ease;}
   body.idle .ui{opacity:.18;}
   body.idle .ui:hover,body.idle .ui:focus-within{opacity:1;}
@@ -65,11 +66,42 @@
   .tool i{width:14px;height:14px;border-radius:50%;background:#23262d;display:block;}
   .sep{width:1px;height:20px;background:rgba(0,0,0,.1);flex:0 0 auto;}
   .tool.primary{background:#23262d;color:#fff;}
+  .tool.zoom{min-width:0;padding:0 8px;font-variant-numeric:tabular-nums;}
   .hint{
     left:50%;bottom:calc(62px + env(safe-area-inset-bottom));transform:translateX(-50%);
     font-size:11.5px;color:#98a0ad;pointer-events:none;white-space:nowrap;
   }
+
+  /* ---------- 简笔画示例面板 ---------- */
+  .simp{
+    position:fixed;z-index:20;width:min(346px,calc(100vw - 20px));
+    padding:12px;border-radius:14px;
+    background:rgba(255,255,255,.96);border:1px solid rgba(0,0,0,.08);
+    box-shadow:0 10px 30px rgba(0,0,0,.16);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  }
+  .simp[hidden]{display:none !important;}
+  .simp h4{
+    margin:0 0 10px;font-size:12.5px;font-weight:700;color:#4b525d;
+  }
+  .simp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .simp-item{
+    aspect-ratio:1;border-radius:11px;border:1px solid rgba(0,0,0,.08);
+    background:#fff;cursor:pointer;padding:0;overflow:hidden;position:relative;
+    transition:transform .12s ease,border-color .15s ease,box-shadow .15s ease;
+  }
+  .simp-item:hover{transform:translateY(-2px);border-color:#635bff;box-shadow:0 5px 14px rgba(99,91,255,.2);}
+  .simp-item:active{transform:scale(.95);}
+  .simp-item canvas{position:static;inset:auto;width:100%;height:100%;display:block;pointer-events:none;}
+  .simp-item b{
+    position:absolute;left:0;right:0;bottom:0;padding:2px 0 3px;
+    font:600 9.5px/1.2 inherit;color:#8b93a1;text-align:center;
+    background:linear-gradient(transparent,rgba(255,255,255,.94) 42%);
+    pointer-events:none;
+  }
+  .simp-tip{margin:9px 0 0;font-size:10.5px;line-height:1.6;color:#98a0ad;}
 </style>
+  <script src="../assets/js/fs-kit.js" defer></script>
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -90,6 +122,8 @@
   <button class="tool" id="fillBtn" type="button" title="填充（G）">填充</button>
   <button class="tool" id="pickBtn" type="button" title="取色（I）">取色</button>
   <i class="sep"></i>
+  <button class="tool zoom" id="zoomBtn" type="button" title="缩放：双指捏合 / 滚轮，点此复位 1:1"><span id="zoomText">100%</span></button>
+  <button class="tool" id="simpBtn" type="button" title="简笔画示例">示例</button>
   <button class="tool" id="undoBtn" type="button" title="撤销（Z）">撤销</button>
   <button class="tool" id="redoBtn" type="button" title="重做（Y）">重做</button>
   <button class="tool" id="clearBtn" type="button" title="清空">清空</button>
@@ -98,7 +132,13 @@
   <button class="tool primary" id="saveBtn" type="button" title="保存 PNG">保存</button>
 </div>
 
-<div class="ui hint" id="hint">工具栏可左右滑动 · 填充前先用取色器挑一个颜色</div>
+<div class="simp" id="simpPop" hidden role="dialog" aria-label="简笔画示例">
+  <h4>简笔画示例</h4>
+  <div class="simp-grid" id="simpGrid"></div>
+  <p class="simp-tip">点一下把简笔画画到画布中央，接着用取色器涂色即可。</p>
+</div>
+
+<div class="ui hint" id="hint">工具栏可左右滑动 · 双指捏合缩放 · 双指拖动平移</div>
 
 <script src="../assets/js/palette-kit.js"></script>
 <script>
@@ -120,6 +160,53 @@
   var mode = 'brush';            // brush | eraser | fill | pick
   var drawing = false, last = null;
 
+  /* ---------------- 缩放 / 平移（视口变换）----------------
+     画布分两层：
+       contentCv —— 内容层，按原始分辨率保存笔迹；撤销/取色/填充/导出都用它
+       cv/ctx    —— 显示层，只负责把内容层按当前视图（缩放+平移）画出来
+     这样放大后旧笔迹会跟着放大，且不损失画质，导出 PNG 始终是原始分辨率。 */
+  var view = { s: 1, x: 0, y: 0 };      // s = 倍率，x/y = 平移量（CSS 像素）
+  var MIN_S = 0.35, MAX_S = 8;
+
+  var contentCv = document.createElement('canvas');
+  var cctx = contentCv.getContext('2d');
+
+  function clampScale(s) { return Math.max(MIN_S, Math.min(MAX_S, s)); }
+
+  /* 画布坐标 → 内容层设备像素（内容层不含视图变换） */
+  function toDevice(x, y) {
+    return { x: Math.round(x * DPR), y: Math.round(y * DPR) };
+  }
+
+  function syncZoom() {
+    var t = document.getElementById('zoomText');
+    if (t) t.textContent = Math.round(view.s * 100) + '%';
+  }
+  // 以画布上的 (px,py) 为锚点缩放 —— 手指/光标下的那一点保持不动
+  function zoomAt(px, py, factor) {
+    var ns = clampScale(view.s * factor);
+    var k = ns / view.s;
+    view.x = px - (px - view.x) * k;
+    view.y = py - (py - view.y) * k;
+    view.s = ns;
+    syncZoom();
+    render();
+  }
+  function zoomBy(factor) { zoomAt(W / 2, H / 2, factor); }
+  function resetView() { view.s = 1; view.x = 0; view.y = 0; syncZoom(); render(); }
+
+  /* 把内容层按当前视图画到显示层 */
+  function render() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = paper;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.translate(view.x, view.y);
+    ctx.scale(view.s, view.s);
+    ctx.drawImage(contentCv, 0, 0, W, H);
+    ctx.restore();
+  }
+
   var snaps = [], redos = [];
   var SNAP_LIMIT = 10;
 
@@ -128,39 +215,51 @@
     W = window.innerWidth; H = window.innerHeight;
     cv.width = Math.round(W * DPR);
     cv.height = Math.round(H * DPR);
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.fillStyle = paper;
-    ctx.fillRect(0, 0, W, H);
+    contentCv.width = cv.width;
+    contentCv.height = cv.height;
+    cctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cctx.fillStyle = paper;
+    cctx.fillRect(0, 0, W, H);
     snaps.length = 0; redos.length = 0;
+    resetView();                 // 尺寸变了，视图复位
   }
 
   function pushSnap() {
     if (snaps.length >= SNAP_LIMIT) snaps.shift();
-    snaps.push(ctx.getImageData(0, 0, cv.width, cv.height));
+    snaps.push(cctx.getImageData(0, 0, contentCv.width, contentCv.height));
     redos.length = 0;
   }
   function undo() {
     var s = snaps.pop();
     if (!s) return;
-    redos.push(ctx.getImageData(0, 0, cv.width, cv.height));
-    ctx.putImageData(s, 0, 0);
+    redos.push(cctx.getImageData(0, 0, contentCv.width, contentCv.height));
+    cctx.putImageData(s, 0, 0);
+    render();
   }
   function redo() {
     var s = redos.pop();
     if (!s) return;
-    snaps.push(ctx.getImageData(0, 0, cv.width, cv.height));
-    ctx.putImageData(s, 0, 0);
+    snaps.push(cctx.getImageData(0, 0, contentCv.width, contentCv.height));
+    cctx.putImageData(s, 0, 0);
+    render();
   }
 
   function pos(e) {
     var r = cv.getBoundingClientRect();
-    return { x: (e.clientX - r.left), y: (e.clientY - r.top) };
+    // 反变换：屏幕坐标 → 画布坐标
+    return {
+      x: (e.clientX - r.left - view.x) / view.s,
+      y: (e.clientY - r.top - view.y) / view.s
+    };
   }
 
   /* ---------------- 笔刷 ---------------- */
   function sampleBg(x, y) {
     try {
-      var d = ctx.getImageData(Math.max(0, Math.round(x * DPR)), Math.max(0, Math.round(y * DPR)), 1, 1).data;
+      var p = toDevice(x, y);
+      p.x = Math.max(0, Math.min(contentCv.width - 1, p.x));
+      p.y = Math.max(0, Math.min(contentCv.height - 1, p.y));
+      var d = cctx.getImageData(p.x, p.y, 1, 1).data;
       bgLum = d[0] * 0.299 + d[1] * 0.587 + d[2] * 0.114;
     } catch (e) { }
   }
@@ -168,6 +267,7 @@
   function drawSegment(x1, y1, x2, y2) {
     var b = BRUSHES[brushIdx];
     var w = widths[wIdx];
+    var ctx = cctx;              // 笔迹画在内容层（局部遮蔽显示层的 ctx）
     ctx.save();
     if (mode === 'eraser') {
       ctx.globalCompositeOperation = 'destination-out';
@@ -257,10 +357,11 @@
 
   /* ---------------- 填充 ---------------- */
   function floodFill(px, py, hexColor) {
-    var w = cv.width, h = cv.height;
-    var img = ctx.getImageData(0, 0, w, h);
+    var w = contentCv.width, h = contentCv.height;
+    var img = cctx.getImageData(0, 0, w, h);
     var d = img.data;
-    var sx = Math.round(px * DPR), sy = Math.round(py * DPR);
+    var dp = toDevice(px, py);
+    var sx = dp.x, sy = dp.y;
     if (sx < 0 || sy < 0 || sx >= w || sy >= h) return;
     var si = (sy * w + sx) * 4;
     var tr = d[si], tg = d[si + 1], tb = d[si + 2], ta = d[si + 3];
@@ -292,11 +393,15 @@
         if (y < h - 1 && match(((y + 1) * w + xx) * 4)) { stack.push(xx, y + 1); }
       }
     }
-    ctx.putImageData(img, 0, 0);
+    cctx.putImageData(img, 0, 0);
+    render();
   }
 
   function pickColor(px, py) {
-    var d = ctx.getImageData(Math.round(px * DPR), Math.round(py * DPR), 1, 1).data;
+    var dp = toDevice(px, py);
+    dp.x = Math.max(0, Math.min(contentCv.width - 1, dp.x));
+    dp.y = Math.max(0, Math.min(contentCv.height - 1, dp.y));
+    var d = cctx.getImageData(dp.x, dp.y, 1, 1).data;
     var hex = window.PaletteKit.rgb2hex(d[0], d[1], d[2]);
     penColor = hex;
     pushRecent(hex);
@@ -329,9 +434,41 @@
     });
   }
 
-  /* ---------------- 交互 ---------------- */
+  /* ---------------- 交互：单指画画 / 双指缩放平移 ---------------- */
+  var ptrs = new Map();
+  var pinch = null;         // {dist, mid, s, vx, vy}
+  var panning = null;       // {sx, sy, vx, vy}
+
+  function ptrList() { return Array.from(ptrs.values()); }
+
+  function beginPinch() {
+    var it = ptrList();
+    if (it.length < 2) { pinch = null; return; }
+    pinch = {
+      dist: Math.hypot(it[0].x - it[1].x, it[0].y - it[1].y),
+      mid: { x: (it[0].x + it[1].x) / 2, y: (it[0].y + it[1].y) / 2 },
+      s: view.s, vx: view.x, vy: view.y
+    };
+  }
+
   cv.addEventListener('pointerdown', function (e) {
-    cv.setPointerCapture && cv.setPointerCapture(e.pointerId);
+    // setPointerCapture 在指针已释放 / 合成事件下会抛异常，
+    // 一旦抛出就会中断后面的处理（双指手势直接失效），必须兜住
+    try { cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } catch (err) { }
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // 双指 → 缩放 / 平移，停止画线
+    if (ptrs.size >= 2) {
+      drawing = false; last = null; panning = null;
+      beginPinch();
+      return;
+    }
+    // 桌面：中键 / Ctrl 拖动 = 平移
+    if (e.button === 1 || e.ctrlKey || e.metaKey) {
+      panning = { sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
+      return;
+    }
+
     var p = pos(e);
     sampleBg(p.x, p.y);
     if (mode === 'fill') { pushSnap(); floodFill(p.x, p.y, penColor); setMode('brush'); return; }
@@ -340,15 +477,234 @@
     drawing = true;
     last = p;
     drawSegment(p.x, p.y, p.x + 0.01, p.y + 0.01);
+    render();
   });
+
   cv.addEventListener('pointermove', function (e) {
+    if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // 双指：捏合缩放（以捏合中心为锚点）+ 中点位移平移
+    if (ptrs.size >= 2) {
+      if (!pinch) beginPinch();
+      if (pinch) {
+        var it = ptrList();
+        var d = Math.hypot(it[0].x - it[1].x, it[0].y - it[1].y);
+        var mid = { x: (it[0].x + it[1].x) / 2, y: (it[0].y + it[1].y) / 2 };
+        var r = cv.getBoundingClientRect();
+        var px = pinch.mid.x - r.left, py = pinch.mid.y - r.top;
+        var target = clampScale(pinch.s * (pinch.dist > 0 ? d / pinch.dist : 1));
+        var k = target / pinch.s;
+        view.x = px - (px - pinch.vx) * k + (mid.x - pinch.mid.x);
+        view.y = py - (py - pinch.vy) * k + (mid.y - pinch.mid.y);
+        view.s = target;
+        syncZoom();
+        render();
+      }
+      return;
+    }
+    // 单指平移（桌面中键 / Ctrl）
+    if (panning) {
+      view.x = panning.vx + (e.clientX - panning.sx);
+      view.y = panning.vy + (e.clientY - panning.sy);
+      render();
+      return;
+    }
+
     if (!drawing) return;
     var p = pos(e);
     drawSegment(last.x, last.y, p.x, p.y);
     last = p;
+    render();
   });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
-    cv.addEventListener(ev, function () { drawing = false; last = null; });
+
+  ['pointerup', 'pointercancel'].forEach(function (ev) {
+    cv.addEventListener(ev, function (e) {
+      ptrs.delete(e.pointerId);
+      if (ptrs.size < 2) pinch = null;
+      if (ptrs.size === 0) { drawing = false; last = null; panning = null; }
+    });
+  });
+  cv.addEventListener('pointerleave', function () { drawing = false; last = null; });
+
+  // 滚轮缩放（桌面）
+  cv.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    var r = cv.getBoundingClientRect();
+    var f = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    zoomAt(e.clientX - r.left, e.clientY - r.top, f);
+  }, { passive: false });
+
+  /* ==========================================================
+     简笔画示例：用 SVG path 定义，画在 0–100 的坐标系里，
+     载入时按画布大小等比缩放居中
+     ========================================================== */
+  var SIMPLE = [
+    { name: '太阳', paths: [
+      'M30 50a20 20 0 1 0 40 0a20 20 0 1 0 -40 0',
+      'M50 4v12 M50 84v12 M4 50h12 M84 50h12 M17 17l9 9 M74 74l9 9 M83 17l-9 9 M26 74l-9 9'
+    ] },
+    { name: '小猫', paths: [
+      'M34 44a16 16 0 1 0 32 0a16 16 0 1 0 -32 0',
+      'M37 30l-2-14l12 7 M63 30l2-14l-12 7',
+      'M43 42a1.8 1.8 0 1 0 .1 0 M57 42a1.8 1.8 0 1 0 .1 0',
+      'M49 49h2',
+      'M50 51c0 3-4 3-5 1 M50 51c0 3 4 3 5 1',
+      'M32 46h-9 M32 52h-9 M68 46h9 M68 52h9',
+      'M36 62c-3 12-3 22 0 30 M64 62c3 12 3 22 0 30 M34 92h32',
+      'M64 74c8 0 10 8 4 12'
+    ] },
+    { name: '小鱼', paths: [
+      'M22 50c0-13 12-23 27-23s25 10 25 23-10 23-25 23-27-10-27-23z',
+      'M74 50l14-13v26z',
+      'M35 45a2 2 0 1 0 .1 0',
+      'M48 27c4-7 10-9 14-9-2 6-6 10-10 12',
+      'M40 72c6 6 18 7 26 2'
+    ] },
+    { name: '小房子', paths: [
+      'M26 46h48v40H26z',
+      'M18 47L50 19l32 28',
+      'M44 86V62h12v24',
+      'M32 56h9v9h-9z',
+      'M62 34V22h9v7'
+    ] },
+    { name: '大树', paths: [
+      'M44 92V58h11v34',
+      'M44 72h11',
+      'M49 12a17 17 0 0 1 15 25a15 15 0 0 1-28 5a14 14 0 0 1 13-30z'
+    ] },
+    { name: '小飞机', paths: [
+      'M12 52c0-4 9-7 38-7s38 3 38 7-9 7-38 7-38-3-38-7z',
+      'M47 57L25 84h12l15-23 M53 57l20 27H61L49 61',
+      'M18 45L10 30h8l8 13'
+    ] },
+    { name: '蝴蝶', paths: [
+      'M48 53C39 31 21 26 14 34c-7 8 2 21 34 23',
+      'M48 58C39 77 23 84 16 77c-6-7 1-19 32-22',
+      'M52 53c9-22 27-27 34-19 7 8-2 21-34 23',
+      'M52 58c9 19 25 26 32 19 6-7-1-19-32-22',
+      'M50 28v48',
+      'M50 32a2 2 0 1 0 .1 0',
+      'M50 28c-3-7-8-9-12-9 M50 28c3-7 8-9 12-9'
+    ] },
+    { name: '卡车', paths: [
+      'M10 38h44v30H10z',
+      'M54 48h18l12 12v8H54z',
+      'M54 60h16',
+      'M26 78a8 8 0 1 0 .1 0 M72 78a8 8 0 1 0 .1 0',
+      'M10 68h18 M72 68h12'
+    ] },
+    { name: '星星', paths: [
+      'M50 10l11.5 24.5L88 37l-19 18.5 4.6 26.5L50 70.5 26.4 82 31 55.5 12 37l26.5-2.5z'
+    ] },
+    { name: '笑脸', paths: [
+      'M50 18a32 32 0 1 0 .1 0',
+      'M37 43a3 3 0 1 0 .1 0 M63 43a3 3 0 1 0 .1 0',
+      'M34 60c5 9 27 9 32 0',
+      'M27 55h7 M66 55h7'
+    ] },
+    { name: '气球', paths: [
+      'M50 12a24 24 0 1 0 .1 0',
+      'M45 36h10l-5 7z',
+      'M50 43c-7 11 7 15 0 26s7 12 0 20'
+    ] },
+    { name: '小船', paths: [
+      'M12 66h76l-11 18H23z',
+      'M50 18v48',
+      'M50 24L26 62h24z',
+      'M54 30l18 32H54z'
+    ] }
+  ];
+
+  /* 统一描边：缩略图与画布共用 */
+  function strokeExample(c, ex, scale, ox, oy, color, lw) {
+    c.save();
+    c.translate(ox, oy);
+    c.scale(scale, scale);
+    c.lineWidth = lw;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.strokeStyle = color;
+    (ex.paths || []).forEach(function (d) {
+      var p = new Path2D(d);
+      if (ex.fill) { c.fillStyle = ex.fill; c.fill(p); }
+      c.stroke(p);
+    });
+    c.restore();
+  }
+
+  function loadExample(ex) {
+    pushSnap();
+    var s = Math.min(W, H) * 0.55 / 100;
+    var ox = W / 2 - 50 * s;
+    var oy = H / 2 - 50 * s;
+    cctx.save();
+    cctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cctx.globalCompositeOperation = 'source-over';
+    strokeExample(cctx, ex, s, ox, oy, penColor, 2.8);
+    cctx.restore();
+    render();
+    setHint('已放入「' + ex.name + '」· 接着涂色吧');
+  }
+
+  /* ---------------- 简笔画面板 ---------------- */
+  var simpBtn = document.getElementById('simpBtn');
+  var simpPop = document.getElementById('simpPop');
+  var simpGrid = document.getElementById('simpGrid');
+
+  function placeSimp() {
+    if (!simpPop || !simpBtn) return;
+    simpPop.hidden = false;
+    simpPop.style.visibility = 'hidden';
+    var r = simpBtn.getBoundingClientRect();
+    var pr = simpPop.getBoundingClientRect();
+    var left = r.left + r.width / 2 - pr.width / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - pr.width - 8));
+    var top = r.top - pr.height - 8;
+    if (top < 8) top = r.bottom + 8;
+    simpPop.style.left = left + 'px';
+    simpPop.style.top = top + 'px';
+    simpPop.style.visibility = 'visible';
+  }
+  function closeSimp() { if (simpPop) simpPop.hidden = true; }
+
+  function renderSimples() {
+    if (!simpGrid) return;
+    simpGrid.innerHTML = '';
+    SIMPLE.forEach(function (ex) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'simp-item';
+      btn.title = ex.name;
+      var c = document.createElement('canvas');
+      c.width = 132; c.height = 132;
+      var cc = c.getContext('2d');
+      strokeExample(cc, ex, 1.32, 0, 0, '#23262d', 3.4);
+      btn.appendChild(c);
+      var b = document.createElement('b');
+      b.textContent = ex.name;
+      btn.appendChild(b);
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        loadExample(ex);
+        closeSimp();
+      });
+      simpGrid.appendChild(btn);
+    });
+  }
+
+  if (simpBtn) simpBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (simpPop && simpPop.hidden) { renderSimples(); placeSimp(); }
+    else closeSimp();
+  });
+
+  var zoomBtn = document.getElementById('zoomBtn');
+  if (zoomBtn) zoomBtn.addEventListener('click', function () {
+    resetView();
+    setHint('已复位到 100%');
+  });
+  document.addEventListener('click', function (e) {
+    if (simpPop && !simpPop.hidden && !simpPop.contains(e.target) && e.target !== simpBtn) closeSimp();
   });
 
   /* ---------------- 控件 ---------------- */
@@ -359,7 +715,7 @@
     hintEl.textContent = t;
     clearTimeout(hintTimer);
     hintTimer = setTimeout(function () {
-      hintEl.textContent = '工具栏可左右滑动 · 填充前先用取色器挑一个颜色';
+      hintEl.textContent = '工具栏可左右滑动 · 双指捏合缩放 · 双指拖动平移';
     }, 2000);
   }
 
@@ -403,10 +759,12 @@
   var clearBtn = document.getElementById('clearBtn');
   if (clearBtn) clearBtn.addEventListener('click', function () {
     pushSnap();
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = paper;
-    ctx.fillRect(0, 0, W, H);
+    cctx.setTransform(DPR, 0, 0, DPR, 0, 0);   // 内容层整张清空
+    cctx.globalCompositeOperation = 'source-over';
+    cctx.fillStyle = paper;
+    cctx.fillRect(0, 0, W, H);
     bgLum = 255;
+    render();
   });
 
   var bgBtn = document.getElementById('bgBtn');
@@ -414,9 +772,11 @@
     paper = paper === '#ffffff' ? '#f2efe9' : '#ffffff';
     var dot = document.getElementById('bgDot');
     if (dot) dot.style.background = paper;
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = paper;
-    ctx.fillRect(0, 0, W, H);
+    cctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cctx.globalCompositeOperation = 'source-over';
+    cctx.fillStyle = paper;
+    cctx.fillRect(0, 0, W, H);
+    render();
   });
 
   var saveBtn = document.getElementById('saveBtn');
@@ -427,7 +787,7 @@
       var o = out.getContext('2d');
       o.fillStyle = paper;
       o.fillRect(0, 0, out.width, out.height);
-      o.drawImage(cv, 0, 0, out.width, out.height);
+      o.drawImage(contentCv, 0, 0, out.width, out.height);   // 导出内容层原始分辨率，不含视图变换
       out.toBlob(function (blob) {
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -441,6 +801,7 @@
   });
 
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { closeSimp(); return; }
     if (e.key === 'z' || e.key === 'Z') undo();
     else if (e.key === 'y' || e.key === 'Y') redo();
     else if (e.key === 'e' || e.key === 'E') setMode('eraser');
@@ -462,6 +823,46 @@
   wake();
 
   window.addEventListener('resize', resize, { passive: true });
+  window.addEventListener('resize', function () {
+    if (simpPop && !simpPop.hidden) placeSimp();
+  }, { passive: true });
+
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__pt = {
+      simples: SIMPLE.map(function (s) { return s.name; }),
+      load: loadExample,
+      get view() { return { s: view.s, x: view.x, y: view.y }; },
+      setView: function (s, x, y) { view.s = s; view.x = x || 0; view.y = y || 0; syncZoom(); render(); },
+      zoomAt: zoomAt,
+      reset: resetView,
+      toDevice: toDevice,
+      setPen: function (c) { penColor = c; },
+      // 内容层取像素（画布坐标）
+      contentPx: function (x, y) {
+        var d = cctx.getImageData(Math.round(x * DPR), Math.round(y * DPR), 1, 1).data;
+        return [d[0], d[1], d[2]];
+      },
+      contentAlpha: function (x, y) {
+        var d = cctx.getImageData(Math.round(x * DPR), Math.round(y * DPR), 1, 1).data;
+        return d[3];
+      },
+      // 显示层取像素（屏幕坐标）
+      displayPx: function (x, y) {
+        var d = ctx.getImageData(Math.round(x * DPR), Math.round(y * DPR), 1, 1).data;
+        return [d[0], d[1], d[2]];
+      },
+      get pixels() {
+        var d = cctx.getImageData(0, 0, contentCv.width, contentCv.height).data;
+        var r = window.PaletteKit.hex2rgb(paper) || { r: 255, g: 255, b: 255 };
+        var n = 0;
+        for (var i = 0; i < d.length; i += 4) {
+          if (Math.abs(d[i] - r.r) > 14 || Math.abs(d[i + 1] - r.g) > 14 || Math.abs(d[i + 2] - r.b) > 14) n++;
+        }
+        return n;
+      }
+    };
+  }
   window.addEventListener('orientationchange', function () { setTimeout(resize, 240); });
 
   var pk = window.PaletteKit.mount(document.getElementById('pk'), {

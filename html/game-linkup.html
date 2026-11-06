@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>连连看</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/game-kit.css">
+<style>
+  .tip{
+    position:fixed;z-index:12;left:50%;transform:translateX(-50%);
+    bottom:calc(20px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.34);
+    pointer-events:none;user-select:none;white-space:nowrap;
+  }
+  @media (max-width:420px){ .tip{font-size:10px;letter-spacing:.02em;} }
+  .gk-label{display:none;}
+
+  #lv{
+    position:fixed;z-index:40;left:50%;transform:translateX(-50%);
+    top:calc(58px + env(safe-area-inset-top));
+    display:flex;gap:6px;padding:4px;border-radius:999px;
+    background:rgba(16,18,30,.72);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  #lv button{
+    appearance:none;border:0;cursor:pointer;
+    padding:5px 13px;border-radius:999px;
+    font:600 12px/1.2 -apple-system,"PingFang SC",system-ui,sans-serif;
+    color:rgba(255,255,255,.55);background:transparent;
+    transition:background .18s,color .18s;
+  }
+  #lv button.on{background:var(--gk-accent,#635bff);color:#fff;}
+</style>
+  <script src="../assets/js/fs-kit.js" defer></script>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="lv">
+  <button type="button" data-lv="0" class="on">4 × 4</button>
+  <button type="button" data-lv="1">6 × 6</button>
+  <button type="button" data-lv="2">8 × 8</button>
+</div>
+<div class="tip">点两张一样的图案 · 中间不通也能消 · 右上色球换配色</div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/game-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LW = 480, LH = 720;
+  var GAP = 5;
+  var LIMIT = 150;                 // 一局 150 秒
+
+  var SYMBOLS = ['●', '○', '◆', '◇', '■', '□', '▲', '△',
+                 '★', '☆', '♥', '♦', '♠', '♣', '※', '◉'];
+
+  var LEVELS = [
+    { cols: 4, rows: 4, time: 90 },
+    { cols: 6, rows: 6, time: 120 },
+    { cols: 8, rows: 8, time: 150 }
+  ];
+
+  var level = 0;
+  var LV = LEVELS[0];
+  var cols = 4, rows = 4;
+  var cell = 0, boardX = 0, boardY = 0;
+
+  var cells = [];                  // 每格 {sym, hue} 或 null（空）
+  var sel = -1;                    // 选中的格
+  var left = 0;                    // 剩余对数
+  var remain = 0;                  // 剩余秒数
+  var pairs = 0;
+  var streak = 0;
+  var msg = '', msgT = 0;
+  var shakeT = 0;
+  var lineFlash = [];              // 消除时的连线动画 {a,b,t}
+
+  /* ==========================================================
+     连通性判定
+     ========================================================== */
+  function rowClear(r, c1, c2, occ, skipA, skipB) {
+    var lo = Math.min(c1, c2), hi = Math.max(c1, c2);
+    for (var c = lo; c <= hi; c++) {
+      var idx = r * cols + c;
+      if (idx === skipA || idx === skipB) continue;
+      if (occ[idx]) return false;
+    }
+    return true;
+  }
+  function colClear(c, r1, r2, occ, skipA, skipB) {
+    var lo = Math.min(r1, r2), hi = Math.max(r1, r2);
+    for (var r = lo; r <= hi; r++) {
+      var idx = r * cols + c;
+      if (idx === skipA || idx === skipB) continue;
+      if (occ[idx]) return false;
+    }
+    return true;
+  }
+
+  // i、j 两格能否连通（同行 / 同列 / L 形两条路）
+  function canConnect(i, j, occ) {
+    if (!occ[i] || !occ[j]) return false;
+    var ri = (i / cols) | 0, ci = i % cols;
+    var rj = (j / cols) | 0, cj = j % cols;
+    if (ri === rj) return rowClear(ri, ci, cj, occ, i, j);
+    if (ci === cj) return colClear(ci, ri, rj, occ, i, j);
+    // 拐角 (ri, cj)
+    if (rowClear(ri, ci, cj, occ, i, j) && colClear(cj, ri, rj, occ, i, j)) return true;
+    // 拐角 (rj, ci)
+    if (colClear(ci, ri, rj, occ, i, j) && rowClear(rj, cj, ci, occ, i, j)) return true;
+    return false;
+  }
+
+  /* ==========================================================
+     可解棋盘生成
+     ------------------------------------------------------------
+     1) 随机把格子两两配对
+     2) 贪心求一个「完全消除序」（只看位置，不看图案）：
+        反复找出当前可连通的一对，随机消除其一
+        死路就整体重来
+     3) 按消除序的逆序分配图案：
+        这样每一对消除时，路径上一定没有更晚消除的牌
+        → 玩家一定能通关
+     ========================================================== */
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0;
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function solveOrder(occ) {
+    var n = cols * rows;
+    var work = occ.slice();
+    var seq = [];
+    var total = pairs;
+    var guard = 0;
+    while (seq.length < total && guard++ < 20000) {
+      var cand = [];
+      for (var i = 0; i < n; i++) {
+        if (!work[i]) continue;
+        for (var j = i + 1; j < n; j++) {
+          if (!work[j]) continue;
+          if (canConnect(i, j, work)) { cand.push(i, j); }
+        }
+      }
+      if (!cand.length) return null;             // 死路
+      var k = (Math.random() * (cand.length / 2)) | 0;
+      var a = cand[k * 2], b = cand[k * 2 + 1];
+      work[a] = false; work[b] = false;
+      seq.push([a, b]);
+    }
+    return seq.length === total ? seq : null;
+  }
+
+  // 兜底构造：每行按水平相邻两两配对（列数都是偶数）→ 必然有解
+  function buildFallback() {
+    var seq = [];
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c += 2) {
+        if (c + 1 < cols) seq.push([r * cols + c, r * cols + c + 1]);
+        else seq.push([r * cols + c, r * cols + c]);   // 理论不会发生（列数偶数）
+      }
+    }
+    return seq;
+  }
+
+  // 生成整盘
+  function buildBoard() {
+    var n = cols * rows;
+    pairs = n / 2;
+    var occ = [];
+    for (var i = 0; i < n; i++) occ.push(true);
+
+    var seq = null;
+    for (var attempt = 0; attempt < 40 && !seq; attempt++) {
+      seq = solveOrder(occ);
+    }
+    if (!seq) seq = buildFallback();
+
+    // 逆序分配图案
+    var out = new Array(n).fill(null);
+    var symIdx = 0;
+    for (var k = seq.length - 1; k >= 0; k--) {
+      var s = SYMBOLS[symIdx % SYMBOLS.length]; symIdx++;
+      out[seq[k][0]] = { sym: s, hue: ((symIdx * 37) % 360) };
+      out[seq[k][1]] = { sym: s, hue: ((symIdx * 37) % 360) };
+    }
+    // 保险：兜底构造若留下空格，随机补齐（正常路径不会走到）
+    for (var z = 0; z < n; z++) {
+      if (!out[z]) out[z] = { sym: SYMBOLS[(Math.random() * SYMBOLS.length) | 0], hue: ((Math.random() * 360) | 0) };
+    }
+    return out;
+  }
+
+  // 只对剩余格子重新生成（保证消除后依然有解）
+  function refill() {
+    var n = cols * rows;
+    var alive = [];
+    for (var i = 0; i < n; i++) if (cells[i]) alive.push(i);
+    if (!alive.length) return;
+    // 收集剩余牌 → 按「每种两个」分组
+    // 注意：不能用一个扁平列表顺序取，那样同种符号会被拆到不同的对里
+    var symCount = {};
+    for (var k = 0; k < alive.length; k++) {
+      var s = cells[alive[k]].sym;
+      symCount[s] = (symCount[s] || 0) + 1;
+    }
+    var symPool = [];
+    var leftover = null;
+    for (var s2 in symCount) {
+      var cnt = symCount[s2];
+      for (var t = 0; t + 1 < cnt; t += 2) symPool.push(s2);
+      if (cnt % 2) leftover = s2;
+    }
+    // 落单的那张补进来（alive.length 恒为偶数，所以 leftover 最多一个）
+    if (leftover && symPool.length * 2 < alive.length) symPool.push(leftover);
+
+    // 在 alive 位置里做「两两配对 + 求消除序 + 逆序填图案」
+    var occ = new Array(n).fill(false);
+    for (var a = 0; a < alive.length; a++) occ[alive[a]] = true;
+    var seq = null;
+    for (var at = 0; at < 30 && !seq; at++) {
+      seq = solveOrder(occ);
+    }
+    if (!seq) {
+      // 兜底：在存活格里直接找「当前就能连通」的配对
+      // 这样按 seq 顺序消除一定走得通
+      seq = [];
+      var occ2 = cells.map(function (c) { return !!c; });
+      var pool = alive.slice();
+      while (pool.length >= 2) {
+        var fp = null;
+        for (var x = 0; x < pool.length && !fp; x++) {
+          for (var y = x + 1; y < pool.length; y++) {
+            if (canConnect(pool[x], pool[y], occ2)) { fp = [pool[x], pool[y]]; break; }
+          }
+        }
+        if (fp) {
+          seq.push(fp);
+          pool.splice(pool.indexOf(fp[0]), 1);
+          pool.splice(pool.indexOf(fp[1]), 1);
+        } else {
+          seq.push([pool[0], pool[1]]);
+          pool.splice(0, 2);
+        }
+      }
+    }
+    // 逆序填符号：每一对拿同一个符号
+    var si = 0;
+    for (var m = seq.length - 1; m >= 0; m--) {
+      var sym = symPool[si % symPool.length]; si++;
+      cells[seq[m][0]] = { sym: sym, hue: ((si * 37) % 360) };
+      cells[seq[m][1]] = { sym: sym, hue: ((si * 37) % 360) };
+    }
+  }
+
+  // 是否还有任何可消的对
+  function hasMove() {
+    var n = cols * rows;
+    var occ = cells.map(function (c) { return !!c; });   // 提到循环外，别在 O(n²) 里反复 map
+    for (var i = 0; i < n; i++) {
+      if (!cells[i]) continue;
+      for (var j = i + 1; j < n; j++) {
+        if (!cells[j]) continue;
+        if (cells[i].sym !== cells[j].sym) continue;
+        if (canConnect(i, j, occ)) return true;
+      }
+    }
+    return false;
+  }
+
+  /* ==========================================================
+     局面操作
+     ========================================================== */
+  function resetGame(a) {
+    var g = a || api;
+    cols = LV.cols; rows = LV.rows;
+    pairs = (cols * rows) / 2;
+    var bw = 440;
+    var bh = 470;
+    cell = Math.min((bw - GAP * (cols - 1)) / cols, (bh - GAP * (rows - 1)) / rows);
+    cell = Math.min(cell, 96);
+    var boardW = cell * cols + GAP * (cols - 1);
+    var boardH = cell * rows + GAP * (rows - 1);
+    boardX = (LW - boardW) / 2;
+    boardY = 130 + (470 - boardH) / 2;
+
+    cells = buildBoard();
+    sel = -1;
+    streak = 0;
+    msg = ''; msgT = 0; shakeT = 0;
+    lineFlash = [];
+    remain = LV.time;
+    left = pairs;
+    g.setScore(0);
+    g.setStat('left', left);
+    g.setStat('time', remain);
+    g.setStat('streak', 0);
+  }
+
+  // 消除后：受影响列的牌整体上移压紧，底部补新牌
+  // （同列消掉两张也要正确处理两次空位）
+  function afterRemove(idxs) {
+    var affected = [];
+    for (var k = 0; k < idxs.length; k++) {
+      var cc = idxs[k] % cols;
+      if (affected.indexOf(cc) < 0) affected.push(cc);
+    }
+    for (var a = 0; a < affected.length; a++) {
+      var col = affected[a];
+      var write = 0;
+      for (var r = 0; r < rows; r++) {
+        if (!cells[r * cols + col]) continue;
+        if (write !== r) {
+          cells[write * cols + col] = cells[r * cols + col];
+          cells[r * cols + col] = null;
+        }
+        write++;
+      }
+      for (var r2 = write; r2 < rows; r2++) {
+        cells[r2 * cols + col] = {
+          sym: SYMBOLS[(Math.random() * SYMBOLS.length) | 0],
+          hue: (Math.random() * 360) | 0
+        };
+      }
+    }
+  }
+
+  function trySelect(idx) {
+    if (idx < 0 || idx >= cells.length || !cells[idx]) return;
+    if (sel === -1) {
+      sel = idx;
+      api.sound('tick');
+      return;
+    }
+    if (sel === idx) { sel = -1; return; }
+    if (cells[sel].sym !== cells[idx].sym) {
+      msg = '不是同一个图案';
+      msgT = 1.2; shakeT = 0.3;
+      api.sound('die');
+      sel = idx;
+      return;
+    }
+    var occ = cells.map(function (c) { return !!c; });
+    if (!canConnect(sel, idx, occ)) {
+      msg = '中间被挡住了';
+      msgT = 1.2; shakeT = 0.3;
+      api.sound('die');
+      sel = idx;
+      return;
+    }
+    // 消除
+    var a = sel, b = idx;
+    lineFlash.push({ a: a, b: b, t: 0.32 });
+    cells[a] = null; cells[b] = null;
+    afterRemove([a, b]);
+    left--;
+    streak++;
+    api.setStat('left', left);
+    api.setStat('streak', streak);
+    api.addScore(10 + Math.min(20, (streak - 1) * 2));
+    api.sound('eat');
+    msg = '';
+    sel = -1;
+
+    if (left <= 0) {
+      api.sound('win');
+      api.gameOver('全部消除！');
+      return;
+    }
+    // 无解则重排
+    if (!hasMove()) {
+      refill();
+      msg = '没有可消的，重新排了';
+      msgT = 1.6;
+      api.sound('merge');
+    }
+  }
+
+  /* ==========================================================
+     更新
+     ========================================================== */
+  function update(dt) {
+    if (api.state !== 'playing') return;
+    if (msgT > 0) msgT = Math.max(0, msgT - dt);
+    if (shakeT > 0) shakeT = Math.max(0, shakeT - dt);
+    for (var i = lineFlash.length - 1; i >= 0; i--) {
+      lineFlash[i].t -= dt;
+      if (lineFlash[i].t <= 0) lineFlash.splice(i, 1);
+    }
+    var before = Math.ceil(remain);
+    remain -= dt;
+    if (remain < 0) remain = 0;
+    if (Math.ceil(remain) !== before) api.setStat('time', Math.ceil(remain));
+    if (remain <= 0) {
+      api.sound('die');
+      api.gameOver('时间到');
+    }
+  }
+
+  /* ==========================================================
+     绘制
+     ========================================================== */
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  var api = window.GameKit.create({
+    slug: 'linkup',
+    title: '连连看',
+    logic: [LW, LH],
+    color: '#ec4899',
+    dpad: false,
+    hint: '点两张<b>相同图案</b>即可消除<br>中间没有阻挡就行，可以拐弯绕过去',
+    hud: [
+      { k: 'score', label: '分数' },
+      { k: 'best', label: '最高' },
+      { k: 'left', label: '剩余' },
+      { k: 'time', label: '时间', fmt: function (v) { return v + 's'; } }
+    ],
+
+    onInit: function (a) {
+      resetGame(a);
+    },
+
+    onUpdate: function (a, dt) { update(dt); },
+
+    onRender: function (a, c) {
+      var pal = a.colors;
+      var r, c2, i;
+
+      // 消除连线动画
+      for (var f = 0; f < lineFlash.length; f++) {
+        var fl = lineFlash[f];
+        var alpha = Math.max(0, fl.t / 0.32);
+        var ax = boardX + (fl.a % cols) * (cell + GAP) + cell / 2;
+        var ay = boardY + ((fl.a / cols) | 0) * (cell + GAP) + cell / 2;
+        var bx = boardX + (fl.b % cols) * (cell + GAP) + cell / 2;
+        var by = boardY + ((fl.b / cols) | 0) * (cell + GAP) + cell / 2;
+        c.save();
+        c.globalAlpha = alpha * 0.85;
+        c.strokeStyle = pal.glow;
+        c.shadowColor = pal.glow;
+        c.shadowBlur = 12;
+        c.lineWidth = 3;
+        c.beginPath();
+        c.moveTo(ax, ay);
+        c.lineTo(bx, by);
+        c.stroke();
+        c.restore();
+      }
+
+      // 牌
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      for (r = 0; r < rows; r++) {
+        for (c2 = 0; c2 < cols; c2++) {
+          i = r * cols + c2;
+          if (!cells[i]) continue;
+          var x = boardX + c2 * (cell + GAP);
+          var y = boardY + r * (cell + GAP);
+          var isSel = (i === sel);
+          var shake = (shakeT > 0 && isSel) ? Math.sin(shakeT * 60) * 2 : 0;
+
+          // 牌底
+          c.fillStyle = isSel ? pal.base : 'rgba(255,255,255,.055)';
+          roundRect(c, x, y, cell, cell, Math.min(10, cell * 0.16));
+          c.fill();
+          c.strokeStyle = isSel ? pal.bright : 'rgba(255,255,255,.08)';
+          c.lineWidth = isSel ? 2 : 1;
+          roundRect(c, x, y, cell, cell, Math.min(10, cell * 0.16));
+          c.stroke();
+
+          // 图案
+          var col = pal.at(cells[i].hue - pal.h, 0.02, 0.04);
+          c.fillStyle = col;
+          c.shadowColor = col;
+          c.shadowBlur = isSel ? 14 : 6;
+          c.font = '700 ' + Math.round(cell * 0.52) + 'px -apple-system,"PingFang SC",system-ui,sans-serif';
+          c.fillText(cells[i].sym, x + cell / 2 + shake, y + cell / 2 + 1);
+          c.shadowBlur = 0;
+        }
+      }
+
+      // 消息
+      if (msgT > 0) {
+        c.save();
+        c.globalAlpha = Math.min(1, msgT * 1.6);
+        c.font = '600 15px -apple-system,"PingFang SC",system-ui,sans-serif';
+        c.fillStyle = pal.alt;
+        c.fillText(msg, LW / 2, boardY - 18);
+        c.restore();
+      }
+    },
+
+    onAction: function (a, act) {
+      if (act.type !== 'tap') return;
+      var col = Math.floor((act.x - boardX) / (cell + GAP));
+      var row = Math.floor((act.y - boardY) / (cell + GAP));
+      if (col < 0 || col >= cols || row < 0 || row >= rows) return;
+      // 必须点在牌内（间隙不算）
+      var x = boardX + col * (cell + GAP);
+      var y = boardY + row * (cell + GAP);
+      if (act.x < x || act.x > x + cell || act.y < y || act.y > y + cell) return;
+      trySelect(row * cols + col);
+    }
+  });
+
+  /* ---------------- 难度切换 ---------------- */
+  var lvBtns = document.querySelectorAll('#lv button');
+  Array.prototype.forEach.call(lvBtns, function (b) {
+    b.addEventListener('click', function () {
+      var i = +b.getAttribute('data-lv');
+      if (i === level) return;
+      level = i;
+      LV = LEVELS[level];
+      Array.prototype.forEach.call(lvBtns, function (x) {
+        x.classList.toggle('on', +x.getAttribute('data-lv') === level);
+      });
+      if (api.state === 'ready') {
+        resetGame(api);
+      } else {
+        api.restart();
+      }
+    });
+  });
+
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__lk = {
+      get cells() { return cells.map(function (c) { return c ? c.sym : null; }); },
+      get sel() { return sel; },
+      get left() { return left; },
+      get remain() { return remain; },
+      get cols() { return cols; },
+      get rows() { return rows; },
+      get pairs() { return pairs; },
+      get msg() { return msg; },
+      get streak() { return streak; },
+      geo: function () { return { x: boardX, y: boardY, cell: cell, gap: GAP, cols: cols, rows: rows }; },
+      cellPos: function (r, c) { return { x: boardX + c * (cell + GAP) + cell / 2, y: boardY + r * (cell + GAP) + cell / 2 }; },
+      // 找一对当前可消除的牌
+      findPair: function () {
+        var occ = cells.map(function (c) { return !!c; });
+        for (var i = 0; i < cells.length; i++) {
+          if (!cells[i]) continue;
+          for (var j = i + 1; j < cells.length; j++) {
+            if (!cells[j] || cells[i].sym !== cells[j].sym) continue;
+            if (canConnect(i, j, occ)) return [i, j];
+          }
+        }
+        return null;
+      },
+      // 是否还有可消对
+      hasMove: hasMove,
+      // 统计棋盘符号是否成对（每种数量都是偶数）
+      pairBalance: function () {
+        var cnt = {};
+        cells.forEach(function (c) { if (c) cnt[c.sym] = (cnt[c.sym] || 0) + 1; });
+        var odd = Object.keys(cnt).filter(function (k) { return cnt[k] % 2 === 1; });
+        return { odd: odd, total: Object.keys(cnt).length };
+      },
+      // 走一步：自动选一对可消的
+      autoStep: function () {
+        var pr = this.findPair();
+        if (!pr) return false;
+        trySelect(pr[0]);
+        trySelect(pr[1]);
+        return true;
+      },
+      setRemain: function (v) { remain = v; },
+      // 破坏配对（测试重排路径用）
+      setCell: function (idx, sym) {
+        if (idx < 0 || idx >= cells.length || !cells[idx]) return false;
+        cells[idx].sym = sym;
+        return true;
+      },
+      forceRefill: function () { refill(); },
+      reset: function () { api.restart(); }
+    };
+  }
+
+  void api;
+})();
+</script>
+</body>
+</html>

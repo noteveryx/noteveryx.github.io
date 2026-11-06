@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>中文接龙</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/game-kit.css">
+<style>
+  .tip{
+    position:fixed;z-index:12;left:50%;transform:translateX(-50%);
+    bottom:calc(96px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.3);
+    pointer-events:none;user-select:none;white-space:nowrap;
+  }
+  @media (max-width:420px){ .tip{font-size:10px;letter-spacing:.02em;} }
+  .gk-label{display:none;}
+
+  /* 输入区（唯一需要 DOM 输入的游戏） */
+  #bar{
+    position:fixed;z-index:45;left:50%;transform:translateX(-50%);
+    bottom:calc(18px + env(safe-area-inset-bottom));
+    width:min(430px, calc(100vw - 24px));
+    display:flex;gap:8px;align-items:center;
+  }
+  #inp{
+    flex:1;min-width:0;
+    background:rgba(14,17,28,.92);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:13px;padding:12px 15px;
+    color:#fff;font:500 17px/1.2 -apple-system,"PingFang SC",system-ui,sans-serif;
+    outline:none;transition:border-color .18s,box-shadow .18s;
+  }
+  #inp::placeholder{color:rgba(255,255,255,.3);}
+  #inp:focus{
+    border-color:var(--gk-accent,#635bff);
+    box-shadow:0 0 0 3px rgba(99,91,255,.18);
+  }
+  #go{
+    flex:none;appearance:none;border:0;cursor:pointer;
+    width:52px;height:46px;border-radius:13px;
+    background:var(--gk-accent,#635bff);color:#fff;
+    font:700 15px/1 -apple-system,"PingFang SC",system-ui,sans-serif;
+    transition:filter .15s,transform .1s;
+  }
+  #go:active{transform:scale(.94);}
+  #go:disabled{opacity:.4;cursor:default;}
+
+  /* ---------------- 词库面板 ---------------- */
+  #lib{
+    position:fixed;inset:0;z-index:70;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(4,6,12,.74);
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:16px;
+  }
+  #lib[hidden]{display:none;}
+  #lib-card{
+    width:min(470px,100%);max-height:min(78vh,660px);
+    display:flex;flex-direction:column;overflow:hidden;
+    background:rgba(13,16,27,.97);
+    border:1px solid rgba(255,255,255,.13);border-radius:18px;
+    box-shadow:0 26px 64px -20px rgba(0,0,0,.72);
+  }
+  #lib-head{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;}
+  #lib-title{font:700 15px/1 -apple-system,"PingFang SC",system-ui,sans-serif;color:#fff;white-space:nowrap;}
+  #lib-info{flex:1;font:500 11.5px/1.3 -apple-system,"PingFang SC",system-ui,sans-serif;color:rgba(255,255,255,.42);}
+  #lib-x{
+    flex:none;width:28px;height:28px;border-radius:9px;
+    border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);
+    color:rgba(255,255,255,.72);cursor:pointer;font-size:13px;line-height:1;
+    transition:background .15s,transform .1s;
+  }
+  #lib-x:hover{background:rgba(255,255,255,.14);color:#fff;}
+  #lib-x:active{transform:scale(.93);}
+  #lib-q{
+    margin:0 16px 10px;padding:10px 13px;border-radius:11px;
+    border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);
+    color:#fff;outline:none;
+    font:500 14px/1.2 -apple-system,"PingFang SC",system-ui,sans-serif;
+    transition:border-color .18s,box-shadow .18s;
+  }
+  #lib-q:focus{border-color:var(--gk-accent,#10b981);box-shadow:0 0 0 3px rgba(16,185,129,.16);}
+  #lib-q::placeholder{color:rgba(255,255,255,.3);}
+  #lib-body{
+    flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:2px 16px 16px;
+  }
+  #lib-body::-webkit-scrollbar{width:6px;}
+  #lib-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:3px;}
+  .lb-sec{
+    margin:12px 0 8px;
+    font:600 11px/1 -apple-system,"PingFang SC",system-ui,sans-serif;
+    color:rgba(255,255,255,.34);letter-spacing:.1em;
+  }
+  .lb-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:7px;}
+  .lb-head{
+    flex:none;width:22px;height:22px;border-radius:7px;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.08);color:rgba(255,255,255,.62);
+    font:700 12px/1 -apple-system,"PingFang SC",system-ui,sans-serif;
+  }
+  .lb-word{
+    padding:6px 10px;border-radius:9px;
+    border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.045);
+    color:rgba(255,255,255,.88);cursor:pointer;
+    font:600 13.5px/1 -apple-system,"PingFang SC",system-ui,sans-serif;
+    transition:background .14s,border-color .14s,transform .1s;
+  }
+  .lb-word:hover{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.26);color:#fff;}
+  .lb-word:active{transform:scale(.94);}
+  .lb-word.hot{
+    border-color:var(--gk-accent,#10b981);color:#fff;
+    background:rgba(16,185,129,.17);
+  }
+  .lb-word.used{opacity:.26;text-decoration:line-through;cursor:default;}
+  .lb-word.used:hover{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.11);color:rgba(255,255,255,.88);}
+  .lb-foot{
+    margin:12px 2px 0;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);
+    font:500 11px/1.5 -apple-system,"PingFang SC",system-ui,sans-serif;color:rgba(255,255,255,.32);
+  }
+</style>
+  <script src="../assets/js/fs-kit.js" defer></script>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="tip">上一个词的尾字 = 下一个词的首字 · 词要来自词库</div>
+<div id="bar">
+  <input id="inp" type="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="接一个词…" maxlength="8">
+  <button id="go" type="button">接上</button>
+</div>
+
+<!-- 词库面板 -->
+<div id="lib" hidden>
+  <div id="lib-card">
+    <div id="lib-head">
+      <span id="lib-title">词库</span>
+      <span id="lib-info"></span>
+      <button id="lib-x" type="button" aria-label="关闭">✕</button>
+    </div>
+    <input id="lib-q" type="text" placeholder="搜索词或首字…" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div id="lib-body"></div>
+  </div>
+</div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/game-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LW = 480, LH = 720;
+  var LIMIT = 60;                 // 一局 60 秒
+
+  /* ---------------- 词库 ---------------- */
+  var WORDS = [
+    // 人物 · 社会
+    '老师', '学生', '医生', '工人', '新闻', '作品', '图书', '演出',
+    '说明', '经理', '师生', '警局', '机场', '队长', '同学', '同事',
+    '病人', '主人', '情人', '老人', '女人', '男人', '儿童', '青年',
+    '军人', '商人', '读书', '著作', '园艺', '园林', '家园', '房间',
+    '厨房', '庭院', '阳光', '窗户', '门口', '街道', '园子', '场地',
+    '市场', '院子',
+    // 生活
+    '校长', '局面', '航线', '舍得', '教学', '书房', '桌子', '椅子',
+    '镜子', '灯光', '手表', '电脑', '书包', '张开', '杯子', '发现',
+    '视线', '调节', '扇子', '眼镜', '船员', '托盘', '票房', '路口',
+    '路面', '天空', '地面', '海港', '流水', '森林', '原来', '火山',
+    '风景', '水果', '雪花', '月光', '星星', '雷雨', '雾气', '浪花',
+    '谷物', '山顶', '顶楼', '楼房', '狗年', '小羊',
+    // 自然
+    '鸟语', '鱼肉', '虎口', '狮子', '大象', '猴子', '兔子', '蜜蜂',
+    '木头', '树叶', '鲜花', '草地', '竹林', '松树', '果实', '种子',
+    '麦子', '稻子', '果子', '子树', '叶子', '子夜', '夜光', '光头',
+    '头脑', '面包', '饭桌', '面条', '饺子', '包子',
+    // 动植物
+    '糕点', '奶牛', '汁水', '茶叶', '糖果', '苹果', '橘子', '瓜果',
+    '蜂蜜', '牛肉', '包邮', '邮件', '信件', '罐头', '骨头', '来往',
+    '过去', '此刻', '时间', '空间', '力量', '神话', '感情', '思想',
+    // 食物
+    '道理', '识别', '经历', '能力', '平安', '全力', '福气', '由来',
+    '等待', '实力', '想象', '象样', '样本', '本事', '事情', '人生',
+    '生气', '气象', '象棋', '棋盘', '盘子', '子女', '女儿', '童年',
+    '年级', '级别',
+    // 抽象
+    '别人', '家人', '梦想', '聪明', '取得', '景观', '彩色', '像素',
+    '牌桌', '桌面', '条形', '形状', '状态', '态势', '势力', '量度',
+    '度假', '假期', '期间', '间接', '接受', '受害', '害处', '处置',
+    '置身', '分开', '身份', '份额', '额外', '外国', '家庭', '调度',
+    '节日', '解码', '密码', '码头', '脑子', '子母', '母亲', '亲手',
+    '表格', '格外', '国土', '土质', '质地', '孔子', '看见', '查看',
+    '看重', '重要', '要点', '点头', '雨天', '港口', '客户', '论点',
+    '谈论', '论说', '说话', '话别', '告别', '别说',
+    // 桥接补链
+    '花束', '束手', '手心', '心情', '情感', '感动', '动物', '物品',
+    '品味', '味道', '理想', '想念', '念头', '孙子', '林中', '中间',
+    '闻名', '名字', '字体', '体育', '育人', '人才', '才华', '华丽',
+    '丽日', '日出', '出门', '门窗', '户口', '口语', '语文', '文学',
+    '生长', '长大', '大人', '人物', '品质', '质量', '口味', '主要',
+    '要素', '素材', '材料', '料理', '测量', '量身', '身材', '限时',
+    '期限', '限量', '量表', '表面', '条件', '件数', '数字', '特点',
+    '点燃', '燃烧', '烧卖', '卖出', '出去', '去除', '除非', '非常',
+    '常规', '规律', '法律', '律动', '动人', '人事', '人间', '回家',
+    '返回', '往返', '到处', '处理', '理论', '明天', '日历', '历史',
+    '史上', '上面', '下车', '运动员', '员工', '地图', '艺人', '面食',
+    '食物', '亲子', '子弹', '弹性', '性质', '儿子', '人家', '房屋',
+    '屋顶', '地板', '板材', '材质', '理解', '空气', '气球', '球体',
+    '具体', '身体', '体积', '树木', '头顶', '石头', '土地', '花朵',
+    '朵儿', '草原', '网格', '格子', '花草', '林间', '年份', '肉食',
+    '羊毛', '毛线', '线条', '识字', '字面', '未来', '往事', '情分',
+    '分明', '见识', '车头', '安全', '量子', '厉害', '遇到', '待遇',
+    '遇见', '见面', '面孔', '开门', '意外', '外表', '开头', '关门',
+    '召开', '召见', '光临', '临时', '开始', '始发', '发明', '出现',
+    '现象', '眼光', '原子', '弹力', '力气', '情节', '节省', '省份',
+    '日常', '颜色', '身影', '影子', '闹事', '事件', '积累', '累计',
+    '计划', '划分', '开花', '花费', '费心', '心口', '语气', '气色',
+    '落叶', '时刻', '刻度', '度量', '受苦', '苦难', '艰难', '难道',
+    '空港', '口岸', '岸上', '上岸', '得力', '时钟', '钟表', '国际',
+    '际遇', '道路', '枕头', '年代', '代价', '价值观', '观念', '念书',
+    '书本', '文艺', '果汁', '发生', '少年', '色彩', '国家', '星光'
+  ];
+
+  var byFirst = {};            // 首字 → 词数组
+  for (var wi = 0; wi < WORDS.length; wi++) {
+    var w = WORDS[wi];
+    var h = w.charAt(0);
+    (byFirst[h] = byFirst[h] || []).push(w);
+  }
+
+  var chain = [];              // 已接的词
+  var used = {};               // 用过的词
+  var left = LIMIT;            // 剩余秒数
+  var streak = 0;              // 当前连击
+  var bestStreak = 0;
+  var hintWord = '';
+  var msg = '';
+  var msgT = 0;
+  var shakeT = 0;
+  var inputEl, goBtn;
+  var libOpen = false;
+  var libWasPlaying = false;
+  var libEl, libBody, libInfo, libQ;
+
+  function resetGame(a) {
+    var g = a || api;
+    chain = []; used = {}; left = LIMIT;
+    streak = 0; bestStreak = 0; hintWord = ''; msg = ''; msgT = 0; shakeT = 0;
+    // 随机起始词
+    var start = WORDS[(Math.random() * WORDS.length) | 0];
+    pushWord(start, true);
+    g.setStat('left', left);
+    g.setStat('streak', 0);
+    if (inputEl) inputEl.value = '';
+  }
+
+  function pushWord(w, silent) {
+    chain.push(w);
+    used[w] = true;
+    if (!silent) {
+      streak++;
+      if (streak > bestStreak) bestStreak = streak;
+      api.setStat('streak', streak);
+      api.addScore(10 + Math.min(20, (streak - 1) * 2));
+    }
+  }
+
+  function currentTail() {
+    return chain.length ? chain[chain.length - 1].charAt(chain[chain.length - 1].length - 1) : '';
+  }
+
+  function candidates() {
+    var list = byFirst[currentTail()] || [];
+    var out = [];
+    for (var i = 0; i < list.length; i++) if (!used[list[i]]) out.push(list[i]);
+    return out;
+  }
+
+  function say(text, bad) {
+    msg = text;
+    msgT = 1.6;
+    if (bad) { shakeT = 0.4; api.sound('die'); }
+    else api.sound('eat');
+  }
+
+  function submit() {
+    if (api.state !== 'playing') return;
+    var raw = (inputEl.value || '').trim();
+    if (!raw) return;
+    if (raw.length < 2) { say('至少两个字', true); return; }
+    if (used[raw]) { say('这个词用过了', true); return; }
+    if (WORDS.indexOf(raw) < 0) { say('词库里没有这个词', true); return; }
+    var tail = currentTail();
+    if (raw.charAt(0) !== tail) { say('要以「' + tail + '」开头', true); return; }
+
+    pushWord(raw, false);
+    hintWord = '';
+    say('接上了！', false);
+    inputEl.value = '';
+    inputEl.focus();
+  }
+
+  function useHint() {
+    if (api.state !== 'playing') return;
+    var cs = candidates();
+    if (!cs.length) { say('没有能接的词了', true); return; }
+    hintWord = cs[(Math.random() * cs.length) | 0];
+    api.setScore(Math.max(0, api.score - 10));     // 提示扣 10 分
+    api.sound('click');
+    msg = '提示（扣 10 分）：' + hintWord;
+    msgT = 4;
+  }
+
+  /* ---------------- 词库面板 ---------------- */
+  function libRender() {
+    var q = (libQ.value || '').trim();
+    var cs = candidates();
+    var hot = {};
+    var i;
+    for (i = 0; i < cs.length; i++) hot[cs[i]] = 1;
+
+    var html = '';
+
+    // 当前可接的词（只在没搜索时单独列出）
+    if (!q) {
+      html += '<div class="lb-sec">当前可接 · ' + cs.length + ' 个</div>';
+      if (cs.length) {
+        html += '<div class="lb-row">';
+        for (i = 0; i < cs.length; i++) {
+          html += '<span class="lb-word hot" data-w="' + cs[i] + '">' + cs[i] + '</span>';
+        }
+        html += '</div>';
+      } else {
+        html += '<div class="lb-row"><span style="font:500 13px/1.4 -apple-system,\'PingFang SC\',system-ui,sans-serif;' +
+          'color:rgba(255,255,255,.4)">没有能接的词了 —— 换个词试试</span></div>';
+      }
+    }
+
+    // 全部词库：按首字分组
+    // 注意：没搜索时，「当前可接」的词已经在顶部单独列了，这里要跳过，避免同一个词出现两次
+    var groups = {}, order = [], total = 0;
+    for (i = 0; i < WORDS.length; i++) {
+      var w = WORDS[i];
+      if (q && w.indexOf(q) < 0) continue;
+      if (!q && hot[w]) continue;
+      var h = w.charAt(0);
+      if (!groups[h]) { groups[h] = []; order.push(h); }
+      groups[h].push(w);
+      total++;
+    }
+    order.sort();
+    html += '<div class="lb-sec">' + (q ? '搜索结果' : '全部词库') + ' · ' + total + ' 个</div>';
+    for (i = 0; i < order.length; i++) {
+      var gh = order[i];
+      html += '<div class="lb-row"><span class="lb-head">' + gh + '</span>';
+      for (var k = 0; k < groups[gh].length; k++) {
+        var gw = groups[gh][k];
+        var cls = 'lb-word' + (used[gw] ? ' used' : (hot[gw] ? ' hot' : ''));
+        html += '<span class="' + cls + '" data-w="' + gw + '">' + gw + '</span>';
+      }
+      html += '</div>';
+    }
+    html += '<div class="lb-foot">共 ' + WORDS.length + ' 个词 · 点词可填入输入框 · 打开词库时倒计时暂停</div>';
+
+    libBody.innerHTML = html;
+    libInfo.textContent = cs.length ? ('当前可接 ' + cs.length + ' 个') : '当前无可接词';
+  }
+
+  function libOpenPanel() {
+    if (libOpen) return;
+    libOpen = true;
+    libEl.hidden = false;
+    // 看词库时静默暂停游戏（不弹暂停遮罩），关掉自动继续
+    libWasPlaying = (api.state === 'playing');
+    if (libWasPlaying) api.pause(true);
+    libQ.value = '';
+    libRender();
+    api.sound('click');
+    setTimeout(function () { try { libQ.focus(); } catch (e) { } }, 40);
+  }
+
+  function libClosePanel() {
+    if (!libOpen) return;
+    libOpen = false;
+    libEl.hidden = true;
+    if (libWasPlaying) {
+      libWasPlaying = false;
+      if (api.state === 'paused') api.resume(true);
+    }
+    if (inputEl) { try { inputEl.focus(); } catch (e) { } }
+  }
+
+  /* ---------------- 更新 ---------------- */
+  function update(dt) {
+    if (api.state !== 'playing') return;
+    if (libOpen) return;                 // 打开词库时暂停倒计时
+    if (msgT > 0) msgT = Math.max(0, msgT - dt);
+    if (shakeT > 0) shakeT = Math.max(0, shakeT - dt);
+
+    var before = Math.ceil(left);
+    left -= dt;
+    if (left < 0) left = 0;
+    if (Math.ceil(left) !== before) api.setStat('left', Math.ceil(left));
+    if (left <= 0) {
+      api.sound('win');
+      api.gameOver('时间到！');
+    }
+  }
+
+  /* ---------------- 绘制 ---------------- */
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  var api = window.GameKit.create({
+    slug: 'wordchain',
+    title: '中文接龙',
+    logic: [LW, LH],
+    color: '#10b981',
+    dpad: false,
+    hint: '上一个词的<b>尾字</b>要接下一个词的<b>首字</b><br>词要来自内置词库，60 秒内接得越多越好',
+    hud: [
+      { k: 'score', label: '分数' },
+      { k: 'best', label: '最高' },
+      { k: 'streak', label: '连击' },
+      { k: 'left', label: '剩余', fmt: function (v) { return v + 's'; } }
+    ],
+
+    onInit: function (a) {
+      resetGame(a);
+      a.setScore(0);
+    },
+
+    onUpdate: function (a, dt) { update(dt); },
+
+    onRender: function (a, c) {
+      var pal = a.colors;
+      var i;
+
+      // 接龙链（显示最近 10 个，纵向）
+      c.save();
+      c.font = '500 15px -apple-system,"PingFang SC",system-ui,sans-serif';
+      c.textBaseline = 'middle';
+      var showFrom = Math.max(0, chain.length - 10);
+      var lx = 34;
+      for (i = showFrom; i < chain.length; i++) {
+        var y = 120 + (i - showFrom) * 27;
+        var isLast = (i === chain.length - 1);
+        c.fillStyle = isLast ? pal.base : pal.ink3;
+        c.fillText(chain[i], lx, y);
+        if (!isLast) {
+          c.fillStyle = pal.muted;
+          c.fillText('→', lx + 40, y);
+        }
+      }
+      c.restore();
+
+      // 当前词（大字）
+      var cur = chain.length ? chain[chain.length - 1] : '';
+      c.save();
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.shadowColor = pal.base;
+      c.shadowBlur = 26;
+      c.fillStyle = pal.ink;
+      c.font = '700 54px -apple-system,"PingFang SC",system-ui,sans-serif';
+      c.fillText(cur, LW / 2, 420);
+      c.shadowBlur = 0;
+
+      // 提示字
+      c.font = '600 15px -apple-system,"PingFang SC",system-ui,sans-serif';
+      c.fillStyle = pal.ink3;
+      c.fillText('下一个词要以「' + currentTail() + '」开头', LW / 2, 470);
+
+      // 两个按钮：提示（扣分） + 词库（当前可接几个）
+      var by = 492, bh = 34, bw = 124;
+      var hintBx = LW / 2 - 132, libBx = LW / 2 + 8;
+
+      c.fillStyle = 'rgba(255,255,255,.06)';
+      roundRect(c, hintBx, by, bw, bh, 17);
+      c.fill();
+      c.strokeStyle = 'rgba(255,255,255,.14)';
+      c.lineWidth = 1;
+      roundRect(c, hintBx, by, bw, bh, 17);
+      c.stroke();
+      c.fillStyle = pal.ink2;
+      c.font = '600 13px -apple-system,"PingFang SC",system-ui,sans-serif';
+      c.fillText('要个提示 -10', hintBx + bw / 2, by + bh / 2);
+
+      // 词库按钮：直接显示当前可接的词数
+      var cs = candidates();
+      var hot = cs.length > 0;
+      c.fillStyle = hot ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.05)';
+      roundRect(c, libBx, by, bw, bh, 17);
+      c.fill();
+      c.strokeStyle = hot ? pal.base : 'rgba(255,255,255,.12)';
+      c.lineWidth = 1;
+      roundRect(c, libBx, by, bw, bh, 17);
+      c.stroke();
+      c.fillStyle = hot ? pal.base : pal.muted;
+      c.font = '700 13px -apple-system,"PingFang SC",system-ui,sans-serif';
+      c.fillText(hot ? ('可接 ' + cs.length + ' 词') : '无可接词', libBx + bw / 2, by + bh / 2);
+      c.restore();
+
+      // 消息（成功/失败提示）
+      if (msgT > 0) {
+        c.save();
+        c.globalAlpha = Math.min(1, msgT * 1.6);
+        c.textAlign = 'center';
+        c.font = '600 16px -apple-system,"PingFang SC",system-ui,sans-serif';
+        c.fillStyle = msg.indexOf('接上') >= 0 ? pal.base : pal.alt;
+        c.fillText(msg, LW / 2, 552);
+        c.restore();
+      }
+
+      // 提示词
+      if (hintWord) {
+        c.save();
+        c.textAlign = 'center';
+        c.font = '700 24px -apple-system,"PingFang SC",system-ui,sans-serif';
+        c.fillStyle = pal.glow;
+        c.fillText(hintWord, LW / 2, 596);
+        c.restore();
+      }
+
+      // 底部输入框上方的分隔
+      c.save();
+      c.strokeStyle = 'rgba(255,255,255,.07)';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(24, 622);
+      c.lineTo(LW - 24, 622);
+      c.stroke();
+      c.restore();
+    },
+
+    onAction: function (a, act) {
+      if (act.type === 'tap') {
+        var by = 492, bh = 34, bw = 124;
+        if (act.y >= by && act.y <= by + bh) {
+          var hintBx = LW / 2 - 132, libBx = LW / 2 + 8;
+          if (act.x >= hintBx && act.x <= hintBx + bw) useHint();
+          else if (act.x >= libBx && act.x <= libBx + bw) {
+            if (libOpen) libClosePanel(); else libOpenPanel();
+          }
+        }
+      }
+    }
+  });
+
+  /* ---------------- 输入 ---------------- */
+  inputEl = document.getElementById('inp');
+  goBtn = document.getElementById('go');
+  goBtn.addEventListener('click', submit);
+  inputEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); submit(); }
+    e.stopPropagation();          // 别让游戏抢键盘
+  });
+  // 点画布空白处不抢焦点（但点输入框区域不处理，因为那是 DOM）
+  document.getElementById('cv').addEventListener('pointerdown', function () {
+    if (api.state === 'playing' && document.activeElement === inputEl) inputEl.blur();
+  });
+
+  /* ---------------- 词库面板 ---------------- */
+  libEl = document.getElementById('lib');
+  libBody = document.getElementById('lib-body');
+  libInfo = document.getElementById('lib-info');
+  libQ = document.getElementById('lib-q');
+
+  document.getElementById('lib-x').addEventListener('click', libClosePanel);
+  libEl.addEventListener('click', function (e) {
+    if (e.target === libEl) libClosePanel();          // 点遮罩关闭
+  });
+  libQ.addEventListener('input', libRender);
+  libQ.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); libClosePanel(); }
+    else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); }
+  });
+  libBody.addEventListener('click', function (e) {
+    var t = e.target;
+    while (t && t !== libBody && !(t.className && String(t.className).indexOf('lb-word') >= 0)) t = t.parentNode;
+    if (!t || t === libBody) return;
+    if (String(t.className).indexOf('used') >= 0) return;   // 用过的词不再填
+    var w = t.getAttribute('data-w');
+    if (!w) return;
+    inputEl.value = w;
+    libClosePanel();
+  });
+  // 面板打开时，按键归面板用：
+  // 必须用 capture 阶段拦截，否则 Escape/Space 会先被游戏内核当成「暂停/继续」，
+  // 把游戏停在一半（甚至弹出暂停遮罩盖住面板）。
+  document.addEventListener('keydown', function (e) {
+    if (!libOpen) return;
+    var k = e.key;
+    var typing = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
+    var isGameKey = (k === 'Escape' || k === ' ' || k === 'Spacebar' ||
+      k === 'ArrowUp' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowRight');
+    if (!isGameKey) return;
+    if (typing && k !== 'Escape') return;      // 输入框内照常打字（只拦 Esc）
+    e.stopPropagation();
+    e.preventDefault();
+    if (k === 'Escape') libClosePanel();
+  }, true);
+
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__wc = {
+      get chain() { return chain.slice(); },
+      get left() { return left; },
+      get streak() { return streak; },
+      get used() { return Object.keys(used); },
+      get tail() { return currentTail(); },
+      get candidates() { return candidates(); },
+      get msg() { return msg; },
+      words: WORDS,
+      submit: submit,
+      useHint: useHint,
+      setLeft: function (v) { left = v; },
+      setInput: function (v) { inputEl.value = v; },
+      // 词库面板
+      openLib: libOpenPanel,
+      closeLib: libClosePanel,
+      get libOpen() { return libOpen; },
+      get state() { return api.state; },
+      libCount: function () { return document.querySelectorAll('#lib-body .lb-word').length; },
+      // 词库自检：哪些词的尾字接不上
+      deadEnds: function () {
+        var out = [];
+        for (var i = 0; i < WORDS.length; i++) {
+          var w = WORDS[i];
+          var t = w.charAt(w.length - 1);
+          var has = (byFirst[t] || []).some(function (x) { return x !== w; });
+          if (!has) out.push(w + '(尾:' + t + ')');
+        }
+        return out;
+      },
+      reset: function () { api.restart(); }
+    };
+  }
+
+  void api;
+})();
+</script>
+</body>
+</html>

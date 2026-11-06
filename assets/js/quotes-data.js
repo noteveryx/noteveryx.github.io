@@ -1,8 +1,8 @@
 /**
  * 句子数据（共用）
  *
- * 使用方：html/quotes.html（句子收藏，逐条显示 + 复制）
- *         html/poster.html（句子海报，选一句生成图片）
+ * 使用方：html/tool-quotes.html（句子收藏，逐条显示 + 复制）
+ *         html/visual-poster.html（句子海报，选一句生成图片）
  *
  * 补充方式：在数组末尾加一行即可
  *   '新的句子。'                              纯句子

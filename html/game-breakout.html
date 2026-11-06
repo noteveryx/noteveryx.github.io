@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>打砖块</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/game-kit.css">
+<style>
+  .tip{
+    position:fixed;z-index:12;left:50%;transform:translateX(-50%);
+    bottom:calc(20px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.34);
+    pointer-events:none;user-select:none;white-space:nowrap;
+  }
+  @media (max-width:420px){ .tip{font-size:10px;letter-spacing:.02em;} }
+  .gk-label{display:none;}
+</style>
+  <script src="../assets/js/fs-kit.js" defer></script>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="tip">左右移动挡板 · ← → 或拖动 · 空格 发球 · 右上色球换配色</div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/game-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LW = 480, LH = 720;
+  var WALL = 10;                    // 左右墙厚度
+  var CEIL = 76;                    // 顶部（给 HUD 留位）
+  var FLOOR = 660;                  // 地面线
+  var PAD_W = 74, PAD_H = 13;        // 挡板
+  var BALL_R = 7;
+
+  var pad = { x: LW / 2, vx: 0 };
+  var ball = { x: 0, y: 0, vx: 0, vy: 0, r: BALL_R, stuck: true };
+  var bricks = [];
+  var level = 1;
+  var lives = 3;
+  var ballSpeed = 320;
+  var alive = true;
+  var launching = false;             // 球在挡板上待发
+  var lastHit = -1;
+  var flashT = 0;
+
+  // 砖块布局：不同关卡不同排列
+  function layout(n) {
+    var rows = 5 + Math.min(3, ((n - 1) / 2) | 0);
+    var cols = 6;
+    var bw = (LW - WALL * 2 - 16 - (cols - 1) * 6) / cols;
+    var bh = 20;
+    var top = CEIL + 40;
+    var out = [];
+    for (var r = 0; r < rows; r++) {
+      var cnt = cols;
+      if (n >= 3 && r % 2 === 1) cnt = cols - 2;                 // 交错
+      if (n >= 5 && r === rows - 1) cnt = cols - 4;              // 底部留缺口
+      var startX = WALL + 8 + (cols - cnt) * (bw + 6) / 2;
+      for (var c = 0; c < cnt; c++) {
+        out.push({
+          x: startX + c * (bw + 6), y: top + r * (bh + 6),
+          w: bw, h: bh,
+          hp: (n >= 4 && r === 0) ? 2 : 1,
+          // 色相围绕主题色 ±70°，既有层次又不与整体配色割裂
+          hue: ((r * 26 + c * 10) % 140) - 70
+        });
+      }
+    }
+    return out;
+  }
+
+  function resetGame(a) {
+    var g = a || api;
+    pad.x = LW / 2;
+    level = 1; lives = 3;
+    ballSpeed = 320;
+    alive = true;
+    launching = true;
+    lastHit = -1;
+    flashT = 0;
+    loadLevel();
+    resetBall();
+    g.setStat('lives', lives);
+    g.setStat('level', level);
+  }
+
+  function loadLevel() {
+    bricks = layout(level);
+  }
+
+  function resetBall() {
+    ball.x = pad.x;
+    ball.y = FLOOR - 40 - PAD_H / 2;
+    ball.vx = 0; ball.vy = 0;
+    ball.stuck = true;
+    launching = true;
+  }
+
+  function launch() {
+    if (!ball.stuck) return;
+    ball.stuck = false;
+    var ang = (-Math.PI / 3) + Math.random() * (Math.PI / 3);
+    ball.vx = Math.cos(ang) * ballSpeed;
+    ball.vy = Math.sin(ang) * ballSpeed;
+    api.sound('click');
+  }
+
+  function loseLife() {
+    lives--;
+    api.setStat('lives', lives);
+    api.sound('die');
+    if (lives <= 0) {
+      alive = false;
+      api.sound('boom');
+      api.gameOver('球全掉了');
+      return;
+    }
+    resetBall();
+  }
+
+  function nextLevel() {
+    level++;
+    api.setStat('level', level);
+    ballSpeed = Math.min(560, 320 + (level - 1) * 26);
+    loadLevel();
+    resetBall();
+    api.sound('merge');
+  }
+
+  /* ---------------- 挡板控制 ---------------- */
+  var keyL = false, keyR = false;
+  var ptrActive = false, ptrT = 0;
+
+  function movePad(dx) {
+    pad.x += dx;
+    if (pad.x < WALL + PAD_W / 2) pad.x = WALL + PAD_W / 2;
+    if (pad.x > LW - WALL - PAD_W / 2) pad.x = LW - WALL - PAD_W / 2;
+  }
+
+  /* ---------------- 更新 ---------------- */
+  function update(dt) {
+    if (!alive) return;
+
+    // 键盘移动挡板
+    var kdir = 0;
+    if (keyL) kdir -= 1;
+    if (keyR) kdir += 1;
+    if (kdir) movePad(kdir * 460 * dt);
+
+    // 指针拖动（近期动过、或正按着才生效，避免跟键盘打架）
+    // 注意：ptrT 只在 pointermove 刷新，所以「按住不动」必须靠 pointer.down 维持跟随
+    if (ptrActive && (api.pointer.down || (performance.now() - ptrT) < 1600)) {
+      var tx = api.pointer.x;
+      movePad((tx - pad.x) * Math.min(1, dt * 18));
+    }
+
+    // 通关检测要放在 stuck 早退之前，
+    // 否则「球还没发出去时砖块就清空了」永远不会进入下一关
+    if (bricks.length === 0) { nextLevel(); return; }
+
+    if (ball.stuck) {
+      ball.x = pad.x;
+      ball.y = FLOOR - 40 - PAD_H / 2;
+      return;
+    }
+
+    // 球运动（固定步长积分 → 与帧率无关）
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+
+    // 左右墙
+    if (ball.x - ball.r < WALL) { ball.x = WALL + ball.r; ball.vx = Math.abs(ball.vx); api.sound('tick'); }
+    if (ball.x + ball.r > LW - WALL) { ball.x = LW - WALL - ball.r; ball.vx = -Math.abs(ball.vx); api.sound('tick'); }
+    // 顶
+    if (ball.y - ball.r < CEIL) { ball.y = CEIL + ball.r; ball.vy = Math.abs(ball.vy); api.sound('tick'); }
+
+    // 挡板
+    var py = FLOOR - 46;
+    if (ball.vy > 0 && ball.y + ball.r >= py && ball.y + ball.r <= py + PAD_H + 12 &&
+        ball.x >= pad.x - PAD_W / 2 - ball.r && ball.x <= pad.x + PAD_W / 2 + ball.r) {
+      ball.y = py - ball.r;
+      // 击球点决定反弹角
+      var rel = (ball.x - pad.x) / (PAD_W / 2);
+      rel = Math.max(-1, Math.min(1, rel));
+      var ang = -Math.PI / 2 + rel * 0.85;
+      var sp = Math.min(620, Math.hypot(ball.vx, ball.vy) * 1.012);
+      ball.vx = Math.cos(ang) * sp;
+      ball.vy = Math.sin(ang) * sp;
+      api.sound('move');
+    }
+
+    // 砖块
+    for (var i = bricks.length - 1; i >= 0; i--) {
+      var b = bricks[i];
+      if (ball.x + ball.r < b.x || ball.x - ball.r > b.x + b.w) continue;
+      if (ball.y + ball.r < b.y || ball.y - ball.r > b.y + b.h) continue;
+      // 反弹：按重叠比例决定翻 x 还是 y
+      var ox = Math.min(ball.x + ball.r - b.x, b.x + b.w - (ball.x - ball.r));
+      var oy = Math.min(ball.y + ball.r - b.y, b.y + b.h - (ball.y - ball.r));
+      if (ox < oy) ball.vx = -ball.vx; else ball.vy = -ball.vy;
+      ball.x += (ball.x < b.x + b.w / 2 ? -1 : 1) * 0.6;
+      ball.y += (ball.y < b.y + b.h / 2 ? -1 : 1) * 0.6;
+
+      b.hp--;
+      if (b.hp <= 0) {
+        bricks.splice(i, 1);
+        api.addScore(10);
+        flashT = 0.25;
+        api.sound('eat');
+      } else {
+        api.addScore(2);
+        api.sound('tick');
+      }
+      lastHit = i;
+      break;
+    }
+
+    // 地面
+    if (ball.y - ball.r > FLOOR) { loseLife(); return; }
+
+    if (flashT > 0) flashT = Math.max(0, flashT - dt);
+  }
+
+  /* ---------------- 绘制 ---------------- */
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  var api = window.GameKit.create({
+    slug: 'breakout',
+    title: '打砖块',
+    logic: [LW, LH],
+    color: '#f43f5e',
+    dpad: false,
+    hint: '左右移动挡板把球弹回去<br>清空全部砖块进入下一关，球速会越来越快',
+    hud: [
+      { k: 'score', label: '分数' },
+      { k: 'best', label: '最高' },
+      { k: 'level', label: '关卡' },
+      { k: 'lives', label: '生命', fmt: function (v) { return '♥ ' + v; } }
+    ],
+
+    onInit: function (a) {
+      resetGame(a);
+      a.setScore(0);
+    },
+
+    onUpdate: function (a, dt) { update(dt); },
+
+    onRender: function (a, c) {
+      var pal = a.colors;
+
+      // 墙
+      c.fillStyle = pal.at(0, -0.04, -0.06);
+      c.fillRect(0, 0, WALL, LH);
+      c.fillRect(LW - WALL, 0, WALL, LH);
+      c.fillRect(0, CEIL - 6, LW, 6);
+
+      // 砖块
+      for (var i = 0; i < bricks.length; i++) {
+        var b = bricks[i];
+        var col = pal.at(b.hue - pal.h, 0.04, 0.02);
+        c.save();
+        c.shadowColor = col;
+        c.shadowBlur = 8;
+        c.fillStyle = col;
+        roundRect(c, b.x, b.y, b.w, b.h, 5);
+        c.fill();
+        c.restore();
+        // 亮面
+        c.fillStyle = 'rgba(255,255,255,.22)';
+        roundRect(c, b.x + 2, b.y + 2, b.w - 4, b.h * 0.36, 4);
+        c.fill();
+        if (b.hp > 1) {
+          c.strokeStyle = 'rgba(255,255,255,.5)';
+          c.lineWidth = 1.5;
+          roundRect(c, b.x + 2, b.y + 2, b.w - 4, b.h - 4, 4);
+          c.stroke();
+        }
+      }
+
+      // 挡板
+      c.save();
+      c.shadowColor = pal.base;
+      c.shadowBlur = 16;
+      var pg = c.createLinearGradient(pad.x - PAD_W / 2, 0, pad.x + PAD_W / 2, 0);
+      pg.addColorStop(0, pal.bright);
+      pg.addColorStop(1, pal.base);
+      c.fillStyle = pg;
+      roundRect(c, pad.x - PAD_W / 2, FLOOR - 46, PAD_W, PAD_H, PAD_H / 2);
+      c.fill();
+      c.restore();
+
+      // 球
+      if (!ball.stuck) {
+        c.save();
+        c.shadowColor = pal.glow;
+        c.shadowBlur = 14 + flashT * 40;
+        c.fillStyle = pal.glow;
+        c.beginPath();
+        c.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      } else {
+        c.save();
+        c.globalAlpha = 0.85;
+        c.fillStyle = pal.glow;
+        c.beginPath();
+        c.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+        // 发射提示箭头
+        c.save();
+        c.strokeStyle = 'rgba(255,255,255,.35)';
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(ball.x, ball.y - 12);
+        c.lineTo(ball.x, ball.y - 26);
+        c.moveTo(ball.x - 5, ball.y - 20);
+        c.lineTo(ball.x, ball.y - 26);
+        c.lineTo(ball.x + 5, ball.y - 20);
+        c.stroke();
+        c.restore();
+      }
+
+      // 地面线
+      c.fillStyle = pal.at(0, 0, -0.2);
+      c.fillRect(WALL, FLOOR, LW - WALL * 2, 2);
+    },
+
+    onAction: function (a, act) {
+      if (act.type === 'key') {
+        var k = act.key;
+        if (k === 'ArrowLeft' || k === 'a' || k === 'A') keyL = true;
+        else if (k === 'ArrowRight' || k === 'd' || k === 'D') keyR = true;
+        else if (k === 'ArrowUp' || k === 'w' || k === 'W') launch();
+      } else if (act.type === 'tap') {
+        // 点击 = 发球；飞行中点击不做位移（跟手由 pointermove 平滑跟随）
+        if (ball.stuck) launch();
+      }
+    }
+  });
+
+  /* 指针拖动 */
+  var cv = document.getElementById('cv');
+  cv.addEventListener('pointermove', function () { ptrT = performance.now(); ptrActive = true; }, { passive: true });
+  cv.addEventListener('pointerdown', function () { ptrT = performance.now(); ptrActive = true; }, { passive: true });
+
+  /* 键盘松开 */
+  document.addEventListener('keyup', function (e) {
+    var k = e.key;
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') keyL = false;
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D') keyR = false;
+  });
+
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__bo = {
+      get pad() { return { x: pad.x }; },
+      get ball() { return { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy, stuck: ball.stuck }; },
+      get bricks() { return bricks.length; },
+      get lives() { return lives; },
+      get level() { return level; },
+      get alive() { return alive; },
+      get speed() { return Math.hypot(ball.vx, ball.vy); },
+      launch: launch,
+      setPadX: function (x) { pad.x = x; },
+      setBall: function (x, y, vx, vy) {
+        ball.x = x; ball.y = y; ball.vx = vx || 0; ball.vy = vy || 0; ball.stuck = false;
+      },
+      // 直接打掉一块砖
+      breakBrick: function () {
+        if (!bricks.length) return false;
+        bricks.pop();
+        api.addScore(10);
+        return true;
+      },
+      clearAll: function () { bricks = []; },
+      reset: function () { api.restart(); }
+    };
+  }
+
+  void api;
+})();
+</script>
+</body>
+</html>

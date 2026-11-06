@@ -18,7 +18,8 @@
     transition:background .25s ease,color .25s ease;
   }
   body.dark{background:#16191f;color:#e8ebf0;}
-  canvas{position:fixed;inset:0;display:block;width:100%;height:100%;cursor:crosshair;}
+  /* 只作用于主画布（墨迹层是 JS 创建的离屏 canvas，不进 DOM） */
+  #cv{position:fixed;inset:0;display:block;width:100%;height:100%;cursor:crosshair;}
   .ui{position:fixed;z-index:5;opacity:1;transition:opacity .5s ease;}
   body.idle .ui{opacity:.18;}
   body.idle .ui:hover,body.idle .ui:focus-within{opacity:1;}
@@ -115,7 +116,74 @@
       repeating-linear-gradient(to bottom,rgba(255,255,255,.38) 0 1px,transparent 1px 5px),
       repeating-linear-gradient(to right,rgba(255,255,255,.38) 0 1px,transparent 1px 5px);
   }
+  /* 田字格：方框 + 对角虚线 */
+  #icoTian{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 2h12v12H2z' fill='none' stroke='%23000' stroke-opacity='.5'/%3E%3Cpath d='M2 2l12 12M14 2L2 14' fill='none' stroke='%23000' stroke-opacity='.26' stroke-dasharray='1.6 1.6'/%3E%3C/svg%3E");
+    background-size:contain;background-repeat:no-repeat;background-position:center;
+  }
+  /* 米字格：方框 + 十字实线 + 对角虚线 */
+  #icoMi{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 2h12v12H2z' fill='none' stroke='%23000' stroke-opacity='.5'/%3E%3Cpath d='M2 8h12M8 2v12' fill='none' stroke='%23000' stroke-opacity='.28'/%3E%3Cpath d='M2 2l12 12M14 2L2 14' fill='none' stroke='%23000' stroke-opacity='.2' stroke-dasharray='1.6 1.6'/%3E%3C/svg%3E");
+    background-size:contain;background-repeat:no-repeat;background-position:center;
+  }
+  /* 四线格：4 条线，中间两条实 */
+  #icoSi{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 3.5h12M2 7.5h12M2 10.5h12M2 13.5h12' fill='none' stroke='%23000' stroke-opacity='.45'/%3E%3Cpath d='M2 3.5h12' fill='none' stroke='%23000' stroke-opacity='.18' stroke-dasharray='1.6 1.6'/%3E%3C/svg%3E");
+    background-size:contain;background-repeat:no-repeat;background-position:center;
+  }
+  body.dark #icoTian{filter:invert(1) opacity(.75);}
+  body.dark #icoMi{filter:invert(1) opacity(.75);}
+  body.dark #icoSi{filter:invert(1) opacity(.75);}
+
+  /* ---------- 描红面板 ---------- */
+  .trace{
+    position:fixed;z-index:20;width:min(330px,calc(100vw - 20px));
+    padding:12px;border-radius:14px;
+    background:rgba(255,255,255,.96);border:1px solid rgba(0,0,0,.08);
+    box-shadow:0 10px 30px rgba(0,0,0,.16);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  }
+  .trace[hidden]{display:none !important;}
+  body.dark .trace{background:rgba(28,33,42,.94);border-color:rgba(255,255,255,.12);box-shadow:0 10px 30px rgba(0,0,0,.5);}
+  .trace h4{
+    margin:0 0 9px;font-size:12.5px;font-weight:700;color:#4b525d;
+    display:flex;align-items:center;gap:6px;
+  }
+  body.dark .trace h4{color:#c6cdd8;}
+  .trace input{
+    width:100%;padding:9px 11px;border-radius:10px;border:1px solid rgba(0,0,0,.12);
+    background:rgba(0,0,0,.03);color:#23262d;outline:none;
+    font:500 14px/1.3 -apple-system,BlinkMacSystemFont,"PingFang SC",system-ui,sans-serif;
+    transition:border-color .16s,box-shadow .16s;
+  }
+  body.dark .trace input{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);color:#e8ebf0;}
+  .trace input:focus{border-color:#635bff;box-shadow:0 0 0 3px rgba(99,91,255,.15);}
+  .trace .row{display:flex;gap:6px;margin-top:9px;}
+  .trace button{
+    flex:1;height:32px;border:none;border-radius:9px;cursor:pointer;
+    font:600 12.5px/1 inherit;transition:transform .1s,background-color .15s;
+  }
+  .trace button:active{transform:scale(.96);}
+  .trace .go{background:#635bff;color:#fff;}
+  .trace .go:hover{background:#544be8;}
+  .trace .clr{background:rgba(0,0,0,.06);color:#4b525d;}
+  body.dark .trace .clr{background:rgba(255,255,255,.09);color:#c6cdd8;}
+  .trace .clr:hover{background:rgba(0,0,0,.11);}
+  body.dark .trace .clr:hover{background:rgba(255,255,255,.15);}
+  .trace .tip{
+    margin:9px 0 0;font-size:10.5px;line-height:1.6;color:#98a0ad;
+  }
+  body.dark .trace .tip{color:#7c8695;}
+  .trace .tabs{display:flex;gap:5px;margin-bottom:8px;}
+  .trace .tabs button{
+    flex:0 0 auto;padding:0 11px;height:28px;border-radius:8px;
+    background:rgba(0,0,0,.05);color:#6b7280;font-size:12px;font-weight:600;
+  }
+  body.dark .trace .tabs button{background:rgba(255,255,255,.08);color:#a8b0bd;}
+  .trace .tabs button.on{background:rgba(99,91,255,.14);color:#635bff;}
+  body.dark .trace .tabs button.on{background:rgba(120,140,255,.2);color:#a9b5ff;}
 </style>
+  <script src="../assets/js/fs-kit.js" defer></script>
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -133,7 +201,8 @@
   <button class="tool" id="brushBtn" type="button" title="切换笔刷：圆笔 / 铅笔">圆笔</button>
   <button class="tool" id="eraserBtn" type="button" title="橡皮（E）">橡皮</button>
   <i class="sep"></i>
-  <button class="tool" id="gridBtn" type="button" title="格线：横线 / 网格 / 无">横线</button>
+  <button class="tool" id="gridBtn" type="button" title="格线：横线 / 网格 / 田字格 / 四线格 / 米字格 / 无">横线</button>
+  <button class="tool" id="traceBtn" type="button" title="描红：输入汉字 / 拼音 / 英文">描红</button>
   <button class="tool" id="bgBtn" type="button" title="纸 / 深色"><span id="bgText">深色</span></button>
   <i class="sep"></i>
   <button class="tool" id="undoBtn" type="button" title="撤销（Z）">撤销</button>
@@ -149,9 +218,34 @@
   <button class="pop-item" type="button" role="menuitemradio" data-grid="2">
     <span class="tick">✓</span><span class="ico" id="icoGrid"></span>网格
   </button>
+  <button class="pop-item" type="button" role="menuitemradio" data-grid="3">
+    <span class="tick">✓</span><span class="ico" id="icoTian"></span>田字格
+  </button>
+  <button class="pop-item" type="button" role="menuitemradio" data-grid="4">
+    <span class="tick">✓</span><span class="ico" id="icoSi"></span>四线格
+  </button>
+  <button class="pop-item" type="button" role="menuitemradio" data-grid="5">
+    <span class="tick">✓</span><span class="ico" id="icoMi"></span>米字格
+  </button>
   <button class="pop-item" type="button" role="menuitemradio" data-grid="0">
     <span class="tick">✓</span><span class="ico" id="icoNone"></span>无（空白纸）
   </button>
+</div>
+
+<div class="trace" id="tracePop" hidden role="dialog" aria-label="描红">
+  <h4>描红练习</h4>
+  <div class="tabs">
+    <button type="button" class="on" data-mode="auto">自动识别</button>
+    <button type="button" data-mode="hanzi">汉字</button>
+    <button type="button" data-mode="pinyin">拼音</button>
+    <button type="button" data-mode="english">英文</button>
+  </div>
+  <input id="traceInput" type="text" placeholder="输入汉字、拼音（ni hao）或英文" autocomplete="off" spellcheck="false">
+  <div class="row">
+    <button type="button" class="go" id="traceGo">生成描红</button>
+    <button type="button" class="clr" id="traceClear">清除</button>
+  </div>
+  <p class="tip">输入 <b>ni hao</b> 会自动转成「你好」并标出拼音；输入英文会按四线格排版。范字不会导出到 PNG，导出的只有你自己的笔迹。</p>
 </div>
 
 <div class="ui hint" id="hint">用手指或鼠标书写 · 导出为透明底 PNG</div>
@@ -195,26 +289,330 @@
 
   function paperColor() { return dark ? '#16191f' : '#fbfaf7'; }
 
+  /* ==========================================================
+     拼音表：音节(不带声调) → 常用字
+     用于「输入拼音自动转汉字」，查不到时保留拼音字母本身
+     ========================================================== */
+  var PY_SRC = ('a:阿 ai:爱 an:安 ang:昂 ao:奥 ' +
+    'ba:八 bai:白 ban:半 bang:帮 bao:包 bei:北 ben:本 bi:笔 bian:边 biao:表 bie:别 bin:宾 bing:冰 bo:波 bu:不 ' +
+    'cai:才 can:残 cao:草 ce:册 cen:参 ceng:层 cha:茶 chai:柴 chan:产 chang:长 chao:超 che:车 chen:陈 ' +
+    'cheng:成 chi:吃 chong:充 chou:丑 chu:出 chuan:穿 chuang:窗 chui:吹 chun:春 ci:词 cong:从 cu:粗 cui:催 ' +
+    'cun:村 cuo:错 da:大 dai:带 dan:单 dang:当 dao:刀 de:的 deng:灯 di:地 dian:点 diao:雕 ding:定 ' +
+    'dong:东 dou:都 du:读 duan:段 dui:对 duo:多 e:鹅 er:儿 fa:发 fan:饭 fang:方 fei:飞 fen:分 feng:风 ' +
+    'fu:服 fu:父 gai:该 gan:干 gang:刚 gao:高 ge:个 gei:给 gen:根 geng:更 gong:工 gou:狗 gu:古 ' +
+    'gua:挂 guai:怪 guan:关 guang:光 gui:归 gun:滚 guo:过 hai:海 han:汉 hao:好 he:和 hei:黑 hen:很 ' +
+    'heng:横 hong:红 hou:后 hu:护 hua:花 huai:坏 huan:换 huang:黄 hui:会 hun:混 huo:火 ji:机 jia:家 ' +
+    'jian:见 jiang:江 jiao:教 jie:街 jin:金 jing:京 jiu:九 ju:举 juan:卷 jue:决 jun:军 ka:卡 kai:开 ' +
+    'kan:看 kang:康 kao:考 ke:可 ken:肯 kong:空 kou:口 ku:哭 kua:夸 kuai:快 kuan:宽 kui:亏 kun:困 ' +
+    'kuo:扩 la:拉 lai:来 lan:蓝 lang:浪 lao:老 le:乐 lei:类 leng:冷 li:里 liang:两 liao:料 lie:列 ' +
+    'lin:林 ling:灵 liu:六 long:龙 lou:楼 lu:路 luan:乱 lun:论 luo:落 ma:妈 mai:买 man:满 mang:忙 ' +
+    'mao:猫 me:么 mei:没 men:门 meng:梦 mi:米 mian:面 miao:苗 mie:灭 min:民 ming:名 mo:摸 mo:墨 mou:某 ' +
+    'mu:木 na:那 nai:奶 nan:南 nang:囊 nao:脑 ne:呢 nei:内 neng:能 ni:你 nian:年 niang:娘 niao:鸟 ' +
+    'nie:捏 nin:您 ning:宁 niu:牛 nong:农 nu:女 nuan:暖 o:哦 ou:欧 pa:怕 pai:排 pan:盘 pang:旁 pao:跑 ' +
+    'pei:陪 pen:盆 peng:朋 pi:皮 pian:片 piao:票 pin:品 ping:平 po:坡 pu:普 pu:铺 qi:七 qian:千 ' +
+    'qiang:枪 qiao:桥 qie:切 qin:亲 qing:青 qiong:穷 qiu:球 qu:去 quan:全 que:却 qun:群 ran:然 rang:让 ' +
+    'rao:绕 re:热 ren:人 reng:仍 ri:日 rong:容 rou:肉 ru:如 rua:软 rui:锐 run:润 ruo:弱 sa:洒 sai:赛 ' +
+    'san:三 sang:桑 sao:扫 se:色 sen:森 sha:沙 shai:晒 shan:山 shang:商 shao:少 she:蛇 shen:身 ' +
+    'sheng:生 shi:十 shou:手 shu:书 shua:刷 shuai:帅 shui:水 shun:顺 shuo:说 si:四 song:送 sou:搜 ' +
+    'su:素 sui:岁 sun:孙 suo:所 ta:他 tai:太 tan:谈 tang:糖 tao:桃 te:特 teng:疼 ti:体 tian:天 ' +
+    'tiao:跳 tie:铁 ting:听 tong:同 tou:头 tu:图 tuan:团 tui:推 tuo:脱 wa:挖 wai:外 wan:完 wang:王 ' +
+    'wei:为 wen:文 wo:我 wu:五 xi:西 xia:下 xian:先 xiang:香 xiao:小 xie:写 xin:心 xing:行 xiong:兄 ' +
+    'xu:需 xuan:选 xue:学 xun:寻 ya:鸭 yan:言 yang:羊 yao:腰 ye:也 yi:一 yin:音 ying:英 yong:用 ' +
+    'you:有 yu:鱼 yuan:元 yue:月 yun:云 za:杂 zai:在 zan:咱 zang:脏 zao:早 ze:责 zen:怎 zeng:增 ' +
+    'zi:字 zong:总 zou:走 zu:足 zuan:钻 zui:最 zun:尊 zuo:做');
+
+  var PY = {};          // 音节 → 汉字
+  var PY_OF = {};       // 汉字 → 音节（反查，用于给已输入的汉字自动标拼音）
+  PY_SRC.split(' ').forEach(function (kv) {
+    var a = kv.split(':');
+    if (a.length !== 2) return;
+    if (!PY[a[0]]) PY[a[0]] = a[1];
+    if (!PY_OF[a[1]]) PY_OF[a[1]] = a[0];
+  });
+
+  /* 声调符号归一化：ní / nǐ / nì / nī → ni */
+  var TONE_MAP = {
+    'ā': 'a', 'á': 'a', 'ǎ': 'a', 'à': 'a', 'ā': 'a',
+    'ō': 'o', 'ó': 'o', 'ǒ': 'o', 'ò': 'o',
+    'ē': 'e', 'é': 'e', 'ě': 'e', 'è': 'e', 'ê': 'e',
+    'ī': 'i', 'í': 'i', 'ǐ': 'i', 'ì': 'i',
+    'ū': 'u', 'ú': 'u', 'ǔ': 'u', 'ù': 'u',
+    'ǖ': 'v', 'ǘ': 'v', 'ǚ': 'v', 'ǜ': 'v', 'ü': 'v',
+    'ń': 'n', 'ň': 'n', 'ǹ': 'n'
+  };
+  function tone(s) {
+    return String(s || '').toLowerCase().split('').map(function (ch) {
+      return TONE_MAP[ch] || ch;
+    }).join('');
+  }
+
+  /* ==========================================================
+     格线布局：绘制与范字定位共用同一套坐标，描红才会正好落在格子里
+     可用区：顶部留出工具区，底部留出工具栏 ——
+     格子必须「完整」落在可用区内，不能出现半行/半列，也不能压到工具栏下面
+     ========================================================== */
+  var GRID_TOP = 86;
+
+  function bottomReserve() {
+    var bar = document.querySelector('.bar');
+    if (!bar) return 74;
+    var r = bar.getBoundingClientRect();
+    return Math.max(0, Math.round(window.innerHeight - r.top)) + 10;
+  }
+
+  function gridLayout() {
+    var availBottom = H - bottomReserve();
+    var availH = Math.max(80, availBottom - GRID_TOP);
+
+    if (gridMode === 3 || gridMode === 5) {          // 田字格 / 米字格
+      var cols = Math.max(2, Math.round((W - 16) / 96));
+      var cell = Math.floor((W - 16) / cols);        // 宽度方向铺满，不留半列
+      var rows = Math.max(1, Math.floor(availH / cell));   // 高度方向只放完整行
+      var left = Math.round((W - cols * cell) / 2);
+      var top = GRID_TOP + Math.max(0, Math.round((availH - rows * cell) / 2));
+      return {
+        kind: 'square', cell: cell, cols: cols, rows: rows,
+        left: left, top: top, bottom: top + rows * cell
+      };
+    }
+    if (gridMode === 4) {                            // 四线格
+      var n = Math.max(1, Math.floor(availH / 92));
+      var rowH = Math.floor(availH / n);             // 高度方向铺满可用区
+      var top2 = GRID_TOP + Math.max(0, Math.round((availH - n * rowH) / 2));
+      return { kind: 'lines', rowH: rowH, rows: n, top: top2, bottom: top2 + n * rowH };
+    }
+    return null;
+  }
+
+  function drawGrid(c) {
+    if (!gridMode) return;
+    var solid = dark ? 'rgba(255,255,255,.15)' : 'rgba(35,38,45,.2)';
+    var faint = dark ? 'rgba(255,255,255,.08)' : 'rgba(35,38,45,.1)';
+    var availBottom = H - bottomReserve();
+
+    if (gridMode === 1) {                            // 横线格
+      c.save();
+      c.strokeStyle = solid;
+      c.lineWidth = 1;
+      c.beginPath();
+      var gap = Math.max(46, Math.min(112, (availBottom - GRID_TOP) / 8));
+      for (var y = GRID_TOP; y <= availBottom; y += gap) { c.moveTo(0, y); c.lineTo(W, y); }
+      c.stroke();
+      c.restore();
+      return;
+    }
+    if (gridMode === 2) {                            // 方格
+      c.save();
+      c.strokeStyle = solid;
+      c.lineWidth = 1;
+      c.beginPath();
+      var gs = 56;
+      for (var gx = gs; gx < W; gx += gs) { c.moveTo(gx, GRID_TOP); c.lineTo(gx, availBottom); }
+      for (var gy = GRID_TOP + gs; gy < availBottom; gy += gs) { c.moveTo(0, gy); c.lineTo(W, gy); }
+      c.stroke();
+      c.restore();
+      return;
+    }
+
+    var L = gridLayout();
+    if (!L) return;
+    c.save();
+    c.lineWidth = 1;
+
+    if (L.kind === 'square') {
+      for (var r = 0; r < L.rows; r++) {
+        var y0 = L.top + r * L.cell;
+        for (var q = 0; q < L.cols; q++) {
+          var x0 = L.left + q * L.cell;
+          c.strokeStyle = solid;
+          c.strokeRect(Math.round(x0) + .5, Math.round(y0) + .5, L.cell, L.cell);
+          if (gridMode === 5) {                       // 米字格：加十字实线
+            c.strokeStyle = faint;
+            c.beginPath();
+            c.moveTo(x0, y0 + L.cell / 2); c.lineTo(x0 + L.cell, y0 + L.cell / 2);
+            c.moveTo(x0 + L.cell / 2, y0); c.lineTo(x0 + L.cell / 2, y0 + L.cell);
+            c.stroke();
+          }
+          c.strokeStyle = faint;                     // 对角虚线
+          c.setLineDash([5, 6]);
+          c.beginPath();
+          c.moveTo(x0, y0); c.lineTo(x0 + L.cell, y0 + L.cell);
+          c.moveTo(x0 + L.cell, y0); c.lineTo(x0, y0 + L.cell);
+          c.stroke();
+          c.setLineDash([]);
+        }
+      }
+    } else if (L.kind === 'lines') {                // 四线格
+      var q1 = L.rowH / 3, q2 = L.rowH * 2 / 3;
+      for (var r2 = 0; r2 < L.rows; r2++) {
+        var yb = L.top + r2 * L.rowH;
+        c.strokeStyle = faint;                       // 上边：虚线
+        c.setLineDash([6, 6]);
+        c.beginPath(); c.moveTo(0, yb); c.lineTo(W, yb); c.stroke();
+        c.setLineDash([]);
+        c.strokeStyle = solid;                       // 三条实线（含本行下沿）
+        c.beginPath();
+        c.moveTo(0, yb + q1); c.lineTo(W, yb + q1);
+        c.moveTo(0, yb + q2); c.lineTo(W, yb + q2);
+        c.moveTo(0, yb + L.rowH); c.lineTo(W, yb + L.rowH);
+        c.stroke();
+      }
+    }
+    c.restore();
+  }
+
+  /* ==========================================================
+     描红：范字画在格线上、墨迹下 —— 用户笔迹始终盖在范字上面
+     ========================================================== */
+  var guide = null;          // {kind:'hanzi'|'english', items:[...], words:[...]}
+
+  function drawGuide(c) {
+    if (!guide) return;
+    var L = gridLayout();
+    var guideStroke = dark ? 'rgba(150,190,255,.30)' : 'rgba(206,64,64,.34)';
+    var guideFill = dark ? 'rgba(150,190,255,.06)' : 'rgba(206,64,64,.055)';
+    var pyColor = dark ? 'rgba(150,190,255,.46)' : 'rgba(64,104,180,.46)';
+    var HAN = '"KaiTi","STKaiti","Kaiti SC","楷体",serif';
+    var LAT = '"Comic Sans MS","Chalkboard SE","Comic Neue",system-ui,sans-serif';
+
+    c.save();
+    c.textAlign = 'center';
+    c.textBaseline = 'alphabetic';
+
+    if (guide.kind === 'hanzi') {
+      var items = guide.items;
+
+      if (L && L.kind === 'lines') {
+        /* —— 四线格：一行一字。
+           字写在中格（底边贴第二条中线），拼音写在上格（贴第一条中线）。 */
+        var q1 = L.rowH / 3, q2 = L.rowH * 2 / 3;
+        var fs = Math.round(L.rowH / 3 * 0.92);     // 字高≈中格高
+        for (var i = 0; i < items.length && i < L.rows; i++) {
+          var yb = L.top + i * L.rowH;
+          var it = items[i];
+          if (it.py) {                              // 拼音在上格
+            c.font = '500 ' + Math.round(fs * 0.30) + 'px -apple-system,"PingFang SC",system-ui,sans-serif';
+            c.fillStyle = pyColor;
+            c.fillText(it.py, W / 2, yb + q1 - 2);
+          }
+          c.font = '600 ' + fs + 'px ' + (it.raw ? LAT : HAN);
+          c.strokeStyle = guideStroke;
+          c.lineWidth = Math.max(1, fs / 46);
+          c.strokeText(it.ch, W / 2, yb + q2);      // 字底贴第二条中线
+          c.fillStyle = guideFill;
+          c.fillText(it.ch, W / 2, yb + q2);
+        }
+      } else {
+        /* —— 田字格 / 米字格：每格一字，拼音标在字上方 */
+        var cell = (L && L.kind === 'square') ? L.cell : 116;
+        var cols = (L && L.kind === 'square') ? L.cols : Math.max(1, Math.floor(W / cell));
+        var left = (L && L.kind === 'square') ? L.left : Math.round((W - cols * cell) / 2);
+        var top = (L && L.kind === 'square') ? L.top : GRID_TOP;
+        var fs2 = Math.round(cell * 0.66);
+        for (var j = 0; j < items.length; j++) {
+          var r = Math.floor(j / cols), q = j % cols;
+          var cx = left + q * cell + cell / 2;
+          var by = top + r * cell + cell * 0.74;
+          var it2 = items[j];
+          if (it2.py) {
+            c.font = '500 ' + Math.round(fs2 * 0.19) + 'px -apple-system,"PingFang SC",system-ui,sans-serif';
+            c.fillStyle = pyColor;
+            c.fillText(it2.py, cx, by - fs2 * 0.78);
+          }
+          c.font = '600 ' + fs2 + 'px ' + (it2.raw ? LAT : HAN);
+          c.strokeStyle = guideStroke;
+          c.lineWidth = Math.max(1, fs2 / 46);
+          c.strokeText(it2.ch, cx, by);
+          c.fillStyle = guideFill;
+          c.fillText(it2.ch, cx, by);
+        }
+      }
+    } else {                                         // 英文
+      var words = guide.words;
+      var rowH = (L && L.kind === 'lines') ? L.rowH : 96;
+      var topY = (L && L.kind === 'lines') ? L.top : GRID_TOP;
+      // cap height ≈ 0.72em → 让大写字母正好顶到第一条中线、落在中格里
+      var efs = (L && L.kind === 'lines') ? Math.round(L.rowH / 3 / 0.72) : 46;
+      var limit = (L && L.bottom) ? L.bottom : H;
+      for (var w = 0; w < words.length; w++) {
+        var wy = topY + w * rowH + (L && L.kind === 'lines' ? L.rowH * 2 / 3 : rowH * 0.72);
+        if (wy > limit) break;
+        c.font = '600 ' + efs + 'px ' + LAT;
+        c.strokeStyle = guideStroke;
+        c.lineWidth = Math.max(1, efs / 42);
+        c.strokeText(words[w], W / 2, wy);
+        c.fillStyle = guideFill;
+        c.fillText(words[w], W / 2, wy);
+      }
+    }
+    c.restore();
+  }
+
+  /* ---------- 描红内容解析 ---------- */
+  function parseGuide(text, mode) {
+    text = String(text || '').trim();
+    if (!text) return null;
+    var hasHan = /[\u4e00-\u9fa5]/.test(text);
+    var hasLatin = /[a-zA-Z\u00c0-\u024f]/.test(text);
+
+    var m = mode;
+    if (m === 'auto') {
+      if (hasHan) m = 'hanzi';
+      else if (hasLatin) {
+        // 音节能在表里查到 → 拼音，否则按英文处理
+        var toks = text.split(/[\s,]+/).filter(Boolean);
+        var hit = 0;
+        for (var i = 0; i < toks.length; i++) if (PY[tone(toks[i])]) hit++;
+        m = (toks.length && hit >= Math.ceil(toks.length / 2)) ? 'pinyin' : 'english';
+      } else m = 'hanzi';
+    }
+
+    if (m === 'english') {
+      var words = text.split(/[\s,]+/).filter(Boolean);
+      if (!words.length) return null;
+      return { kind: 'english', words: words };
+    }
+
+    // 汉字 / 拼音：逐段解析
+    var segs = text.split(/[\s,]+/).filter(Boolean);
+    var items = [];
+    var pendingPy = '';             // 尚未绑定到汉字的拼音
+    for (var s = 0; s < segs.length; s++) {
+      var seg = segs[s];
+      var hans = seg.match(/[\u4e00-\u9fa5]+/g);
+      var lat = seg.match(/[a-zA-Z\u00c0-\u024f]+/g);
+      var pyHere = lat ? lat.join(' ') : '';
+      if (hans) {
+        for (var h = 0; h < hans.length; h++) {
+          var ch = hans[h];
+          for (var ci = 0; ci < ch.length; ci++) {
+            var one = ch.charAt(ci);
+            var py = PY_OF[one] || '';
+            if (!py && pyHere && ci === 0) py = tone(pyHere.split(' ')[0]);
+            items.push({ ch: one, py: py });
+          }
+        }
+        if (pyHere) pendingPy = '';
+      } else if (lat) {
+        // 纯拼音段：查表转汉字；查不到就保留拼音字母本身
+        var syl = lat[0];
+        var key = tone(syl);
+        if (PY[key]) {
+          items.push({ ch: PY[key], py: syl });
+        } else {
+          items.push({ ch: syl, py: '', raw: true });   // 原样显示拼音字母
+        }
+      }
+    }
+    if (!items.length) return null;
+    return { kind: 'hanzi', items: items };
+  }
+
   function repaint() {
     ctx.fillStyle = paperColor();
     ctx.fillRect(0, 0, W, H);
-
-    // 格线
-    if (gridMode) {
-      ctx.strokeStyle = dark ? 'rgba(255,255,255,.08)' : 'rgba(35,38,45,.09)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      if (gridMode === 1) {
-        var gap = Math.max(48, Math.min(120, H / 10));
-        for (var y = gap; y < H; y += gap) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
-      } else {
-        var gs = 56;
-        for (var gx = gs; gx < W; gx += gs) { ctx.moveTo(gx, 0); ctx.lineTo(gx, H); }
-        for (var gy = gs; gy < H; gy += gs) { ctx.moveTo(0, gy); ctx.lineTo(W, gy); }
-      }
-      ctx.stroke();
-    }
-
+    drawGrid(ctx);
+    drawGuide(ctx);
     ctx.drawImage(inkCv, 0, 0, W, H);
   }
 
@@ -287,7 +685,7 @@
   }
 
   cv.addEventListener('pointerdown', function (e) {
-    cv.setPointerCapture && cv.setPointerCapture(e.pointerId);
+    try { cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } catch (err) { }
     pushSnap();
     drawing = true;
     last = pos(e);
@@ -331,7 +729,7 @@
   var eraserBtn = document.getElementById('eraserBtn');
   if (eraserBtn) eraserBtn.addEventListener('click', function () { setEraser(!erasing); });
 
-  var GRID_NAMES = { 0: '无', 1: '横线', 2: '网格' };
+  var GRID_NAMES = { 0: '无', 1: '横线', 2: '网格', 3: '田字格', 4: '四线格', 5: '米字格' };
   var gridBtn = document.getElementById('gridBtn');
   var gridPop = document.getElementById('gridPop');
   var gridItems = gridPop ? [].slice.call(gridPop.querySelectorAll('.pop-item')) : [];
@@ -377,6 +775,85 @@
   });
   document.addEventListener('click', function (e) {
     if (gridPop && !gridPop.hidden && !gridPop.contains(e.target)) closePop();
+  });
+
+  /* ---------------- 描红面板 ---------------- */
+  var traceBtn = document.getElementById('traceBtn');
+  var tracePop = document.getElementById('tracePop');
+  var traceInput = document.getElementById('traceInput');
+  var traceMode = 'auto';
+
+  function placeTrace() {
+    if (!tracePop || !traceBtn) return;
+    tracePop.hidden = false;
+    tracePop.style.visibility = 'hidden';
+    var r = traceBtn.getBoundingClientRect();
+    var pr = tracePop.getBoundingClientRect();
+    var left = r.left + r.width / 2 - pr.width / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - pr.width - 8));
+    var top = r.top - pr.height - 8;
+    if (top < 8) top = r.bottom + 8;
+    tracePop.style.left = left + 'px';
+    tracePop.style.top = top + 'px';
+    tracePop.style.visibility = 'visible';
+  }
+  function closeTrace() { if (tracePop) tracePop.hidden = true; }
+
+  if (traceBtn) traceBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (tracePop && tracePop.hidden) {
+      placeTrace();
+      try { traceInput.focus(); } catch (err) { }
+    } else closeTrace();
+  });
+  document.addEventListener('click', function (e) {
+    if (tracePop && !tracePop.hidden && !tracePop.contains(e.target) && e.target !== traceBtn) closeTrace();
+  });
+
+  var traceTabs = tracePop ? [].slice.call(tracePop.querySelectorAll('.tabs button')) : [];
+  traceTabs.forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      traceMode = b.getAttribute('data-mode');
+      traceTabs.forEach(function (x) { x.classList.toggle('on', x === b); });
+    });
+  });
+
+  var traceGo = document.getElementById('traceGo');
+  if (traceGo) traceGo.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var g = parseGuide(traceInput.value, traceMode);
+    if (!g) { try { traceInput.focus(); } catch (err) { } return; }
+    guide = g;
+    // 格线自适应：
+    //   英文 → 四线格（字母要撑满中格）
+    //   汉字/拼音 → 田字格最合适，但若用户已在四线格/米字格就保留，
+    //              否则会把用户从四线格踢走，导致范字位置不对
+    if (g.kind === 'english') {
+      if (gridMode !== 4) setGrid(4);
+    } else if (gridMode !== 3 && gridMode !== 5 && gridMode !== 4) {
+      setGrid(3);
+    }
+    closeTrace();
+    repaint();
+    var h = document.getElementById('hint');
+    if (h) {
+      h.textContent = g.kind === 'english' ? '照着范字描一遍（英文 · 四线格）' : '照着范字描一遍（范字不会导出到 PNG）';
+      setTimeout(function () { h.textContent = '用手指或鼠标书写 · 导出为透明底 PNG'; }, 2600);
+    }
+  });
+
+  var traceClear = document.getElementById('traceClear');
+  if (traceClear) traceClear.addEventListener('click', function (e) {
+    e.stopPropagation();
+    guide = null;
+    repaint();
+  });
+
+  if (traceInput) traceInput.addEventListener('keydown', function (e) {
+    e.stopPropagation();
+    if (e.key === 'Enter') { e.preventDefault(); if (traceGo) traceGo.click(); }
+    else if (e.key === 'Escape') { e.preventDefault(); closeTrace(); }
   });
 
   var bgBtn = document.getElementById('bgBtn');
@@ -433,7 +910,7 @@
   });
 
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closePop();
+    if (e.key === 'Escape') { closePop(); closeTrace(); }
     if (e.key === 'z' || e.key === 'Z') undo();
     if (e.key === 'e' || e.key === 'E') setEraser(!erasing);
   });
@@ -450,10 +927,75 @@
   });
   wake();
 
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__hw = {
+      get guide() { return guide; },
+      get gridMode() { return gridMode; },
+      get gridLayout() { return gridLayout(); },
+      setGrid: setGrid,
+      parseGuide: parseGuide,
+      // 范字落点（用于断言「拼音/汉字/英文 是否落在正确的线上」）
+      guidePos: function () {
+        if (!guide) return null;
+        var L = gridLayout();
+        var out = [];
+        if (guide.kind === 'hanzi') {
+          var items = guide.items;
+          if (L && L.kind === 'lines') {
+            var q1 = L.rowH / 3, q2 = L.rowH * 2 / 3;
+            for (var i = 0; i < items.length && i < L.rows; i++) {
+              var yb = L.top + i * L.rowH;
+              out.push({
+                ch: items[i].ch, py: items[i].py || '',
+                x: W / 2, base: yb + q2, pyBase: yb + q1 - 2, row: i
+              });
+            }
+          } else {
+            var cell = (L && L.kind === 'square') ? L.cell : 116;
+            var cols = (L && L.kind === 'square') ? L.cols : Math.max(1, Math.floor(W / cell));
+            var left = (L && L.kind === 'square') ? L.left : Math.round((W - cols * cell) / 2);
+            var top = (L && L.kind === 'square') ? L.top : GRID_TOP;
+            for (var j = 0; j < items.length; j++) {
+              out.push({
+                ch: items[j].ch, py: items[j].py || '',
+                x: left + (j % cols) * cell + cell / 2,
+                base: top + Math.floor(j / cols) * cell + cell * 0.74,
+                pyBase: top + Math.floor(j / cols) * cell + cell * 0.74 - cell * 0.66 * 0.78,
+                row: Math.floor(j / cols)
+              });
+            }
+          }
+        } else {
+          var rowH = (L && L.kind === 'lines') ? L.rowH : 96;
+          var topY = (L && L.kind === 'lines') ? L.top : GRID_TOP;
+          for (var w = 0; w < guide.words.length; w++) {
+            out.push({
+              ch: guide.words[w],
+              x: W / 2,
+              base: topY + w * rowH + (L && L.kind === 'lines' ? L.rowH * 2 / 3 : rowH * 0.72)
+            });
+          }
+        }
+        return { kind: guide.kind, items: out, layout: L };
+      },
+      // 墨迹层非透明像素数（描红范字不进墨迹层，所以这个数不该因范字而变）
+      inkPixels: function () {
+        var d = ictx.getImageData(0, 0, inkCv.width, inkCv.height).data;
+        var n = 0;
+        for (var i = 3; i < d.length; i += 4) if (d[i] > 8) n++;
+        return n;
+      }
+    };
+  }
+
   /* ---------------- 启动 ---------------- */
   window.addEventListener('resize', resize, { passive: true });
   window.addEventListener('orientationchange', function () { setTimeout(resize, 240); });
-  window.addEventListener('resize', function () { if (gridPop && !gridPop.hidden) placePop(); }, { passive: true });
+  window.addEventListener('resize', function () {
+    if (gridPop && !gridPop.hidden) placePop();
+    if (tracePop && !tracePop.hidden) placeTrace();
+  }, { passive: true });
 
   var pk = window.PaletteKit.mount(document.getElementById('pk'), {
     value: '#23262d',

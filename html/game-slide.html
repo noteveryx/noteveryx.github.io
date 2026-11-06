@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>数字滑块</title>
+<link rel="stylesheet" href="../assets/css/palette-kit.css">
+<link rel="stylesheet" href="../assets/css/game-kit.css">
+<style>
+  .tip{
+    position:fixed;z-index:12;left:50%;transform:translateX(-50%);
+    bottom:calc(20px + env(safe-area-inset-bottom));
+    font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.34);
+    pointer-events:none;user-select:none;white-space:nowrap;
+  }
+  @media (max-width:420px){ .tip{font-size:10px;letter-spacing:.02em;} }
+  .gk-label{display:none;}
+
+  #lv{
+    position:fixed;z-index:40;left:50%;transform:translateX(-50%);
+    top:calc(58px + env(safe-area-inset-top));
+    display:flex;gap:6px;padding:4px;border-radius:999px;
+    background:rgba(16,18,30,.72);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  #lv button{
+    appearance:none;border:0;cursor:pointer;
+    padding:5px 14px;border-radius:999px;
+    font:600 12px/1.2 -apple-system,"PingFang SC",system-ui,sans-serif;
+    color:rgba(255,255,255,.55);background:transparent;
+    transition:background .18s,color .18s;
+  }
+  #lv button.on{background:var(--gk-accent,#635bff);color:#fff;}
+</style>
+  <script src="../assets/js/fs-kit.js" defer></script>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="lv">
+  <button type="button" data-lv="0" class="on">3 × 3</button>
+  <button type="button" data-lv="1">4 × 4</button>
+</div>
+<div class="tip">点相邻方块滑进空位 · 方向键也能推 · 右上色球换配色</div>
+
+<script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/game-kit.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LW = 480, LH = 720;
+  var GAP = 6;
+
+  var level = 0;
+  var N = 3;                    // 每行格数
+  var tiles = [];               // {v, x, y, tx, ty}
+  var board = [];               // board[r*N+c] = tile 下标，空格为 -1
+  var emptyIdx = -1;
+  var cell = 0;                 // 格子边长（逻辑像素）
+  var originX = 0, originY = 0;  // 棋盘左上
+  var moves = 0;
+  var elapsed = 0;
+  var started = false;
+  var lastHud = -1;
+  var won = false;
+
+  function resetGame(a) {
+    var g = a || api;
+    N = (level === 0) ? 3 : 4;
+
+    var total = N * N;
+    var size = 440;                            // 两种难度都占满宽度，手机上更饱满
+    cell = (size - GAP * (N - 1)) / N;
+    originX = (LW - size) / 2;
+    originY = 132;
+
+    // 打乱：从完成态出发做随机合法移动，保证一定有解
+    var arr = [];
+    for (var i = 0; i < total - 1; i++) arr.push(i + 1);
+    arr.push(0);                       // 0 代表空格
+    var steps = 220 + ((Math.random() * 120) | 0);
+    for (var s = 0; s < steps; s++) {
+      var ei = arr.indexOf(0);
+      var er = (ei / N) | 0, ec = ei % N;
+      var opts = [];
+      if (er > 0) opts.push(ei - N);
+      if (er < N - 1) opts.push(ei + N);
+      if (ec > 0) opts.push(ei - 1);
+      if (ec < N - 1) opts.push(ei + 1);
+      var ni = opts[(Math.random() * opts.length) | 0];
+      var t = arr[ni];
+      arr[ni] = 0;
+      arr[ei] = t;
+    }
+
+    tiles = [];
+    board = [];
+    emptyIdx = -1;
+    for (var r = 0; r < N; r++) {
+      for (var c = 0; c < N; c++) {
+        var v = arr[r * N + c];
+        if (v === 0) {
+          emptyIdx = r * N + c;
+          board.push(-1);
+        } else {
+          board.push(tiles.length);
+          tiles.push({
+            v: v,
+            x: originX + c * (cell + GAP),
+            y: originY + r * (cell + GAP),
+            tx: originX + c * (cell + GAP),
+            ty: originY + r * (cell + GAP)
+          });
+        }
+      }
+    }
+    moves = 0; elapsed = 0; started = false; lastHud = -1; won = false;
+    g.setStat('moves', 0);
+    g.setStat('time', 0);
+  }
+
+  /* ---------------- 操作 ---------------- */
+  function swapWithEmpty(idx) {
+    if (idx < 0 || idx === emptyIdx) return false;
+    // 必须相邻
+    var er = (emptyIdx / N) | 0, ec = emptyIdx % N;
+    var tr = (idx / N) | 0, tc = idx % N;
+    if (Math.abs(er - tr) + Math.abs(ec - tc) !== 1) return false;
+
+    var ti = board[idx];
+    board[idx] = -1;
+    board[emptyIdx] = ti;
+    emptyIdx = idx;
+
+    var t = tiles[ti];
+    t.tx = originX + ec * (cell + GAP);
+    t.ty = originY + er * (cell + GAP);
+
+    moves++;
+    api.setStat('moves', moves);
+    if (!started) started = true;
+    api.sound('move');
+    checkWin();
+    return true;
+  }
+
+  // 方向键：把该方向的数字推进空格
+  function push(dir) {
+    var er = (emptyIdx / N) | 0, ec = emptyIdx % N;
+    var tr = er, tc = ec;
+    if (dir === 'up') tr = er + 1;         // 空格在上 → 下方的数字往上推
+    else if (dir === 'down') tr = er - 1;
+    else if (dir === 'left') tc = ec + 1;
+    else if (dir === 'right') tc = ec - 1;
+    if (tr < 0 || tr >= N || tc < 0 || tc >= N) return;
+    swapWithEmpty(tr * N + tc);
+  }
+
+  function checkWin() {
+    if (won) return;
+    for (var i = 0; i < N * N - 1; i++) {
+      if (board[i] < 0) continue;
+      if (tiles[board[i]].v !== i + 1) return;
+    }
+    won = true;
+    api.sound('win');
+    api.setScore(moves);
+    api.gameOver('拼好了！');
+  }
+
+  /* ---------------- 更新 ---------------- */
+  function update(dt) {
+    for (var i = 0; i < tiles.length; i++) {
+      var t = tiles[i];
+      var k = Math.min(1, dt * 15);
+      t.x += (t.tx - t.x) * k;
+      t.y += (t.ty - t.y) * k;
+      if (Math.abs(t.tx - t.x) < 0.3) t.x = t.tx;
+      if (Math.abs(t.ty - t.y) < 0.3) t.y = t.ty;
+    }
+    if (started && !won) {
+      elapsed += dt;
+      var t10 = Math.floor(elapsed * 10);
+      if (t10 !== lastHud) {
+        lastHud = t10;
+        api.setStat('time', elapsed);
+      }
+    }
+  }
+
+  /* ---------------- 绘制 ---------------- */
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function drawTile(c, t, pal) {
+    var hue = (t.v * 26) % 360;
+    var col = pal.at(hue - pal.h, 0.02, 0.03);
+    c.save();
+    c.shadowColor = col;
+    c.shadowBlur = 12;
+    c.fillStyle = col;
+    roundRect(c, t.x, t.y, cell, cell, 12);
+    c.fill();
+    c.restore();
+
+    // 顶部高光
+    c.fillStyle = 'rgba(255,255,255,.14)';
+    roundRect(c, t.x + 3, t.y + 3, cell - 6, cell * 0.36, 10);
+    c.fill();
+
+    c.save();
+    c.fillStyle = 'rgba(255,255,255,.94)';
+    c.font = '700 ' + Math.round(cell * 0.42) + 'px -apple-system,"PingFang SC",system-ui,sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(String(t.v), t.x + cell / 2, t.y + cell / 2 + 1);
+    c.restore();
+  }
+
+  var api = window.GameKit.create({
+    slug: 'slide',
+    title: '数字滑块',
+    logic: [LW, LH],
+    color: '#06b6d4',
+    dpad: false,
+    bestMode: 'min',                  // 步数越少越好
+    hint: '把方块滑进空位，排成 1 2 3 … 的顺序<br>步数越少越好，难度可切',
+    hud: [
+      { k: 'moves', label: '步数' },
+      { k: 'best', label: '最少步数', fmt: function (v) { return v ? v + ' 步' : '—'; } },
+      { k: 'time', label: '用时', fmt: function (v) { return v.toFixed(1) + 's'; } }
+    ],
+
+    onInit: function (a) {
+      resetGame(a);
+      a.setScore(0);
+    },
+
+    onUpdate: function (a, dt) { update(dt); },
+
+    onRender: function (a, c) {
+      var pal = a.colors;
+      var size = cell * N + GAP * (N - 1);
+
+      // 底板
+      c.fillStyle = pal.at(0, -0.06, -0.12);
+      roundRect(c, originX - GAP, originY - GAP, size + GAP * 2, size + GAP * 2, 16);
+      c.fill();
+
+      // 空格凹槽
+      var er = (emptyIdx / N) | 0, ec = emptyIdx % N;
+      c.fillStyle = 'rgba(255,255,255,.035)';
+      roundRect(c, originX + ec * (cell + GAP), originY + er * (cell + GAP), cell, cell, 12);
+      c.fill();
+
+      for (var i = 0; i < tiles.length; i++) drawTile(c, tiles[i], pal);
+    },
+
+    onAction: function (a, act) {
+      if (act.type === 'tap') {
+        var x = act.x, y = act.y;
+        for (var r = 0; r < N; r++) {
+          for (var c2 = 0; c2 < N; c2++) {
+            var bx = originX + c2 * (cell + GAP);
+            var by = originY + r * (cell + GAP);
+            if (x >= bx && x <= bx + cell && y >= by && y <= by + cell) {
+              swapWithEmpty(r * N + c2);
+              return;
+            }
+          }
+        }
+      } else if (act.type === 'key') {
+        var k = act.key;
+        if (k === 'ArrowUp' || k === 'w' || k === 'W') push('up');
+        else if (k === 'ArrowDown' || k === 's' || k === 'S') push('down');
+        else if (k === 'ArrowLeft' || k === 'a' || k === 'A') push('left');
+        else if (k === 'ArrowRight' || k === 'd' || k === 'D') push('right');
+      }
+    }
+  });
+
+  /* 难度切换 */
+  var lvBtns = document.querySelectorAll('#lv button');
+  Array.prototype.forEach.call(lvBtns, function (b) {
+    b.addEventListener('click', function () {
+      var i = +b.getAttribute('data-lv');
+      if (i === level) return;
+      level = i;
+      Array.prototype.forEach.call(lvBtns, function (x) {
+        x.classList.toggle('on', +x.getAttribute('data-lv') === level);
+      });
+      if (api.state === 'ready') {
+        resetGame(api);
+        api.setScore(0);
+      } else {
+        api.restart();
+      }
+    });
+  });
+
+  /* 开发钩子：仅 ?dev=1 时暴露内部状态，供自动化测试 */
+  if (/[?&]dev=1/.test(location.search)) {
+    window.__slide = {
+      get n() { return N; },
+      get moves() { return moves; },
+      get empty() { return emptyIdx; },
+      get won() { return won; },
+      get elapsed() { return elapsed; },
+      get board() { return board.slice(); },
+      get tiles() { return tiles.map(function (t) { return { v: t.v, x: t.x, y: t.y, tx: t.tx, ty: t.ty }; }); },
+      geo: function () { return { originX: originX, originY: originY, cell: cell, gap: GAP, n: N }; },
+      // 值 -> 格子索引
+      posOf: function (v) {
+        for (var i = 0; i < board.length; i++) if (board[i] >= 0 && tiles[board[i]].v === v) return i;
+        return -1;
+      },
+      // 把 v 推一步（找与空位相邻的推法），返回是否成功
+      pushValue: function (v) {
+        var idx = this.posOf(v);
+        if (idx < 0) return false;
+        return swapWithEmpty(idx);
+      },
+      // 直接摆成完成态（测试通关用）
+      solve: function () {
+        var total = N * N;
+        for (var r = 0; r < N; r++) {
+          for (var c2 = 0; c2 < N; c2++) {
+            var idx = r * N + c2;
+            var want = (idx < total - 1) ? idx + 1 : 0;
+            var ti = board[idx];
+            var cur = (ti >= 0) ? tiles[ti].v : 0;
+            if (cur === want) continue;
+            // 把 want 挪到 idx：先找 want 的位置
+            var from = -1;
+            for (var j = 0; j < board.length; j++) {
+              if (board[j] >= 0 && tiles[board[j]].v === want) { from = j; break; }
+            }
+            if (from < 0) continue;
+            // 简单做法：直接把 board 重排（仅测试用）
+            var tmp = board[idx];
+            board[idx] = board[from];
+            board[from] = tmp;
+          }
+        }
+        // 同步显示位置
+        for (var k = 0; k < board.length; k++) {
+          if (board[k] < 0) { emptyIdx = k; continue; }
+          var t = tiles[board[k]];
+          t.tx = originX + (k % N) * (cell + GAP);
+          t.ty = originY + ((k / N) | 0) * (cell + GAP);
+        }
+        checkWin();
+      },
+      reset: function () { api.restart(); }
+    };
+  }
+
+  void api;
+})();
+</script>
+</body>
+</html>
