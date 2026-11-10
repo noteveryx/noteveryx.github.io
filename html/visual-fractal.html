@@ -18,7 +18,7 @@
   }
   canvas{position:fixed;inset:0;display:block;width:100%;height:100%;}
   .ui{position:fixed;z-index:5;opacity:1;transition:opacity .55s cubic-bezier(.3,.8,.3,1);}
-  body.idle .ui{opacity:.15;}
+  body.idle .ui{opacity:.4;}
   body.idle .ui:hover{opacity:1;}
   .back{
     top:calc(14px + env(safe-area-inset-top));left:calc(14px + env(safe-area-inset-left));
@@ -33,13 +33,17 @@
   .tools{right:calc(14px + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;}
   .btn{
     width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    background:rgba(12,16,24,.42);border:1px solid rgba(255,255,255,.14);
-    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;cursor:pointer;
-    font-family:inherit;font-size:15px;line-height:1;outline:none;
-    transition:background-color .2s ease,transform .12s ease;
+    background:rgba(14,16,26,.55);border:1px solid rgba(255,255,255,.22);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,.92);cursor:pointer;
+    font-family:inherit;font-size:14px;font-weight:700;line-height:1;outline:none;
+    box-shadow:0 2px 10px rgba(0,0,0,.28);
+    -webkit-tap-highlight-color:transparent;
+    transition:background-color .2s ease,transform .16s cubic-bezier(.2,.9,.3,1),color .2s,border-color .2s;
   }
-  .btn:hover{background:rgba(20,26,38,.7);}
+  .btn:hover{background:rgba(14,16,26,.78);color:#fff;border-color:rgba(255,255,255,.45);transform:scale(1.06);}
   .btn:active{transform:scale(.93);}
+  .btn:focus-visible{outline:2px solid rgba(255,255,255,.6);outline-offset:2px;}
+  .btn svg{width:18px;height:18px;display:block;}
   .label{
     left:calc(18px + env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));
     font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:rgba(255,255,255,.5);
@@ -58,8 +62,12 @@
 
 <div class="ui tools">
   <div class="pk" id="pk" data-pk="fractal" data-placement="left"></div>
-  <button class="btn" id="resetBtn" type="button" title="复位（R）">↺</button>
-  <button class="btn" id="juliaBtn" type="button" title="切换曼德博 / 茱莉亚">J</button>
+  <button class="btn" id="resetBtn" type="button" title="复位（R）" aria-label="复位">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3"/><path d="M3.5 4.5V10H9"/>
+    </svg>
+  </button>
+  <button class="btn" id="juliaBtn" type="button" title="切换曼德博 / 茱莉亚" aria-label="切换曼德博 / 茱莉亚">J</button>
 </div>
 
 <div class="ui label" id="label">Fractal · <b>分形缩放</b></div>
@@ -73,12 +81,15 @@
   var ctx = cv.getContext('2d', { alpha: false });
   var W = 0, H = 0;
 
-  /* 内部低分辨率缓冲：分形计算量大，低分辨率再放大，兼顾速度与观感 */
+  /* 双缓冲：交互时用低清缓冲（跟手），静止后渐进细化到高清（清晰） */
   var buf = document.createElement('canvas');
   var bctx = buf.getContext('2d');
-  var BW = 0, BH = 0;
-  var img = null, data = null;
-  var SCALE = 0.42;
+  var fine = document.createElement('canvas');
+  var fctx = fine.getContext('2d');
+  var BW = 0, BH = 0, FW = 0, FH = 0;
+  var img = null, fimg = null;
+  var SCALE = 0.4;                 // 交互分辨率
+  var FINE_MAX_W = 1280, FINE_MAX_H = 800;
 
   var SPAN_X = 3.2, SPAN_Y = 2.4;      // 缩放 1 时可见的复平面范围
   var zoom = 1, cx = -0.5, cy = 0;
@@ -87,26 +98,52 @@
   var jc = { x: -0.4, y: 0.58 };
 
   var baseHex = '#7b5cff';
-  var LUT = new Uint8Array(1024 * 3);
+  var PAL = new Uint8Array(1024 * 3);     // 外部色带（按平滑迭代数取样）
+  var IN = new Uint8Array(64 * 3);       // 集合内部（未逃逸）的暗色梯度
 
   var running = false, rafId = 0, lastT = 0, need = true;
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  function mixRGB(a, b, t) {
+    return {
+      r: a.r + (b.r - a.r) * t,
+      g: a.g + (b.g - a.g) * t,
+      b: a.b + (b.b - a.b) * t
+    };
+  }
+
+  /* 调色板：以主色为中心做「深 → 主色 → 邻近色 → 亮 → 深」的循环渐变，
+     告别原来彩虹色相硬转导致的刺眼色带 */
   function buildLUT() {
     var c = window.PaletteKit.hex2rgb(baseHex) || { r: 123, g: 92, b: 255 };
     var hsl = window.PaletteKit.rgb2hsl(c.r, c.g, c.b);
+
+    var deep = { r: c.r * 0.26 + 5, g: c.g * 0.26 + 5, b: c.b * 0.26 + 11 };
+    var warm = window.PaletteKit.hsl2rgb((hsl.h + 42) % 360,
+      Math.min(1, hsl.s * 0.8), Math.min(0.9, Math.max(hsl.l, 0.42)));
+    var hi = { r: c.r + (255 - c.r) * 0.7, g: c.g + (255 - c.g) * 0.7, b: c.b + (255 - c.b) * 0.62 };
+    var stops = [
+      [0.00, deep],
+      [0.20, c],
+      [0.42, warm],
+      [0.64, hi],
+      [0.84, c],
+      [1.00, deep]
+    ];
     for (var i = 0; i < 1024; i++) {
-      var mu = i / 1023;                       // 0 = 立刻逃逸（远处），1 = 不逃逸（集合内部）
-      var hue = (hsl.h + mu * 430) % 360;      // 色相循环一圈多，形成彩虹带
-      var sat = Math.max(0.05, Math.min(1, hsl.s * (0.35 + mu * 1.05)));
-      var lig = Math.max(0.012, Math.min(0.9, hsl.l * (0.22 + mu * 1.05) + 0.015));
-      if (mu > 0.88) {                         // 集合内部压成纯黑
-        var k = (1 - mu) / 0.12;
-        lig *= k * k;
-        sat *= k;
-      }
-      var c2 = window.PaletteKit.hsl2rgb(hue, sat, lig);
-      LUT[i * 3] = c2.r; LUT[i * 3 + 1] = c2.g; LUT[i * 3 + 2] = c2.b;
+      var v = i / 1023, k = 0;
+      while (k < stops.length - 2 && v > stops[k + 1][0]) k++;
+      var t0 = stops[k][0], t1 = stops[k + 1][0];
+      var tt = t1 > t0 ? (v - t0) / (t1 - t0) : 0;
+      tt = tt * tt * (3 - 2 * tt);                       // smoothstep，过渡不生硬
+      var col = mixRGB(stops[k][1], stops[k + 1][1], tt);
+      PAL[i * 3] = col.r; PAL[i * 3 + 1] = col.g; PAL[i * 3 + 2] = col.b;
+    }
+    // 内部：接近纯黑，只留一点点主色，靠轨道极小值透出细微纹理
+    for (var j = 0; j < 64; j++) {
+      var u = j / 63;
+      var ic = mixRGB({ r: 4, g: 5, b: 11 }, { r: c.r * 0.32, g: c.g * 0.32, b: c.b * 0.36 }, u);
+      IN[j * 3] = ic.r; IN[j * 3 + 1] = ic.g; IN[j * 3 + 2] = ic.b;
     }
   }
 
@@ -115,7 +152,7 @@
     buildLUT();
     var lbl = document.getElementById('label');
     if (lbl) lbl.innerHTML = 'Fractal · <b>' + hex.toUpperCase() + '</b>';
-    need = true;
+    markDirty();
   }
 
   function resize() {
@@ -129,52 +166,143 @@
     BH = Math.max(90, Math.round(H * SCALE));
     buf.width = BW; buf.height = BH;
     img = bctx.createImageData(BW, BH);
-    data = img.data;
+
+    var fs = Math.min(1, FINE_MAX_W / Math.max(1, W), FINE_MAX_H / Math.max(1, H));
+    FW = Math.max(BW, Math.round(W * fs));
+    FH = Math.max(BH, Math.round(H * fs));
+    fine.width = FW; fine.height = FH;
+    fimg = fctx.createImageData(FW, FH);
+
+    refine.on = false;
     need = true;
+    refined = false;
+    clearTimeout(refine.timer);
     if (!running) draw();
   }
 
-  function draw() {
-    if (!data) return;
-    var maxIter = Math.min(260, Math.round(60 + Math.log(zoom + 1) * 55));
-    var sx = SPAN_X / zoom, sy = SPAN_Y / zoom;
-    var p = 0;
-    for (var y = 0; y < BH; y++) {
-      var cy0 = (y / BH - 0.5) * sy + cy;      // 该像素的复数坐标
-      for (var x = 0; x < BW; x++) {
-        var cx0 = (x / BW - 0.5) * sx + cx;
-        var zx, zy, i = 0;
-        if (julia) {
-          // 茱莉亚集：z0 = 像素坐标，c = 固定常数
-          zx = cx0; zy = cy0;
-          for (; i < maxIter; i++) {
-            var t = zx * zx - zy * zy + jc.x;
-            zy = 2 * zx * zy + jc.y;
-            zx = t;
-            if (zx * zx + zy * zy > 16) { i++; break; }
-          }
+  function iterCount() {
+    return Math.min(420, Math.round(80 + Math.log(zoom + 1) * 62));
+  }
+
+  /* 核心渲染：平滑迭代计数（无色带断层）+ 距离估计（近边界更亮、带抗锯齿）
+     —— 逐行渲染，便于把高清细化拆到多帧里做，不卡住界面 */
+  function renderRows(timg, y0, y1, sx, sy, ctrX, ctrY, maxIter) {
+    var Wd = timg.width, Hd = timg.height;
+    var tdata = timg.data;
+    var p = y0 * Wd * 4;
+    var pxPerUnit = Wd / sx;
+    var isJ = julia;
+    var jx = jc.x, jy = jc.y;
+    var zx, zy, dzx, dzy, i, r2, t, ndx, ndy, minR2;
+
+    for (var y = y0; y < y1; y++) {
+      var cy0 = (y / Hd - 0.5) * sy + ctrY;      // 该行的复平面纵坐标
+      for (var x = 0; x < Wd; x++) {
+        var cx0 = (x / Wd - 0.5) * sx + ctrX;
+        minR2 = 1e9;
+        if (isJ) {
+          // 茱莉亚集：z0 = 像素，c = 常数；导数对 z0 求
+          zx = cx0; zy = cy0; dzx = 1; dzy = 0;
         } else {
-          // 曼德博集：z0 = 0，c = 像素坐标
-          zx = 0; zy = 0;
-          for (; i < maxIter; i++) {
-            var t2 = zx * zx - zy * zy + cx0;
-            zy = 2 * zx * zy + cy0;
-            zx = t2;
-            if (zx * zx + zy * zy > 16) { i++; break; }
-          }
+          // 曼德博集：z0 = 0，c = 像素；导数对 c 求
+          zx = 0; zy = 0; dzx = 0; dzy = 0;
         }
-        var idx = ((i / maxIter) * 1023) | 0;
-        idx = idx > 1023 ? 1023 : idx;
-        data[p] = LUT[idx * 3];
-        data[p + 1] = LUT[idx * 3 + 1];
-        data[p + 2] = LUT[idx * 3 + 2];
-        data[p + 3] = 255;
+        for (i = 0; i < maxIter; i++) {
+          ndx = 2 * (zx * dzx - zy * dzy) + (isJ ? 0 : 1);
+          ndy = 2 * (zx * dzy + zy * dzx);
+          dzx = ndx; dzy = ndy;
+          t = zx * zx - zy * zy + (isJ ? jx : cx0);
+          zy = 2 * zx * zy + (isJ ? jy : cy0);
+          zx = t;
+          r2 = zx * zx + zy * zy;
+          if (r2 < minR2) minR2 = r2;
+          if (r2 > 16) { i++; break; }
+        }
+        if (i >= maxIter) {
+          // 没逃逸 → 在集合内部：用轨道极小值做出隐约纹理，而不是一块死黑
+          var ti = (Math.min(1, Math.sqrt(minR2) * 1.5) * 63) | 0;
+          tdata[p] = IN[ti * 3];
+          tdata[p + 1] = IN[ti * 3 + 1];
+          tdata[p + 2] = IN[ti * 3 + 2];
+        } else {
+          var r = Math.sqrt(r2);
+          // 平滑迭代计数：抹掉整数迭代造成的色带断层
+          var sm = i + 1 - Math.log(Math.log(r) / Math.LN2) / Math.LN2;
+          var band = sm * 0.26;
+          band -= Math.floor(band);
+          var bi = (band * 1023) | 0;
+          // 距离估计：离边界越近越亮，远处自然沉入黑暗
+          var dr = Math.sqrt(dzx * dzx + dzy * dzy);
+          if (dr < 1e-9) dr = 1e-9;
+          var de = r * Math.log(r) / dr * pxPerUnit;   // 换算成像素单位
+          var shade = 0.07 + 0.93 * Math.exp(-de / 26);
+          var pr = PAL[bi * 3] * shade;
+          var pg = PAL[bi * 3 + 1] * shade;
+          var pb = PAL[bi * 3 + 2] * shade;
+          if (pr > 255) pr = 255; if (pg > 255) pg = 255; if (pb > 255) pb = 255;
+          tdata[p] = pr; tdata[p + 1] = pg; tdata[p + 2] = pb;
+        }
+        tdata[p + 3] = 255;
         p += 4;
       }
     }
-    bctx.putImageData(img, 0, 0);
+  }
+
+  function blit() {
     ctx.clearRect(0, 0, cv.width, cv.height);
     ctx.drawImage(buf, 0, 0, cv.width, cv.height);
+  }
+
+  function draw() {
+    if (!img) return;
+    // 交互中用较低迭代上限保证跟手；静止细化时再用满迭代
+    var maxIter = Math.min(220, iterCount());
+    var sx = SPAN_X / zoom, sy = SPAN_Y / zoom;
+    renderRows(img, 0, BH, sx, sy, cx, cy, maxIter);
+    bctx.putImageData(img, 0, 0);
+    blit();
+  }
+
+  /* 静止后：分帧把画面细化到高清，渐进变清晰，不卡 UI */
+  var refine = { on: false, row: 0, timer: 0 };
+  var refined = false;
+
+  /* 画面变了：回到低清重绘，并放弃正在进行的高清细化 */
+  function markDirty() {
+    need = true;
+    refined = false;
+    refine.on = false;
+    clearTimeout(refine.timer);
+  }
+
+  function startRefine() {
+    if (!fimg) return;
+    refine.on = true;
+    refine.row = 0;
+    var maxIter = iterCount();
+    var sx = SPAN_X / zoom, sy = SPAN_Y / zoom;
+    function step() {
+      if (!refine.on) return;
+      var t0 = (window.performance || Date).now();
+      while (refine.row < FH && (window.performance || Date).now() - t0 < 20) {
+        var end = Math.min(FH, refine.row + 6);
+        renderRows(fimg, refine.row, end, sx, sy, cx, cy, maxIter);
+        fctx.putImageData(fimg, 0, 0, 0, refine.row, FW, end - refine.row);
+        refine.row = end;
+      }
+      // 底图先铺低清，再用高清层覆盖已细化区域（未细化处透明，露出底图）
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(buf, 0, 0, cv.width, cv.height);
+      ctx.drawImage(fine, 0, 0, cv.width, cv.height);
+      if (refine.row < FH) requestAnimationFrame(step);
+      else refine.on = false;
+    }
+    requestAnimationFrame(step);
+  }
+
+  function scheduleRefine() {
+    clearTimeout(refine.timer);
+    refine.timer = setTimeout(startRefine, 220);
   }
 
   function loop(now) {
@@ -187,9 +315,10 @@
       zoom += dz * Math.min(1, dt * 9);
       cx += dcx * Math.min(1, dt * 9);
       cy += dcy * Math.min(1, dt * 9);
-      need = true;
+      markDirty();
     }
     if (need) { draw(); need = false; }
+    else if (!refined && !refine.on) { scheduleRefine(); refined = true; }
   }
   function start() { if (running) return; running = true; lastT = 0; rafId = requestAnimationFrame(loop); }
   function stop() { running = false; cancelAnimationFrame(rafId); }
@@ -203,7 +332,7 @@
     tcx = fx - ux * (SPAN_X / nz);
     tcy = fy - uy * (SPAN_Y / nz);
     tz = nz;
-    need = true;
+    markDirty();
   }
 
   cv.addEventListener('wheel', function (e) {
@@ -221,7 +350,7 @@
     if (!drag) return;
     tcx = drag.cx - (e.clientX - drag.x) / W * (SPAN_X / tz);
     tcy = drag.cy - (e.clientY - drag.y) / H * (SPAN_Y / tz);
-    need = true;
+    markDirty();
   });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
     cv.addEventListener(ev, function () { drag = null; });
@@ -243,7 +372,7 @@
 
   function reset() {
     tz = 1; tcx = julia ? 0 : -0.5; tcy = 0;
-    need = true;
+    markDirty();
   }
   var resetBtn = document.getElementById('resetBtn');
   if (resetBtn) resetBtn.addEventListener('click', reset);
@@ -282,7 +411,8 @@
   });
   setColor(pk.get());
   resize();
-  if (!reduceMotion) start(); else draw();
+  if (!reduceMotion) start();
+  else { draw(); scheduleRefine(); }
 })();
 </script>
 </body>

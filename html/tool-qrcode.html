@@ -10,6 +10,24 @@
 <link rel="stylesheet" href="../assets/css/theme-kit.css">
 <link rel="stylesheet" href="../assets/css/themes.css">
 <link rel="stylesheet" href="../assets/css/toolbox.css">
+<style>
+/* 原生调色盘按钮：伪装成色块，点击唤起系统取色器 */
+.tb-color {
+  width: 38px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+}
+.tb-color:hover { transform: scale(1.05); border-color: var(--accent); }
+.tb-color::-webkit-color-swatch-wrapper { padding: 3px; }
+.tb-color::-webkit-color-swatch { border: none; border-radius: 7px; }
+.tb-color::-moz-color-swatch { border: none; border-radius: 7px; }
+</style>
 <script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
 <script src="../assets/js/theme-kit.js" defer></script>
 <script src="../assets/js/toolbox.js" defer></script>
@@ -53,8 +71,8 @@
     /* 常用网址 */
     var quick = el('div', { class: 'tb-seg', style: 'margin-top:10px' });
     [
-      { label: '本站', url: 'https://noteveryx.github.io/knowledge-base/' },
-      { label: 'GitHub', url: 'https://github.com/noteveryx' },
+      { label: '本站', url: 'https://noteveryx.github.io/x.html' },
+      { label: '主页', url: 'https://noteveryx.github.io' },
       { label: '当前页面', url: '' }
     ].forEach(function (q) {
       var b = el('button', { type: 'button', text: q.label });
@@ -89,21 +107,19 @@
       f.appendChild(el('label', { text: label }));
       var row = el('div', { class: 'tb-row tight' });
       var inp = el('input', { class: 'tb-in mono', type: 'text', value: cfg[key], maxlength: '7', style: 'flex:1' });
-      var sw = el('span', { class: 'tb-swatch', style: 'width:34px;height:34px;border-radius:9px;background:' + cfg[key] });
+      var sw = el('input', { class: 'tb-color', type: 'color', value: cfg[key], title: '点击打开调色盘', 'aria-label': label + '调色盘' });
       function apply(v) {
         if (!/^#[0-9a-fA-F]{6}$/.test(v)) { ToolBox.toast('请输入 6 位 HEX 色值'); inp.value = cfg[key]; return; }
         cfg[key] = v;
         inp.value = v;
-        sw.style.background = v;
+        sw.value = v;
         save();
         generate();
       }
       inp.addEventListener('change', function () { apply(inp.value.trim()); });
-      sw.addEventListener('click', function () {
-        ToolBox.copy(cfg[key]);
-        ToolBox.toast('已复制 ' + cfg[key]);
-      });
-      sw.title = '点击复制';
+      // 原生调色盘：直接唤起系统取色器
+      sw.addEventListener('input', function () { apply(sw.value); });
+      sw.addEventListener('change', function () { apply(sw.value); });
       row.appendChild(inp);
       row.appendChild(sw);
       f.appendChild(row);
@@ -240,7 +256,7 @@
     });
 
     /* ---------- 初始 ---------- */
-    input.value = 'https://noteveryx.github.io/knowledge-base/';
+    input.value = 'https://noteveryx.github.io/x.html';
     generate();
   }
 

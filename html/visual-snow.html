@@ -18,7 +18,7 @@
   }
   canvas{position:fixed;inset:0;display:block;width:100%;height:100%;}
   .ui{position:fixed;z-index:5;opacity:1;transition:opacity .55s cubic-bezier(.3,.8,.3,1);}
-  body.idle .ui{opacity:.15;}
+  body.idle .ui{opacity:.4;}
   body.idle .ui:hover{opacity:1;}
   .back{
     top:calc(14px + env(safe-area-inset-top));left:calc(14px + env(safe-area-inset-left));
@@ -37,6 +37,39 @@
     pointer-events:none;user-select:none;
   }
   .label b{font-weight:600;letter-spacing:.18em;color:rgba(255,255,255,.9);}
+  /* 工具按钮：与调色球 / 保存按钮统一成同一种圆形玻璃按钮 */
+  .tool-btn{
+    width:38px;height:38px;padding:0;border-radius:50%;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(255,255,255,.22);
+    background:rgba(14,16,26,.55);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    color:rgba(255,255,255,.92);cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    box-shadow:0 2px 10px rgba(0,0,0,.28);
+    transition:transform .16s cubic-bezier(.2,.9,.3,1),opacity .2s,color .2s,border-color .2s,background .2s;
+  }
+  .tool-btn:hover{color:#fff;border-color:rgba(255,255,255,.45);background:rgba(14,16,26,.78);transform:scale(1.06);}
+  .tool-btn:active{transform:scale(.93);}
+  .tool-btn:focus-visible{outline:2px solid rgba(255,255,255,.6);outline-offset:2px;}
+  .tool-btn svg{width:19px;height:19px;display:block;pointer-events:none;}
+  .tool-btn.pop svg{animation:pop .55s cubic-bezier(.2,.9,.3,1);}
+  @keyframes pop{
+    0%{transform:scale(.5) rotate(-50deg);opacity:.35;}
+    55%{transform:scale(1.25) rotate(12deg);opacity:1;}
+    100%{transform:none;}
+  }
+  /* 点击瞬间的一圈微光，给出即时反馈 */
+  .flash{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .6s ease;}
+  .flash.on{opacity:1;transition:none;}
+  /* 轻提示 */
+  .toast{
+    left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    padding:8px 15px;border-radius:999px;font-size:12.5px;font-weight:600;
+    background:rgba(14,16,26,.92);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.92);
+    opacity:0;pointer-events:none;transition:opacity .22s ease,transform .22s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
 </style>
   <script src="../assets/js/fs-kit.js" defer></script>
 </head>
@@ -49,8 +82,19 @@
 
 <div class="ui tools">
   <div class="pk" id="pk" data-pk="snow" data-placement="left"></div>
-  <button class="btn" id="burstBtn" type="button" title="下一场大雪" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.14);color:#fff;font-size:18px;line-height:1;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);">✻</button>
+  <button class="tool-btn" id="burstBtn" type="button" title="下一场大雪" aria-label="下一场大雪">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2v20M2 12h20"/>
+      <path d="m20 16-4-4 4-4"/>
+      <path d="m4 8 4 4-4 4"/>
+      <path d="m16 4-4 4-4-4"/>
+      <path d="m8 20 4-4 4 4"/>
+    </svg>
+  </button>
 </div>
+
+<div class="flash" id="flash"></div>
+<div class="ui toast" id="toast" role="status"></div>
 
 <div class="ui label" id="label">Snow · <b>雪落</b></div>
 
@@ -129,6 +173,8 @@
         vr: (Math.random() - 0.5) * 1.2
       });
     }
+    // 连点时别让雪片无限堆积
+    if (flakes.length > 1400) flakes.splice(0, flakes.length - 1400);
   }
 
   function render() {
@@ -203,8 +249,44 @@
     }
   }
 
+  /* ---------------- 大雪按钮：点击反馈 ---------------- */
   var burstBtn = document.getElementById('burstBtn');
-  if (burstBtn) burstBtn.addEventListener('click', burst);
+  var flashEl = document.getElementById('flash');
+  var toastEl = document.getElementById('toast');
+  var toastTimer = 0;
+
+  function toast(msg) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    void toastEl.offsetWidth;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
+  }
+
+  function flashAt(x, y) {
+    if (!flashEl) return;
+    var sc = window.PaletteKit.hex2rgb(snowHex) || { r: 255, g: 255, b: 255 };
+    flashEl.style.background = 'radial-gradient(circle at ' + Math.round(x) + 'px ' + Math.round(y) + 'px,' +
+      'rgba(' + sc.r + ',' + sc.g + ',' + sc.b + ',.3),transparent 52%)';
+    flashEl.classList.add('on');
+    setTimeout(function () { flashEl.classList.remove('on'); }, 50);
+  }
+
+  if (burstBtn) {
+    burstBtn.addEventListener('click', function () {
+      if (reduceMotion || !running) {
+        toast('系统开启了「减弱动态效果」');
+        return;
+      }
+      burst();
+      burstBtn.classList.remove('pop');
+      void burstBtn.offsetWidth;          // 重启动画
+      burstBtn.classList.add('pop');
+      var r = burstBtn.getBoundingClientRect();
+      flashAt(r.left + r.width / 2, r.top + r.height / 2);
+    });
+  }
 
   /* ---------------- 闲置淡出 ---------------- */
   var idleTimer = null;
