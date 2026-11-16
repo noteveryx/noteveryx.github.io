@@ -156,6 +156,7 @@
     .bg-deco {
       position: fixed;
       inset: 0;
+      overflow: hidden;
       pointer-events: none;
       z-index: 0;
       background:
@@ -163,6 +164,20 @@
         radial-gradient(620px 380px at 92% 4%, var(--brand-soft), transparent 72%);
       opacity: .9;
       transition: background .28s ease;
+    }
+    /* 两团缓慢漂移的柔光，让背景「活」起来（reduce-motion 时静止） */
+    .bg-deco::before, .bg-deco::after {
+      content: "";
+      position: absolute;
+      width: 44vmax; height: 44vmax;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, var(--brand-soft), transparent 62%);
+    }
+    .bg-deco::before { top: -16%; left: -14%; animation: blobDrift 28s ease-in-out infinite alternate; }
+    .bg-deco::after { bottom: -18%; right: -12%; animation: blobDrift 34s ease-in-out infinite alternate-reverse; }
+    @keyframes blobDrift {
+      from { transform: translate3d(0, 0, 0) scale(1); }
+      to { transform: translate3d(7%, 9%, 0) scale(1.15); }
     }
 
     /* 滚动条 */
@@ -219,6 +234,11 @@
       font-weight: 800;
       letter-spacing: -.01em;
       line-height: 1.3;
+      /* 标题渐变：由正文色过渡到品牌色，随主题一起变 */
+      background: linear-gradient(120deg, var(--text) 55%, var(--brand));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
     .page-sub {
       margin: 2px 0 0;
@@ -410,10 +430,38 @@
     .sp-card:hover {
       transform: translateY(-4px);
       border-color: var(--brand);
-      box-shadow: var(--shadow-lg);
+      box-shadow: var(--shadow-lg), 0 10px 30px -14px var(--brand-ring);
     }
     .sp-card:hover::before { opacity: 1; }
     .sp-card:active { transform: translateY(-1px); }
+    /* 悬停时顶部浮现一条品牌色渐变描边，强化“可点”的反馈 */
+    .sp-card::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      border-radius: 16px 16px 0 0;
+      background: linear-gradient(90deg, var(--brand), var(--brand-soft) 55%, transparent);
+      opacity: 0;
+      transition: opacity .24s ease;
+      pointer-events: none;
+    }
+    .sp-card:hover::after { opacity: 1; }
+
+    /* 图标徽章行（图标由 JS 按目标页注入，标签靠右对齐） */
+    .sp-head-row { display: flex; align-items: center; gap: 10px; }
+    .sp-head-row .sp-tag { margin-left: auto; }
+    .sp-ico {
+      width: 38px; height: 38px;
+      flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.15rem; line-height: 1;
+      border-radius: 11px;
+      background: var(--brand-soft);
+      border: 1px solid var(--brand-ring);
+      transition: transform .18s ease, background-color .28s ease, border-color .28s ease;
+    }
+    .sp-card:hover .sp-ico { transform: scale(1.07) rotate(-3deg); }
 
     .sp-tag {
       align-self: flex-start;
@@ -518,6 +566,7 @@
       color: var(--brand);
       border-color: var(--brand);
       background: var(--brand-soft);
+      transform: translateY(-1px);
     }
     .nav-link:active { transform: scale(.97); }
 
@@ -618,11 +667,14 @@
       font-family: "Roboto Mono", "SF Mono", Monaco, Consolas, monospace;
       font-size: 2rem;
       font-weight: 700;
-      color: var(--brand);
       letter-spacing: .03em;
       line-height: 1;
       font-variant-numeric: tabular-nums;
-      transition: color .28s ease;
+      /* 时钟数字用品牌色渐变，比单色更有质感 */
+      background: linear-gradient(115deg, var(--brand) 30%, var(--brand-2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
     /* 圆形模拟表盘：指针由 JS 每秒驱动，与数字时钟同步 */
     .analog-clock {
@@ -684,7 +736,11 @@
       line-height: 1.1;
       font-variant-numeric: tabular-nums;
       transition: color .28s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
+    .w-ico { font-size: 1.3rem; line-height: 1; }
     .weather-desc { font-size: .78rem; color: var(--muted); margin: 4px 0 8px; transition: color .28s ease; }
     .weather-meta { display: flex; flex-direction: column; gap: 2px; font-size: .72rem; color: var(--muted); }
     .district-list {
@@ -921,7 +977,18 @@
     /* 减少动效 */
     @media (prefers-reduced-motion: reduce) {
       * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+      .bg-deco::before, .bg-deco::after { animation: none; }
     }
+
+    /* 入场动效：JS 为支持的浏览器追加 .reveal，进入视口后轻柔上浮；
+       动画结束由 JS 移除类名，避免覆盖卡片自身的 hover 过渡 */
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity .6s ease, transform .6s cubic-bezier(.2, .8, .25, 1);
+      will-change: opacity, transform;
+    }
+    .reveal.in { opacity: 1; transform: none; }
   </style>
   <!-- 先于首屏渲染应用已保存的主题，避免闪白 -->
   <script>
@@ -1019,7 +1086,7 @@
             <div class="weather-city" role="button" tabindex="0" title="选择区县">
               <span class="w-city-name">沈阳市</span><span class="w-arrow">▾</span>
             </div>
-            <div class="weather-temp w-temp">--</div>
+            <div class="weather-temp"><span class="w-ico" aria-hidden="true">🌡️</span><span class="w-temp">--</span></div>
             <div class="weather-desc w-desc">获取中…</div>
             <div class="weather-meta"><span class="w-wind">--</span><span class="w-hum">--</span></div>
             <div class="district-list"></div>
@@ -1028,7 +1095,7 @@
             <div class="weather-city" role="button" tabindex="0" title="选择区县">
               <span class="w-city-name">阜新市</span><span class="w-arrow">▾</span>
             </div>
-            <div class="weather-temp w-temp">--</div>
+            <div class="weather-temp"><span class="w-ico" aria-hidden="true">🌡️</span><span class="w-temp">--</span></div>
             <div class="weather-desc w-desc">获取中…</div>
             <div class="weather-meta"><span class="w-wind">--</span><span class="w-hum">--</span></div>
             <div class="district-list"></div>
@@ -1538,6 +1605,73 @@
         if (c > 0) cntEl.textContent = c;
       }
 
+      /* ---------------- 卡片图标徽章（按目标页注入 emoji，视觉上更快区分） ---------------- */
+      var CARD_ICONS = {
+        'html/search.html': '🔍', 'html/tool-quote-copy.html': '📋',
+        'html/tool-standby.html': '⏰', 'html/tool-quotes.html': '💬',
+        'html/tool-eyedropper.html': '💧', 'html/tool-textbox.html': '🔤',
+        'html/tool-image.html': '🖼️', 'html/tool-diff.html': '🔀',
+        'html/tool-pomodoro.html': '🍅', 'html/tool-qrcode.html': '🔳',
+        'html/visual-aurora.html': '🌌', 'html/visual-starfield.html': '🌠',
+        'html/visual-rain.html': '🌧️', 'html/visual-sky.html': '🌤️',
+        'html/visual-snow.html': '❄️', 'html/visual-wave-grid.html': '🌊',
+        'html/visual-fractal.html': '🌀', 'html/visual-constellation.html': '🌟',
+        'html/visual-text-warp.html': '🔠', 'html/visual-particle-text.html': '💫',
+        'html/visual-poster.html': '📜', 'html/visual-mandala.html': '🪷',
+        'html/visual-gradient.html': '🌈', 'html/visual-noise.html': '🌫️',
+        'html/visual-pixel-avatar.html': '👾', 'html/tool-handwriting.html': '✍️',
+        'html/tool-paint.html': '🎨', 'html/game-hub.html': '🕹️',
+        'html/game-gomoku.html': '♟️', 'html/game-linkup.html': '🔗',
+        'html/game-2048.html': '🔢', 'html/game-snake.html': '🐍',
+        'html/game-tetris.html': '🧱', 'html/game-minesweeper.html': '💣',
+        'html/game-flappy.html': '🐤', 'html/game-pong.html': '🏓',
+        'html/game-memory.html': '🃏', 'html/game-slide.html': '🧩',
+        'html/game-breakout.html': '⚾', 'html/game-wordchain.html': '🐉',
+        'html/tool-delta-escort.html': '🛡️'
+      };
+      var spCards = document.querySelectorAll('.sp-card');
+      for (var ci = 0; ci < spCards.length; ci++) {
+        (function (card) {
+          var ico = CARD_ICONS[card.getAttribute('href')];
+          if (!ico) return;
+          var tag = card.querySelector('.sp-tag');
+          var row = document.createElement('div');
+          row.className = 'sp-head-row';
+          var chip = document.createElement('span');
+          chip.className = 'sp-ico';
+          chip.setAttribute('aria-hidden', 'true');
+          chip.textContent = ico;
+          row.appendChild(chip);
+          if (tag) { card.removeChild(tag); row.appendChild(tag); }
+          card.insertBefore(row, card.firstChild);
+        })(spCards[ci]);
+      }
+
+      /* ---------------- 入场动效：滚动到视口时轻柔上浮（尊重系统“减少动效”） ---------------- */
+      (function () {
+        if (!('IntersectionObserver' in window)) return;
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        var els = document.querySelectorAll('.top-widgets > *, .sp-card, .nav-group');
+        for (var i = 0; i < els.length; i++) {
+          els[i].classList.add('reveal');
+          // 同屏最多错开 6 个，长列表尾部不用干等
+          els[i].style.transitionDelay = (i % 6) * 55 + 'ms';
+        }
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (en) {
+            if (!en.isIntersecting) return;
+            en.target.classList.add('in');
+            io.unobserve(en.target);
+            // 动画结束后摘掉 reveal 类，让卡片恢复自身的 hover 过渡
+            setTimeout(function () {
+              en.target.classList.remove('reveal', 'in');
+              en.target.style.transitionDelay = '';
+            }, 1400);
+          });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
+        for (var j = 0; j < els.length; j++) io.observe(els[j]);
+      })();
+
       /* ---------------- 顶部信息区：时钟 / 天气 / 每日一句 ---------------- */
       (function () {
         /* 时钟：每秒刷新 */
@@ -1590,9 +1724,17 @@
             .catch(function () { return fallbackWeather(); })
             .finally(function () { if (timer) clearTimeout(timer); });
         }
+        var W_ICON = {
+          '晴朗': '☀️', '多云': '⛅', '阴天': '☁️', '小雨': '🌦️', '中雨': '🌧️',
+          '大雨': '🌧️', '暴雨': '⛈️', '雷阵雨': '⛈️', '小雪': '🌨️', '中雪': '🌨️',
+          '大雪': '❄️', '暴雪': '❄️', '浮尘': '😷', '扬沙': '💨', '沙尘暴': '🌪️',
+          '雾': '🌫️', '霾': '😷'
+        };
         function renderWeather(card, w) {
           card.querySelector('.w-temp').textContent = w.temperature + '°C';
           card.querySelector('.w-desc').textContent = w.description;
+          var wIco = card.querySelector('.w-ico');
+          if (wIco) wIco.textContent = W_ICON[w.description] || '🌡️';
           card.querySelector('.w-wind').textContent = w.windDirection + ' ' + w.windSpeed + '级';
           card.querySelector('.w-hum').textContent = '湿度 ' + w.humidity + '%';
         }
