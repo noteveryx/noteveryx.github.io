@@ -123,6 +123,8 @@
 </style>
 <script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
 <script src="../assets/js/theme-kit.js" defer></script>
+  <script src="../assets/js/translate-kit.js" defer></script>
+  <script src="../assets/js/dock-kit.js" defer></script>
 </head>
 <body class="tb-page">
 <div class="tb-wrap">
@@ -145,7 +147,7 @@
       <button id="reindex" class="tb-btn sm" type="button">重建索引</button>
     </div>
     <div class="sq-progress"><i id="prog"></i></div>
-    <p class="sq-tip" style="margin-top:10px">首次打开要把全部文档抓下来建索引（约 880 篇、20MB），本地要等十几秒；之后直接用本地缓存，秒开。索引只存在你自己的浏览器里，不上传任何内容。</p>
+    <p class="sq-tip" style="margin-top:10px">首次打开要把全部文档抓下来建索引（现 937 篇、约 20MB），本地要等十几秒；之后直接用本地缓存，秒开。索引只存在你自己的浏览器里，不上传任何内容。</p>
   </section>
 
   <div id="results"></div>
@@ -261,7 +263,7 @@
     t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
     t = t.replace(/<[^>]+>/g, ' ');
     /* 行首/行尾的空白一律用 [ \t], 不要用 \s —— \s 含换行, 配合 (.+)$ 之类会跨行回溯,
-       实测在 880 篇文档上能白白吃掉 100 多秒 */
+       实测在近千篇文档上能白白吃掉 100 多秒 */
     t = t.replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm, '');
     t = t.replace(/^[ \t]{0,3}>[ \t]?/gm, '');
     t = t.replace(/^[ \t]*[-*+][ \t]+/gm, '');

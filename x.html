@@ -1004,6 +1004,8 @@
     })();
   </script>
   <script src="assets/js/fs-kit.js" defer></script>
+  <script src="assets/js/translate-kit.js" defer></script>
+  <script src="assets/js/dock-kit.js" defer></script>
 </head>
 <body>
   <div class="bg-deco" aria-hidden="true"></div>
@@ -1117,7 +1119,13 @@
         <a class="sp-card" href="html/search.html" target="_blank" rel="noopener noreferrer">
           <span class="sp-tag">检索</span>
           <span class="sp-name">全站搜索</span>
-          <p class="sp-desc">检索全部 880 篇文档，索引建在本地浏览器里，首页不受任何影响。</p>
+          <p class="sp-desc">检索全部 937 篇文档，索引建在本地浏览器里，首页不受任何影响。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/tool-translate.html" target="_blank" rel="noopener noreferrer">
+          <span class="sp-tag">翻译</span>
+          <span class="sp-name">翻译工具</span>
+          <p class="sp-desc">自动检测源语种，28 种语言互译，附翻译历史，结果本地缓存。</p>
           <span class="sp-arrow">打开</span>
         </a>
         <a class="sp-card" href="html/tool-quote-copy.html" target="_blank" rel="noopener noreferrer">
@@ -1607,7 +1615,7 @@
 
       /* ---------------- 卡片图标徽章（按目标页注入 emoji，视觉上更快区分） ---------------- */
       var CARD_ICONS = {
-        'html/search.html': '🔍', 'html/tool-quote-copy.html': '📋',
+        'html/search.html': '🔍', 'html/tool-translate.html': '🌐', 'html/tool-quote-copy.html': '📋',
         'html/tool-standby.html': '⏰', 'html/tool-quotes.html': '💬',
         'html/tool-eyedropper.html': '💧', 'html/tool-textbox.html': '🔤',
         'html/tool-image.html': '🖼️', 'html/tool-diff.html': '🔀',

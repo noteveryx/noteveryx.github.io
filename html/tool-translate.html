@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>翻译工具</title>
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<link rel="stylesheet" href="../assets/css/themes.css">
+<link rel="stylesheet" href="../assets/css/toolbox.css">
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
+<script>/* 本页自己就是翻译交互，不让 translate-kit 注入页面翻译按钮，只借它的多源加载能力 */
+window.__TK_NO_PAGE_UI__ = true;</script>
+<script src="../assets/js/theme-kit.js" defer></script>
+<script src="../assets/js/toolbox.js" defer></script>
+  <script src="../assets/js/translate-kit.js" defer></script>
+  <script src="../assets/js/dock-kit.js" defer></script>
+<style>
+  /* ---------- 语种选择 ---------- */
+  .tt-langbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .tt-lang-tag{
+    display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:999px;
+    border:1px solid var(--line);background:var(--card);color:var(--muted);
+    font:600 13px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",system-ui,sans-serif;
+  }
+  .tt-arrow{color:var(--muted);font-size:14px;user-select:none;}
+  .tt-dd{position:relative;}
+  .tt-dd-btn{
+    display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 13px;border-radius:999px;
+    border:1px solid var(--accent-ghost-line,var(--line));background:var(--accent-ghost-bg,transparent);
+    color:var(--accent);font:600 13px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",system-ui,sans-serif;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .2s;
+  }
+  .tt-dd-btn:hover{border-color:var(--accent);}
+  .tt-dd-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .tt-dd-btn .caret{
+    width:7px;height:7px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;
+    transform:rotate(45deg) translate(-2px,-2px);opacity:.6;
+  }
+  .tt-dd-panel{
+    position:absolute;z-index:60;top:calc(100% + 8px);left:0;width:236px;max-height:min(56vh,380px);
+    overflow-y:auto;overscroll-behavior:contain;padding:8px;border-radius:16px;
+    background:var(--card);border:1px solid var(--line);
+    box-shadow:0 20px 50px -20px rgba(0,0,0,.3);text-align:left;
+  }
+  .tt-dd-panel[hidden]{display:none;}
+  .tt-dd-item{
+    display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;border:0;border-radius:9px;
+    background:transparent;color:var(--text);text-align:left;cursor:pointer;
+    font:600 13px/1.3 -apple-system,BlinkMacSystemFont,"PingFang SC",system-ui,sans-serif;
+    -webkit-tap-highlight-color:transparent;transition:background-color .14s;
+  }
+  .tt-dd-item:hover{background:var(--accent-ghost-bg);}
+  .tt-dd-item.on{background:var(--accent-ghost-bg);color:var(--accent);}
+  .tt-dd-flag{font-size:15px;line-height:1;flex:0 0 auto;}
+  .tt-dd-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tt-dd-check{font-size:12px;opacity:0;flex:0 0 auto;}
+  .tt-dd-item.on .tt-dd-check{opacity:1;}
+
+  /* ---------- 快捷语种 ---------- */
+  .tt-chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px;}
+  .tt-chip{
+    padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;
+    color:var(--muted);font:600 12px/1 -apple-system,system-ui,sans-serif;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;transition:color .15s,border-color .15s;
+  }
+  .tt-chip:hover{color:var(--accent);border-color:var(--accent-ghost-line);}
+  .tt-chip.on{color:var(--accent);border-color:var(--accent);background:var(--accent-ghost-bg);}
+
+  /* ---------- 计数 / 元信息 ---------- */
+  .tt-meta{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    font-size:11.5px;color:var(--muted);margin-top:8px;min-height:16px;
+  }
+  .tt-out-wrap{margin-top:12px;}
+  .tt-out-wrap .tb-out{min-height:88px;white-space:pre-wrap;word-break:break-word;}
+  .tt-out-loading{opacity:.55;transition:opacity .2s;}
+
+  /* ---------- 历史 ---------- */
+  .tt-h-item{
+    display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line);
+    border-radius:12px;cursor:pointer;transition:border-color .15s,background-color .15s;
+  }
+  .tt-h-item:hover{border-color:var(--accent-ghost-line);background:var(--accent-ghost-bg);}
+  .tt-h-main{flex:1;min-width:0;}
+  .tt-h-src,.tt-h-res{
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;line-height:1.5;
+  }
+  .tt-h-src{color:var(--text);}
+  .tt-h-res{color:var(--muted);}
+  .tt-h-meta{font-size:10.5px;color:var(--muted);margin-top:3px;letter-spacing:.04em;}
+  .tt-h-del{
+    flex:0 0 auto;width:24px;height:24px;border-radius:7px;border:1px solid transparent;background:transparent;
+    color:var(--muted);font-size:12px;line-height:1;cursor:pointer;opacity:.6;
+  }
+  .tt-h-del:hover{opacity:1;color:#e5484d;border-color:var(--line);}
+  .tt-h-empty{text-align:center;color:var(--muted);font-size:12.5px;padding:18px 0;}
+
+  /* ---------- 翻译工作节点（视觉隐藏但保持可渲染，供 translate.js 扫描） ---------- */
+  .tt-holder{
+    position:fixed;left:-9999px;top:0;width:80%;
+    white-space:pre-wrap;word-break:break-word;pointer-events:none;
+  }
+
+  /* 手机：语种面板改底部抽屉 */
+  @media (max-width:600px){
+    .tt-dd-panel{
+      position:fixed;left:10px;right:10px;top:auto;bottom:10px;width:auto;max-width:none;
+      max-height:min(66vh,480px);border-radius:20px;padding:10px;
+    }
+    .tt-dd-item{padding:12px;}
+  }
+</style>
+</head>
+<body class="tb-page">
+<div id="tbRoot"></div>
+
+<script>
+(function () {
+  'use strict';
+  var el = function () { return ToolBox.el.apply(null, arguments); };
+
+  /* ---------------- 语种表（id 与 translate.js 一致） ---------------- */
+  var LANGS = [
+    ['english', '🇬🇧', 'English'],
+    ['chinese_simplified', '🇨🇳', '简体中文'],
+    ['chinese_traditional', '🇭🇰', '繁體中文'],
+    ['japanese', '🇯🇵', '日本語'],
+    ['korean', '🇰🇷', '한국어'],
+    ['french', '🇫🇷', 'Français'],
+    ['deutsch', '🇩🇪', 'Deutsch'],
+    ['spanish', '🇪🇸', 'Español'],
+    ['portuguese', '🇵🇹', 'Português'],
+    ['italian', '🇮🇹', 'Italiano'],
+    ['russian', '🇷🇺', 'Русский'],
+    ['thai', '🇹🇭', 'ไทย'],
+    ['vietnamese', '🇻🇳', 'Tiếng Việt'],
+    ['indonesian', '🇮🇩', 'Bahasa Indonesia'],
+    ['malay', '🇲🇾', 'Bahasa Melayu'],
+    ['turkish', '🇹🇷', 'Türkçe'],
+    ['arabic', '🇸🇦', 'العربية'],
+    ['hindi', '🇮🇳', 'हिन्दी'],
+    ['polish', '🇵🇱', 'Polski'],
+    ['dutch', '🇳🇱', 'Nederlands'],
+    ['swedish', '🇸🇪', 'Svenska'],
+    ['norwegian', '🇳🇴', 'Norsk'],
+    ['finnish', '🇫🇮', 'Suomi'],
+    ['danish', '🇩🇰', 'Dansk'],
+    ['ukrainian', '🇺🇦', 'Українська'],
+    ['czech', '🇨🇿', 'Čeština'],
+    ['greek', '🇬🇷', 'Ελληνικά'],
+    ['hungarian', '🇭🇺', 'Magyar']
+  ];
+  var LANG_MAP = {};
+  LANGS.forEach(function (l) { LANG_MAP[l[0]] = l; });
+  var QUICK = ['english', 'chinese_simplified', 'chinese_traditional', 'japanese', 'korean'];
+  var LOCAL = 'chinese_simplified';
+
+  var KEY_TO = 'tb_translate_to';
+  var KEY_AUTO = 'tb_translate_auto';
+  var KEY_HIST = 'tb_translate_history';
+
+  function storeGet(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+  function storeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+
+  var target = LANG_MAP[storeGet(KEY_TO, 'english')] ? storeGet(KEY_TO, 'english') : 'english';
+  var autoOn = storeGet(KEY_AUTO, '1') === '1';
+
+  var T = null;                 /* translate.js 实例 */
+  var holder = null;            /* 翻译工作节点 */
+  var pending = null;           /* 进行中的翻译 */
+  var lastDetected = '';        /* 上次识别到的源语种 */
+  var lastResult = '';          /* 上次译文（互换用） */
+
+  function langName(id) { return (LANG_MAP[id] || [null, '🌐', id])[2]; }
+  function langFlag(id) { return (LANG_MAP[id] || [null, '🌐', ''])[1]; }
+
+  /* 中日韩字符占比（避免「中文→中文」这种无意义请求） */
+  function cjkRatio(s) {
+    var cjk = 0, total = 0;
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      if (c >= 0x2E80 && c <= 0x9FFF || c >= 0xF900 && c <= 0xFAFF || c >= 0xFF00 && c <= 0xFFEF) { cjk++; total++; }
+      else if (!/\s/.test(s.charAt(i))) total++;
+    }
+    return total ? cjk / total : 0;
+  }
+
+  /* ==========================================================
+     Tab · 文本翻译
+     ========================================================== */
+  var input, out, meta, btnGo, btnAuto, btnCopy, btnClear, btnSwap;
+  var ddBtn, ddPanel;
+  var histList;
+
+  function renderTranslate(panel) {
+    var card = el('div', { class: 'tb-card' });
+    card.appendChild(el('div', { class: 'tb-card-title', text: '文本翻译' }));
+
+    /* ---- 语种条 ---- */
+    var bar = el('div', { class: 'tt-langbar' });
+    bar.appendChild(el('span', { class: 'tt-lang-tag', html: '<span>🔍</span>自动检测源语种' }));
+    bar.appendChild(el('span', { class: 'tt-arrow', text: '→' }));
+
+    var dd = el('div', { class: 'tt-dd' });
+    ddBtn = el('button', { class: 'tt-dd-btn', type: 'button', 'aria-haspopup': 'true', 'aria-expanded': 'false' });
+    ddBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      ddPanel.hidden = !ddPanel.hidden;
+      ddBtn.setAttribute('aria-expanded', ddPanel.hidden ? 'false' : 'true');
+    });
+    dd.appendChild(ddBtn);
+
+    ddPanel = el('div', { class: 'tt-dd-panel', role: 'menu', 'aria-label': '选择目标语种' });
+    ddPanel.hidden = true;
+    dd.appendChild(ddPanel);
+    bar.appendChild(dd);
+
+    btnSwap = el('button', {
+      class: 'tb-btn sm', type: 'button',
+      title: '互换：译文作为输入，目标语种换成源语种', text: '⇄ 互换'
+    });
+    btnSwap.addEventListener('click', doSwap);
+    bar.appendChild(btnSwap);
+    card.appendChild(bar);
+
+    /* ---- 快捷语种 ---- */
+    var chips = el('div', { class: 'tt-chips' });
+    QUICK.forEach(function (id) {
+      var c = el('button', { class: 'tt-chip', type: 'button', 'data-id': id, text: langName(id) });
+      c.addEventListener('click', function () { setTarget(id); });
+      chips.appendChild(c);
+    });
+    card.appendChild(chips);
+
+    /* ---- 输入 ---- */
+    input = el('textarea', {
+      class: 'tb-ta', rows: 6, placeholder: '输入或粘贴要翻译的文字…（Ctrl + Enter 翻译）', spellcheck: 'false'
+    });
+    input.addEventListener('input', function () {
+      updateCount();
+      scheduleAuto();
+    });
+    input.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doTranslate(); }
+    });
+    card.appendChild(input);
+
+    meta = el('div', { class: 'tt-meta' });
+    card.appendChild(meta);
+
+    /* ---- 操作 ---- */
+    var act = el('div', { class: 'tb-row', style: 'margin-top:12px' });
+    btnGo = el('button', { class: 'tb-btn primary', type: 'button', text: '译 ' + langName(target) });
+    btnGo.addEventListener('click', doTranslate);
+    act.appendChild(btnGo);
+
+    btnAuto = el('button', { class: 'tb-btn sm' + (autoOn ? ' on' : ''), type: 'button', text: '自动翻译：' + (autoOn ? '开' : '关') });
+    btnAuto.addEventListener('click', function () {
+      autoOn = !autoOn;
+      storeSet(KEY_AUTO, autoOn ? '1' : '0');
+      btnAuto.classList.toggle('on', autoOn);
+      btnAuto.textContent = '自动翻译：' + (autoOn ? '开' : '关');
+      if (autoOn) scheduleAuto();
+    });
+    act.appendChild(btnAuto);
+
+    btnCopy = el('button', { class: 'tb-btn sm', type: 'button', text: '复制译文' });
+    btnCopy.addEventListener('click', function () {
+      if (!out.textContent) { ToolBox.toast('还没有译文'); return; }
+      ToolBox.copy(out.textContent);
+      ToolBox.toast('已复制译文');
+    });
+    act.appendChild(btnCopy);
+
+    btnClear = el('button', { class: 'tb-btn sm ghost', type: 'button', text: '清空' });
+    btnClear.addEventListener('click', function () {
+      input.value = '';
+      out.textContent = '';
+      meta.textContent = '';
+      lastResult = '';
+      updateCount();
+      input.focus();
+    });
+    act.appendChild(btnClear);
+    card.appendChild(act);
+
+    /* ---- 输出 ---- */
+    var wrap = el('div', { class: 'tt-out-wrap' });
+    out = el('div', { class: 'tb-out', 'data-empty': '译文会显示在这里' });
+    wrap.appendChild(out);
+    card.appendChild(wrap);
+
+    card.appendChild(el('p', {
+      class: 'tb-hint', style: 'margin-top:12px',
+      html: '源语种<b>自动检测</b>，支持整段文字 · 基于 <b>translate.js</b>（Edge 通道），结果缓存在本地，重复翻译瞬时返回'
+    }));
+
+    panel.appendChild(card);
+
+    /* ---- 历史 ---- */
+    var hcard = el('div', { class: 'tb-card' });
+    hcard.appendChild(el('div', { class: 'tb-card-title', text: '最近翻译' }));
+    var hBar = el('div', { class: 'tb-row end', style: 'margin-bottom:10px' });
+    var hClear = el('button', { class: 'tb-btn sm ghost', type: 'button', text: '清空历史' });
+    hClear.addEventListener('click', function () {
+      storeSet(KEY_HIST, '[]');
+      renderHistory();
+      ToolBox.toast('历史已清空');
+    });
+    hBar.appendChild(hClear);
+    hcard.appendChild(hBar);
+    histList = el('div', { style: 'display:flex;flex-direction:column;gap:8px' });
+    hcard.appendChild(histList);
+    panel.appendChild(hcard);
+
+    fillDD();
+    syncTargetUI();
+    updateCount();
+    renderHistory();
+    syncReady();
+  }
+
+  /* ---------------- 语种下拉 ---------------- */
+  function fillDD() {
+    ddPanel.textContent = '';
+    LANGS.forEach(function (l) {
+      var it = el('button', { class: 'tt-dd-item', type: 'button', role: 'menuitemradio', 'data-id': l[0] });
+      it.appendChild(el('span', { class: 'tt-dd-flag', text: l[1] }));
+      it.appendChild(el('span', { class: 'tt-dd-name', text: l[2] }));
+      it.appendChild(el('span', { class: 'tt-dd-check', 'aria-hidden': 'true', text: '✓' }));
+      it.addEventListener('click', function (e) {
+        e.stopPropagation();
+        ddPanel.hidden = true;
+        setTarget(l[0]);
+      });
+      ddPanel.appendChild(it);
+    });
+    document.addEventListener('click', function (e) {
+      if (!ddPanel.hidden && !ddPanel.contains(e.target) && e.target !== ddBtn && !ddBtn.contains(e.target)) ddPanel.hidden = true;
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !ddPanel.hidden) ddPanel.hidden = true;
+    });
+  }
+
+  function setTarget(id) {
+    if (!LANG_MAP[id]) return;
+    target = id;
+    storeSet(KEY_TO, id);
+    syncTargetUI();
+    doTranslate();
+  }
+  function syncTargetUI() {
+    if (!ddBtn) return;
+    ddBtn.innerHTML = '';
+    ddBtn.appendChild(el('span', { text: langFlag(target) }));
+    ddBtn.appendChild(el('span', { text: langName(target) }));
+    ddBtn.appendChild(el('span', { class: 'caret' }));
+    if (btnGo && T) btnGo.textContent = '译 ' + langName(target);
+    var chips = document.querySelectorAll('.tt-chip');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].classList.toggle('on', chips[i].getAttribute('data-id') === target);
+    }
+    var items = ddPanel ? ddPanel.querySelectorAll('.tt-dd-item') : [];
+    for (var j = 0; j < items.length; j++) {
+      var on = items[j].getAttribute('data-id') === target;
+      items[j].classList.toggle('on', on);
+      items[j].setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+  }
+
+  function updateCount() {
+    var n = input.value.length;
+    meta.textContent = n ? (n + ' 字') : '';
+  }
+
+  /* ---------------- 互换 ---------------- */
+  function doSwap() {
+    if (!lastResult) { ToolBox.toast('先翻译一次，才能互换'); return; }
+    input.value = lastResult;
+    lastResult = '';
+    out.textContent = '';
+    if (lastDetected && LANG_MAP[lastDetected] && lastDetected !== target) {
+      target = lastDetected;
+      storeSet(KEY_TO, target);
+      syncTargetUI();
+    }
+    updateCount();
+    doTranslate();
+  }
+
+  /* ---------------- 自动翻译（输入停顿后触发） ---------------- */
+  var autoTimer = 0;
+  function scheduleAuto() {
+    if (!autoOn) return;
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(doTranslate, 800);
+  }
+
+  /* ---------------- 翻译主流程 ---------------- */
+  function syncReady() {
+    if (!btnGo) return;
+    btnGo.disabled = !T;
+    if (!T) btnGo.textContent = '组件加载中…';
+    else btnGo.textContent = '译 ' + langName(target);
+  }
+
+  function doTranslate() {
+    if (!T) { syncReady(); return; }
+    var src = input.value.trim();
+    if (!src) { out.textContent = ''; meta.textContent = ''; updateCount(); return; }
+
+    /* 中文 → 中文 没有意义，直接原样返回 */
+    if (target === LOCAL && cjkRatio(src) > 0.5) {
+      out.textContent = src;
+      lastResult = src;
+      meta.textContent = '源文已是大段中文，无需翻译';
+      return;
+    }
+
+    abortPending();
+
+    holder.textContent = src;
+    lastResult = '';
+    lastDetected = '';
+
+    out.classList.add('tt-out-loading');
+    meta.textContent = '翻译中…';
+
+    var mo = new MutationObserver(function () {
+      var txt = holder.textContent;
+      if (txt && txt !== src) finish(txt);
+    });
+    mo.observe(holder, { childList: true, characterData: true, subtree: true });
+
+    pending = {
+      src: src, to: target, t0: Date.now(), mo: mo, tried: false,
+      timer: setTimeout(function () { fail('翻译超时，请稍后重试'); }, 12000)
+    };
+
+    try {
+      /* 清掉这个节点的翻译记录，保证重复翻译同一段文字也能正常触发 */
+      if (T.node && typeof T.node.delete === 'function') T.node.delete(holder);
+      T.to = target;       /* 直接指定目标语种，不走 changeLanguage，不污染跨页面记忆 */
+      T.execute([holder]); /* 只翻译工作节点这一个元素 */
+    } catch (e) {
+      fail('翻译执行异常');
+    }
+  }
+
+  function abortPending() {
+    if (!pending) return;
+    try { if (pending.mo) pending.mo.disconnect(); } catch (e) { }
+    clearTimeout(pending.timer);
+    pending = null;
+    if (out) out.classList.remove('tt-out-loading');
+  }
+
+  function finish(txt) {
+    var p = pending;
+    abortPending();
+    if (!p) return;
+    lastResult = txt;
+    out.textContent = txt;
+    /* 从翻译队列读出识别到的源语种 */
+    var det = '';
+    try {
+      var ks = Object.keys(T.nodeQueue || {});
+      var last = T.nodeQueue[ks[ks.length - 1]];
+      if (last && last.list) {
+        var langs = Object.keys(last.list);
+        if (langs.length) det = langs[0];
+      }
+    } catch (e) { }
+    lastDetected = det;
+    meta.textContent = (det ? langName(det) : '未知语种') + ' → ' + langName(p.to) +
+      ' · ' + (Date.now() - p.t0) + 'ms';
+    addHistory(p.src, txt, p.to);
+  }
+
+  function fail(msg) {
+    var p = pending;
+    if (!p) return;
+    /* 第一次失败换备用通道（官方服务）再试一次 */
+    if (!p.tried) {
+      p.tried = true;
+      clearTimeout(p.timer);
+      try { if (p.mo) p.mo.disconnect(); } catch (e) { }
+      meta.textContent = '首选通道无响应，切换备用通道…';
+      var mo = new MutationObserver(function () {
+        var txt = holder.textContent;
+        if (txt && txt !== p.src) finish(txt);
+      });
+      mo.observe(holder, { childList: true, characterData: true, subtree: true });
+      p.mo = mo;
+      p.timer = setTimeout(function () { fail(msg); }, 12000);
+      try {
+        T.service.use('translate.service');
+        if (T.node && typeof T.node.delete === 'function') T.node.delete(holder);
+        holder.textContent = p.src;
+        T.to = p.to;
+        T.execute([holder]);
+      } catch (e) { fail('翻译执行异常'); }
+      return;
+    }
+    abortPending();
+    meta.textContent = '';
+    ToolBox.toast(msg);
+  }
+
+  /* 接口请求失败时尽早感知（比等超时快） */
+  function watchErrors() {
+    try {
+      if (T.lifecycle && T.lifecycle.execute && T.lifecycle.execute.translateNetworkAfter &&
+        typeof T.lifecycle.execute.translateNetworkAfter.push === 'function') {
+        T.lifecycle.execute.translateNetworkAfter.push(function (d) {
+          if (pending && d && d.result === 0 && d.to === pending.to) {
+            fail('翻译请求失败');
+          }
+        });
+      }
+    } catch (e) { }
+  }
+
+  /* ---------------- 历史 ---------------- */
+  function getHistory() {
+    try { return JSON.parse(storeGet(KEY_HIST, '[]')) || []; } catch (e) { return []; }
+  }
+  function addHistory(src, res, to) {
+    var h = getHistory();
+    h = h.filter(function (x) { return !(x.s === src && x.t === to); });
+    h.unshift({
+      s: src.length > 400 ? src.slice(0, 400) + '…' : src,
+      r: res.length > 400 ? res.slice(0, 400) + '…' : res,
+      t: to, d: Date.now()
+    });
+    if (h.length > 20) h.length = 20;
+    storeSet(KEY_HIST, JSON.stringify(h));
+    renderHistory();
+  }
+  function fmtTime(ts) {
+    var d = new Date(ts);
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function renderHistory() {
+    if (!histList) return;
+    histList.textContent = '';
+    var h = getHistory();
+    if (!h.length) {
+      histList.appendChild(el('div', { class: 'tt-h-empty', text: '暂无记录，翻译一次试试' }));
+      return;
+    }
+    h.forEach(function (x, idx) {
+      var it = el('div', { class: 'tt-h-item', role: 'button', tabindex: '0', title: '点击载入这条记录' });
+      var main = el('div', { class: 'tt-h-main' });
+      main.appendChild(el('div', { class: 'tt-h-src', text: x.s }));
+      main.appendChild(el('div', { class: 'tt-h-res', text: x.r }));
+      main.appendChild(el('div', { class: 'tt-h-meta', text: langName(x.t) + ' · ' + fmtTime(x.d) }));
+      it.appendChild(main);
+      var del = el('button', { class: 'tt-h-del', type: 'button', 'aria-label': '删除这条记录', text: '✕' });
+      del.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var list = getHistory();
+        list.splice(idx, 1);
+        storeSet(KEY_HIST, JSON.stringify(list));
+        renderHistory();
+      });
+      it.appendChild(del);
+      function load() {
+        input.value = x.s;
+        out.textContent = x.r;
+        lastResult = x.r;
+        meta.textContent = langName(x.t) + '（来自历史）';
+        updateCount();
+        input.focus();
+      }
+      it.addEventListener('click', load);
+      it.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); load(); }
+      });
+      histList.appendChild(it);
+    });
+  }
+
+  /* ---------------- 启动 ---------------- */
+  function boot() {
+    ToolBox.mount(document.getElementById('tbRoot'), {
+      title: '翻译工具',
+      sub: '自动检测源语种 · 28 种目标语言 · 翻译历史',
+      storageKey: 'tb_translate',
+      tabs: [
+        { id: 'text', name: '文本翻译', render: renderTranslate }
+      ]
+    });
+
+    /* 翻译工作节点：视觉上移出屏幕，但保持渲染，translate.js 扫的就是它 */
+    holder = document.createElement('div');
+    holder.className = 'tt-holder';
+    holder.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(holder);
+
+    /* 等 translate.js 就位（translate-kit 负责多源加载与基础配置） */
+    if (window.TranslateKit && typeof window.TranslateKit.ready === 'function') {
+      window.TranslateKit.ready(function (t) {
+        T = t;
+        if (!T) { meta.textContent = '翻译组件加载失败，请检查网络后刷新重试'; syncReady(); return; }
+        try {
+          T.selectLanguageTag.show = false;      /* 不渲染它自带的语言 select */
+          T.language.translateLocal = true;      /* 允许译入中文（本地语种） */
+        } catch (e) { }
+        watchErrors();
+        syncReady();
+      });
+    } else {
+      meta.textContent = '翻译组件未加载（translate-kit 缺失）';
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>
