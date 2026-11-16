@@ -1,5 +1,14 @@
 # 知识库自动化任务长期记忆
 
+## 乐享令牌有效期与恢复（2026-11-13 确认，重要）
+- **乐享访问令牌有效期约 1 天**：11-12 09:49 写入的令牌，11-13 10:43 已 401
+- `.credentials.v3.json` 的 `mcpOAuth` **只有 lighthouse-ops，乐享无 refresh token → 令牌无法自动续期**
+- 无人值守自动化中无法自助恢复：`workbuddy_request_mcp_connection` 返回 skipped，`reconnect_plugin` 被拒绝
+- **唯一恢复路径**：WorkBuddy 客户端「连接器中心」→ 乐享 → 重新授权（OAuth），或重启客户端
+- `list_installed_plugins` 的 status **不可信**（11-12 报 connected 但令牌实际失效），必须实测 initialize HTTP 200
+- 排查令牌的完整套路：解密 connector-states.json/.v3.json → workbuddy.db 全表 sqlite 扫 `lx_at_` → 全目录 grep → 逐个 curl initialize 实测 → 认证头变体测试
+- 直连脚本 `.workbuddy/tmp_lx/`（lxmcp.js / sync.js / import2.js）可复用；`import2.js` 读 `diff.json`（不是 diff_out.json），内置 import_result.json 断点续传
+
 ## 最近执行（2026-10-17）
 - 侧边栏+README 更新：737 篇，最新 2026-10-17，今日新增 2 篇（寓言故事目录，不在乐享同步范围）
 - 乐享增量同步：本地有而乐享无共 9 篇全部导入成功（讲话稿 1 + 申论 1 + 软考 7）
