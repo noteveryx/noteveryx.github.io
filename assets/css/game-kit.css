@@ -114,11 +114,11 @@ body.gk-page > canvas {
   font-size: 11px;
   letter-spacing: .3em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, .42);
+  color: rgba(255, 255, 255, .55);
   pointer-events: none;
   user-select: none;
 }
-.gk-label b { font-weight: 600; letter-spacing: .16em; color: rgba(255, 255, 255, .76); }
+.gk-label b { font-weight: 600; letter-spacing: .16em; color: rgba(255, 255, 255, .85); }
 
 /* ---------- HUD（顶部左侧玻璃条） ---------- */
 .gk-hud {
@@ -144,10 +144,10 @@ body.gk-page > canvas {
   min-width: 52px;
 }
 .gk-lb {
-  font-size: 9.5px;
+  font-size: 10px;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, .45);
+  color: rgba(255, 255, 255, .58);
   line-height: 1.2;
 }
 .gk-val {

@@ -1185,7 +1185,12 @@
     renderStats();
   }
   tickClock();
-  setInterval(tickClock, 1000);
+  var clockTimer = setInterval(tickClock, 1000);
+  // 页面隐藏时暂停秒级刷新，回到前台立即补一次，避免后台空耗
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { clearInterval(clockTimer); }
+    else { clockTimer = setInterval(tickClock, 1000); tickClock(); }
+  });
 
   /* ---------- 跑马灯循环：所有条目拼接两份，无缝水平滚动，点击暂停 / 继续 ---------- */
   var typeIdx = document.getElementById('typeIdx');

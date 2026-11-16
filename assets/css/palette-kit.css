@@ -260,3 +260,11 @@ body.pk-open .ui{opacity:1 !important;}
   .pk-grid{grid-template-columns:repeat(8,1fr);}
   .pk-panel{padding:12px;}
 }
+
+/* ---------- 触屏闲置淡出兜底 ---------- */
+/* 触屏没有 hover：闲置时 UI 淡到 15% 后无法“悬停恢复”，
+   保持半可见，避免按钮长期几乎不可见（任意触摸仍会完全唤醒）。
+   多套一层 html 提升优先级，覆盖各页面内联的 body.idle .ui{opacity:.15} */
+@media (hover:none){
+  html body.idle .ui{opacity:.45;}
+}

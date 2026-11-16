@@ -438,6 +438,7 @@
     if (!typePanel.hidden && !typePanel.contains(e.target) && e.target !== typeBtn) closePanel();
   });
   document.addEventListener('keydown', function (e) {
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.key !== 'Escape') return;
     if (e.key === 'Escape') closePanel();
     if (e.key === 'r' || e.key === 'R') { build(); blowTarget = 0; blow = 0; }
   });

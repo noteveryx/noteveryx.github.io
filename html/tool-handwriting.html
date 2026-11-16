@@ -926,6 +926,8 @@
   });
 
   document.addEventListener('keydown', function (e) {
+    // 输入框（调色板 HEX 等）里打字时不触发快捷键；Escape 仍放行
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.key !== 'Escape') return;
     if (e.key === 'Escape') { closePop(); closeTrace(); }
     if (e.key === 'z' || e.key === 'Z') undo();
     if (e.key === 'e' || e.key === 'E') setEraser(!erasing);

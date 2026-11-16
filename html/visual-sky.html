@@ -300,12 +300,13 @@
   wake();
 
   /* ---------------- 启动 ---------------- */
+  var clockTimer = setInterval(updateClock, 1000);
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) stop(); else if (!reduceMotion) start();
+    if (document.hidden) { clearInterval(clockTimer); stop(); }
+    else { clockTimer = setInterval(updateClock, 1000); updateClock(); if (!reduceMotion) start(); }
   });
   window.addEventListener('resize', resize, { passive: true });
   window.addEventListener('orientationchange', function () { setTimeout(resize, 220); });
-  setInterval(updateClock, 1000);
 
   var pk = window.PaletteKit.mount(document.getElementById('pk'), {
     value: '#ffd166',

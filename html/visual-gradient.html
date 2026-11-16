@@ -185,7 +185,7 @@
     });
   }
 
-  function copy(text, msg) {
+  function fallbackCopy(text) {
     var ok = false;
     try {
       var ta = document.createElement('textarea');
@@ -196,8 +196,18 @@
       ok = document.execCommand('copy');
       ta.remove();
     } catch (e) { ok = false; }
-    // 复制失败必须如实提示：不能一律显示「已复制」，否则用户会以为复制好了
-    setHint(ok ? (msg || ('已复制：' + text)) : ('复制失败，请手动复制：' + text));
+    return ok;
+  }
+  function copy(text, msg) {
+    function done(ok) {
+      // 复制失败必须如实提示：不能一律显示「已复制」，否则用户会以为复制好了
+      setHint(ok ? (msg || ('已复制：' + text)) : ('复制失败，请手动复制：' + text));
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(fallbackCopy(text)); });
+    } else {
+      done(fallbackCopy(text));
+    }
   }
 
   var hintTimer = null;

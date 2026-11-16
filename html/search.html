@@ -539,7 +539,7 @@
   }
   function docHref(path) {
     var route = path.replace(/\.md$/, '');
-    if (route === '/README.md') route = '/';
+    if (route === '/README') route = '/';
     return BASE + '#' + route;
   }
   function search(kw) {
@@ -645,6 +645,7 @@
     if (e.key === 'Escape') { qEl.value = ''; search(''); }
   });
   document.addEventListener('keydown', function (e) {
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
     if (e.key === '/' && document.activeElement !== qEl) {
       e.preventDefault();
       qEl.focus();
@@ -663,7 +664,10 @@
   /* ---------------- 启动 ---------------- */
   renderResults([], '');
   build(true).then(function () {
-    try { qEl.focus(); } catch (e) { }
+    // 仅桌面（有鼠标指针）自动聚焦；移动端自动聚焦会弹出软键盘遮挡结果列表
+    if (window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches) {
+      try { qEl.focus(); } catch (e) { }
+    }
   });
 })();
 </script>

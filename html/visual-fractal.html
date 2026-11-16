@@ -384,6 +384,7 @@
     reset();
   });
   document.addEventListener('keydown', function (e) {
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
     if (e.key === 'r' || e.key === 'R') reset();
   });
 

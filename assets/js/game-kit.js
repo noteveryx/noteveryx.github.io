@@ -211,9 +211,10 @@
     var dpad = el('div', 'gk-dpad');
     overlay.hidden = true;
 
-    /* 返回 */
+    /* 返回：从游戏中心进来就回游戏中心，否则回站点首页 */
     var back = el('a', 'gk-back', svg('<path d="M15 5l-7 7 7 7"/>', 15, false));
-    back.href = opts.back || '../x.html';
+    var ref = (document.referrer || '').split(/[?#]/)[0];
+    back.href = opts.back || (/(^|\/)game-hub\.html$/.test(ref) ? 'game-hub.html' : '../x.html');
     back.title = '返回';
     back.setAttribute('aria-label', '返回');
 

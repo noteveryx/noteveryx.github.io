@@ -379,6 +379,7 @@
 
   /* ---------------- 键盘 ---------------- */
   document.addEventListener('keydown', function (e) {
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
     if (e.key === 'z' || e.key === 'Z') undo();
     else if (e.key === 's' || e.key === 'S') { if (symBtn) symBtn.click(); }
     else if (e.key === 'r' || e.key === 'R') randomFlower();

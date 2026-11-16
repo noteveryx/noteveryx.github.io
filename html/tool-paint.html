@@ -824,6 +824,8 @@
   });
 
   document.addEventListener('keydown', function (e) {
+    // 输入框（调色板 HEX 等）里打字时不要误触发快捷键；Escape 仍放行用于关面板
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.key !== 'Escape') return;
     if (e.key === 'Escape') { closeSimp(); return; }
     if (e.key === 'z' || e.key === 'Z') undo();
     else if (e.key === 'y' || e.key === 'Y') redo();
