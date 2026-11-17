@@ -18,13 +18,13 @@
     --line: #1b2530;
     --text: #dfe9e4;
     --muted: #5d6f6a;
-    --brand: #42b983;
-    --brand-soft: rgba(66, 185, 131, .12);
+    --brand: #3fa06a;
+    --brand-soft: rgba(63, 160, 106, .12);
     --glass: rgba(255, 255, 255, .04);
     --scrim: rgba(3, 5, 7, .88);
-    --glow1: rgba(66, 185, 131, .08);
-    --glow2: rgba(66, 185, 131, .05);
-    --logo-glow: rgba(66, 185, 131, .35);
+    --glow1: rgba(63, 160, 106, .08);
+    --glow2: rgba(63, 160, 106, .05);
+    --logo-glow: rgba(63, 160, 106, .35);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; }
@@ -725,38 +725,39 @@
   .tech-copy.done { background: var(--brand-soft); color: var(--brand); }
   .tech-copy.failed { background: var(--muted); color: #fff; }
 
-  /* ---------- 主题（theme-kit）：翡翠绿 / 深海蓝 / 暖阳橙 / 紫罗兰 / 墨石青，默认深海蓝 ----------
-     深海蓝这一套以前是缺的：防闪脚本默认就是 midnight，
-     但没有对应的变量块 → 首次访问「深海蓝」根本不生效，只能回落到 :root 的翡翠绿。 */
+  /* ---------- 主题（theme-kit）：青瓷绿 / 夜航蓝 / 琥珀橙 / 藕荷紫 / 墨玉青，默认夜航蓝 ----------
+     夜航蓝这一套以前是缺的：防闪脚本默认就是 midnight，
+     但没有对应的变量块 → 首次访问「夜航蓝」根本不生效，只能回落到 :root 的青瓷绿。
+     色值与 ../assets/css/themes.css 保持同步（这里变量名不同，是屏保页自己的命名）。 */
   html[data-theme="midnight"]{
-    --bg1:#0f1626; --bg2:#0a101c; --panel:#151f2e; --line:#232f40;
-    --text:#e7eef8; --muted:#7f8fa4; --brand:#5b9dff; --brand-soft:rgba(91,157,255,.14);
-    --glass:rgba(255,255,255,.05); --scrim:rgba(9,13,22,.9);
-    --glow1:rgba(91,157,255,.08); --glow2:rgba(56,200,240,.05); --logo-glow:rgba(91,157,255,.3);
+    --bg1:#0b1020; --bg2:#070b14; --panel:#121a2b; --line:#1e2938;
+    --text:#e6edf8; --muted:#8a9ab2; --brand:#7aa2f7; --brand-soft:rgba(122,162,247,.14);
+    --glass:rgba(255,255,255,.05); --scrim:rgba(7,11,20,.9);
+    --glow1:rgba(122,162,247,.08); --glow2:rgba(125,207,255,.05); --logo-glow:rgba(122,162,247,.3);
   }
   html[data-theme="emerald"]{
-    --bg1:#f4faf7; --bg2:#e7f1eb; --panel:#ffffff; --line:rgba(22,36,29,.12);
-    --text:#16241d; --muted:#6d8177; --brand:#2f9e6d; --brand-soft:rgba(47,158,109,.14);
-    --glass:rgba(22,36,29,.05); --scrim:rgba(244,250,247,.9);
-    --glow1:rgba(47,158,109,.08); --glow2:rgba(47,158,109,.05); --logo-glow:rgba(47,158,109,.3);
+    --bg1:#f4f9f5; --bg2:#e6efe9; --panel:#ffffff; --line:rgba(20,33,26,.12);
+    --text:#14211a; --muted:#6c7f74; --brand:#1e7a4c; --brand-soft:rgba(30,122,76,.14);
+    --glass:rgba(20,33,26,.05); --scrim:rgba(244,249,245,.9);
+    --glow1:rgba(30,122,76,.08); --glow2:rgba(63,160,106,.05); --logo-glow:rgba(30,122,76,.3);
   }
   html[data-theme="sunset"]{
-    --bg1:#fdf8f4; --bg2:#f7ece2; --panel:#ffffff; --line:rgba(51,35,26,.12);
-    --text:#33231a; --muted:#96796a; --brand:#f2762e; --brand-soft:rgba(242,118,46,.13);
-    --glass:rgba(51,35,26,.05); --scrim:rgba(253,248,244,.9);
-    --glow1:rgba(242,118,46,.08); --glow2:rgba(242,118,46,.05); --logo-glow:rgba(242,118,46,.3);
+    --bg1:#fdf8f3; --bg2:#f8eade; --panel:#ffffff; --line:rgba(43,28,21,.12);
+    --text:#2b1c15; --muted:#8e7668; --brand:#bf5b1b; --brand-soft:rgba(191,91,27,.13);
+    --glass:rgba(43,28,21,.05); --scrim:rgba(253,248,243,.9);
+    --glow1:rgba(191,91,27,.08); --glow2:rgba(233,147,66,.05); --logo-glow:rgba(191,91,27,.3);
   }
   html[data-theme="violet"]{
-    --bg1:#f6f7fd; --bg2:#eceef9; --panel:#ffffff; --line:rgba(22,25,43,.12);
-    --text:#16192b; --muted:#6b7590; --brand:#635bff; --brand-soft:rgba(99,91,255,.12);
-    --glass:rgba(22,25,43,.05); --scrim:rgba(246,247,253,.9);
-    --glow1:rgba(99,91,255,.08); --glow2:rgba(99,91,255,.05); --logo-glow:rgba(99,91,255,.3);
+    --bg1:#f8f6fc; --bg2:#ede9f7; --panel:#ffffff; --line:rgba(30,26,46,.12);
+    --text:#1e1a2e; --muted:#78718c; --brand:#6e56cf; --brand-soft:rgba(110,86,207,.12);
+    --glass:rgba(30,26,46,.05); --scrim:rgba(248,246,252,.9);
+    --glow1:rgba(110,86,207,.08); --glow2:rgba(155,126,222,.05); --logo-glow:rgba(110,86,207,.3);
   }
   html[data-theme="ink"]{
-    --bg1:#0e1517; --bg2:#0a1012; --panel:#131b1e; --line:#212e31;
-    --text:#e2edee; --muted:#7d9194; --brand:#2dd4bf; --brand-soft:rgba(45,212,191,.12);
+    --bg1:#0d1112; --bg2:#080b0c; --panel:#141a1b; --line:#222a2b;
+    --text:#e3e9e9; --muted:#7e8c8c; --brand:#2aa79b; --brand-soft:rgba(42,167,155,.12);
     --glass:rgba(255,255,255,.05); --scrim:rgba(3,5,7,.88);
-    --glow1:rgba(45,212,191,.07); --glow2:rgba(45,212,191,.05); --logo-glow:rgba(45,212,191,.3);
+    --glow1:rgba(42,167,155,.07); --glow2:rgba(92,143,166,.05); --logo-glow:rgba(42,167,155,.3);
   }
 </style>
   <script src="../assets/js/fs-kit.js" defer></script>

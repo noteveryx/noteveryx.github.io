@@ -460,7 +460,7 @@ buildPanel(panel, {
 
 | 文件 | 作用 | 谁在用 | 关键 API / 约定 |
 | --- | --- | --- | --- |
-| `themes.css` | 5 套主题变量 | 所有独立页 | `data-theme` 取 `emerald / midnight / sunset / violet / ink` |
+| `themes.css` | 5 套主题变量（青瓷绿 / 夜航蓝 / 琥珀橙 / 藕荷紫 / 墨玉青） | 所有独立页 | `data-theme` 取 `emerald / midnight / sunset / violet / ink`（**id 是 localStorage 键，换色可以、换 id 不行**）；换色要同步四处：本文件、`theme-kit.js` 的 `THEMES`（色点 + `meta`）、`x.html` 内联的 5 套变量与面板色点、`tool-standby.html` 自带的 5 套 |
 | `theme-kit.css/js` | 主题切换按钮 + 面板 | 工具页、生成器页 | 自动挂到页头；主题存 `localStorage['tk_theme']` |
 | `toolbox.css/js` | 工具箱页骨架 | 工具页、`search.html` | `ToolBox.mount(root, {title, sub, storageKey, tabs})`；工具方法 `ToolBox.el / toast / copy` |
 | `game-kit.css/js` | 游戏页骨架 | 12 个游戏 | `GameKit.create(opts)` 负责 HUD / 工具列 / D-pad / 返回 |

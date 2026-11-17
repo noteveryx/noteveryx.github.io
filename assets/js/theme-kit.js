@@ -13,18 +13,22 @@
  *        .documentElement.setAttribute('data-theme',
  *        ['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')
  *      }catch(e){}</script>
+ *      五个 id 是持久化契约，换名字换颜色都行，别改 id。
  *   2. 引入 theme-kit.css 与本文件。
  *   3. CSS 里按 data-theme 写变量覆盖（五套 id 见下 THEMES）。
  */
 (function () {
   'use strict';
 
+  // c1 / c2 只用来画面板里那个渐变圆点，取值与 themes.css 的
+  // --accent / --accent2 一一对应；meta 是移动端地址栏色（取各套 bg1）。
+  // 改色时三处一起改：本数组 + themes.css + x.html（+ tool-standby.html）。
   var THEMES = [
-    { id: 'emerald',  name: '翡翠绿', c1: '#42b983', c2: '#2f9e6d', meta: '#e9f2ee' },
-    { id: 'midnight', name: '深海蓝', c1: '#5b9dff', c2: '#3d6fd6', meta: '#0f1626' },
-    { id: 'sunset',   name: '暖阳橙', c1: '#f2762e', c2: '#e05a12', meta: '#f7ece2' },
-    { id: 'violet',   name: '紫罗兰', c1: '#7c5cff', c2: '#5b3fd6', meta: '#eef1f9' },
-    { id: 'ink',      name: '墨石青', c1: '#2dd4bf', c2: '#0d9488', meta: '#0e1517' }
+    { id: 'emerald',  name: '青瓷绿', c1: '#1e7a4c', c2: '#3fa06a', meta: '#f4f9f5' },
+    { id: 'midnight', name: '夜航蓝', c1: '#7aa2f7', c2: '#7dcfff', meta: '#0b1020' },
+    { id: 'sunset',   name: '琥珀橙', c1: '#bf5b1b', c2: '#e99342', meta: '#fdf8f3' },
+    { id: 'violet',   name: '藕荷紫', c1: '#6e56cf', c2: '#9b7ede', meta: '#f8f6fc' },
+    { id: 'ink',      name: '墨玉青', c1: '#2aa79b', c2: '#5c8fa6', meta: '#0d1112' }
   ];
   var KEY = 'tk_theme';
 

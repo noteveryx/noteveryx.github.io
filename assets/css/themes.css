@@ -12,88 +12,108 @@
      · 页面引本文件 → 五套主题变量自动齐全，不会再漏
      · 页面保留自己独有的变量时，写在自己的 <style> 里即可
        （同名变量以页面 <style> 为准，因为它在后面）
+
+   配色约定（改这里时一起守）：
+   1. id 是持久化键（localStorage['tk_theme']）与防闪脚本的硬编码清单，
+      换色相可以，改 id 会让老用户的主题失效 —— 别动。
+   2. 浅色三套（emerald / sunset / violet）--accent 对白底对比度 ≥ 4.5；
+      深色两套（midnight / ink）--accent 对 --bg1 对比度 ≥ 4.5。
+   3. 五套色相拉开：绿 150° / 蓝 220° / 橙 25° / 紫 258° / 青 175°，
+      相邻主题之间不做同色相微调，避免「换来换去好像一样」。
+   4. --accent2 是辅助色（渐变、图表），只做陪衬，不承担文字对比度。
    ========================================================== */
 
-/* ---------- 默认（紫罗兰）：data-theme 缺失时的兜底 ---------- */
+/* ---------- 默认（藕荷紫）：data-theme 缺失时的兜底 ---------- */
 :root {
-  --bg1: #f7f9fd; --bg2: #eef1f9; --card: #fff; --text: #16192b; --muted: #6b7590;
-  --line: rgba(22, 25, 43, .08); --accent: #635bff; --accent2: #00b8d9;
-  --accent-hi: #7d6dff; --accent-hi-2: #8b7bff;
-  --accent-ghost-bg: rgba(99, 91, 255, .09); --accent-ghost-line: rgba(99, 91, 255, .14);
-  --accent-shadow: 0 6px 18px rgba(99, 91, 255, .28);
-  --glow1: rgba(99, 91, 255, .22); --glow2: rgba(0, 184, 217, .20);
-  --glass: rgba(255, 255, 255, .82); --focus-bg: #f2f4fa;
-  --ghost-active: #f2f4fa; --ghost-bg: #fbfbfe;
-  --toast-bg: rgba(22, 25, 43, .94); --foot-note: #b9c1c9;
-  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(22, 25, 43, .18);
+  --bg1: #f8f6fc; --bg2: #ede9f7; --card: #fff; --text: #1e1a2e; --muted: #78718c;
+  --line: rgba(30, 26, 46, .08); --accent: #6e56cf; --accent2: #9b7ede;
+  --accent-hi: #7d67d9; --accent-hi-2: #8d79e3;
+  --accent-ghost-bg: rgba(110, 86, 207, .09); --accent-ghost-line: rgba(110, 86, 207, .16);
+  --accent-shadow: 0 6px 18px rgba(110, 86, 207, .26);
+  --glow1: rgba(110, 86, 207, .18); --glow2: rgba(155, 126, 222, .14);
+  --glass: rgba(255, 255, 255, .82); --focus-bg: #f1edfa;
+  --ghost-active: #f0ecf9; --ghost-bg: #fcfbff;
+  --toast-bg: rgba(30, 26, 46, .94); --foot-note: #b8b2c7;
+  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(30, 26, 46, .18);
 }
 
-/* ---------- 翡翠绿 ---------- */
+/* ---------- 青瓷绿（浅） ----------
+   比原来的「翡翠绿」深两档、去灰：原 #2f9e6d 白底只有 3.0:1，
+   当按钮底写白字发飘；现在 #1e7a4c 是 5.3:1，绿也更「青瓷」而非「豆绿」。 */
 html[data-theme="emerald"] {
-  --bg1: #f5faf7; --bg2: #e8f1ec; --card: #fff; --text: #16241d; --muted: #6d8177;
-  --line: rgba(22, 36, 29, .08); --accent: #2f9e6d; --accent2: #31b8a4;
-  --accent-hi: #43b983; --accent-hi-2: #4ccf9a;
-  --accent-ghost-bg: rgba(47, 158, 109, .09); --accent-ghost-line: rgba(47, 158, 109, .16);
-  --accent-shadow: 0 6px 18px rgba(47, 158, 109, .28);
-  --glow1: rgba(66, 185, 131, .20); --glow2: rgba(49, 184, 164, .16);
-  --glass: rgba(255, 255, 255, .82); --focus-bg: #f2faf6;
-  --ghost-active: #edf5f0; --ghost-bg: #fbfdfc;
-  --toast-bg: rgba(22, 36, 29, .94); --foot-note: #a9b8b0;
-  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(22, 36, 29, .18);
+  --bg1: #f4f9f5; --bg2: #e6efe9; --card: #fff; --text: #14211a; --muted: #6c7f74;
+  --line: rgba(20, 33, 26, .08); --accent: #1e7a4c; --accent2: #3fa06a;
+  --accent-hi: #2b9159; --accent-hi-2: #38a56b;
+  --accent-ghost-bg: rgba(30, 122, 76, .09); --accent-ghost-line: rgba(30, 122, 76, .16);
+  --accent-shadow: 0 6px 18px rgba(30, 122, 76, .26);
+  --glow1: rgba(30, 122, 76, .18); --glow2: rgba(63, 160, 106, .14);
+  --glass: rgba(255, 255, 255, .82); --focus-bg: #eef7f1;
+  --ghost-active: #eaf3ed; --ghost-bg: #fbfdfc;
+  --toast-bg: rgba(20, 33, 26, .94); --foot-note: #a9b8ae;
+  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(20, 33, 26, .18);
 }
 
-/* ---------- 深海蓝 ---------- */
+/* ---------- 夜航蓝（深） ----------
+   原「深海蓝」#5b9dff + #38c8f0 冷暖掺着，像两个来源拼的。
+   现在主色统一到 #7aa2f7（冷蓝），辅助色 #7dcfff 只做同族提亮。 */
 html[data-theme="midnight"] {
-  --bg1: #0f1626; --bg2: #0a101c; --card: #151f2e; --text: #e7eef8; --muted: #7f8fa4;
-  --line: #232f40; --accent: #5b9dff; --accent2: #38c8f0;
-  --accent-hi: #7bb0ff; --accent-hi-2: #8bc0ff;
-  --accent-ghost-bg: rgba(91, 157, 255, .10); --accent-ghost-line: rgba(91, 157, 255, .20);
-  --accent-shadow: 0 6px 18px rgba(0, 0, 0, .4);
-  --glow1: rgba(91, 157, 255, .14); --glow2: rgba(56, 200, 240, .10);
-  --glass: rgba(255, 255, 255, .05); --focus-bg: #1a2534;
-  --ghost-active: #1a2433; --ghost-bg: #182231;
-  --toast-bg: rgba(0, 0, 0, .75); --foot-note: #5c6b80;
+  --bg1: #0b1020; --bg2: #070b14; --card: #121a2b; --text: #e6edf8; --muted: #8a9ab2;
+  --line: #1e2938; --accent: #7aa2f7; --accent2: #7dcfff;
+  --accent-hi: #92b4fa; --accent-hi-2: #a4c2fc;
+  --accent-ghost-bg: rgba(122, 162, 247, .12); --accent-ghost-line: rgba(122, 162, 247, .22);
+  --accent-shadow: 0 6px 18px rgba(0, 0, 0, .42);
+  --glow1: rgba(122, 162, 247, .16); --glow2: rgba(125, 207, 255, .10);
+  --glass: rgba(255, 255, 255, .05); --focus-bg: #172136;
+  --ghost-active: #16203a; --ghost-bg: #131c2e;
+  --toast-bg: rgba(0, 0, 0, .75); --foot-note: #5f6f88;
   --logo-border: rgba(255, 255, 255, .10); --logo-shadow: 0 4px 14px rgba(0, 0, 0, .5);
 }
 
-/* ---------- 暖阳橙 ---------- */
+/* ---------- 琥珀橙（浅） ----------
+   原「暖阳橙」#f2762e 是屏幕橙，白底 2.6:1，看久了发烫。
+   现在换成陶土琥珀 #bf5b1b（4.9:1），暖而不刺，辅助色 #e99342 留住「阳」的感觉。 */
 html[data-theme="sunset"] {
-  --bg1: #fdf8f4; --bg2: #f7ece2; --card: #fff; --text: #33231a; --muted: #96796a;
-  --line: rgba(51, 35, 26, .09); --accent: #f2762e; --accent2: #f5a623;
-  --accent-hi: #ff8f4d; --accent-hi-2: #ff9f66;
-  --accent-ghost-bg: rgba(242, 118, 46, .09); --accent-ghost-line: rgba(242, 118, 46, .16);
-  --accent-shadow: 0 6px 18px rgba(242, 118, 46, .28);
-  --glow1: rgba(242, 118, 46, .20); --glow2: rgba(245, 166, 35, .16);
-  --glass: rgba(255, 255, 255, .82); --focus-bg: #fdf5ee;
-  --ghost-active: #f6efe8; --ghost-bg: #fefcf9;
-  --toast-bg: rgba(51, 35, 26, .94); --foot-note: #c2ab9c;
+  --bg1: #fdf8f3; --bg2: #f8eade; --card: #fff; --text: #2b1c15; --muted: #8e7668;
+  --line: rgba(43, 28, 21, .09); --accent: #bf5b1b; --accent2: #e99342;
+  --accent-hi: #d06b26; --accent-hi-2: #de7c38;
+  --accent-ghost-bg: rgba(191, 91, 27, .09); --accent-ghost-line: rgba(191, 91, 27, .16);
+  --accent-shadow: 0 6px 18px rgba(191, 91, 27, .26);
+  --glow1: rgba(191, 91, 27, .18); --glow2: rgba(233, 147, 66, .14);
+  --glass: rgba(255, 255, 255, .82); --focus-bg: #fdf5ec;
+  --ghost-active: #f7efe6; --ghost-bg: #fefcf9;
+  --toast-bg: rgba(43, 28, 21, .94); --foot-note: #c2ab9c;
   --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(80, 45, 20, .18);
 }
 
-/* ---------- 紫罗兰（5 个页面原本都缺这一套） ---------- */
+/* ---------- 藕荷紫（浅） ----------
+   原「紫罗兰」#635bff 是典型 SaaS 电光紫，饱和度过高、AI 味重。
+   现在降到 #6e56cf（4.9:1），往藕荷方向收，辅色 #9b7ede 做渐变。 */
 html[data-theme="violet"] {
-  --bg1: #f7f9fd; --bg2: #eef1f9; --card: #fff; --text: #16192b; --muted: #6b7590;
-  --line: rgba(22, 25, 43, .08); --accent: #635bff; --accent2: #00b8d9;
-  --accent-hi: #7d6dff; --accent-hi-2: #8b7bff;
-  --accent-ghost-bg: rgba(99, 91, 255, .09); --accent-ghost-line: rgba(99, 91, 255, .14);
-  --accent-shadow: 0 6px 18px rgba(99, 91, 255, .28);
-  --glow1: rgba(99, 91, 255, .22); --glow2: rgba(0, 184, 217, .20);
-  --glass: rgba(255, 255, 255, .82); --focus-bg: #f2f4fa;
-  --ghost-active: #f2f4fa; --ghost-bg: #fbfbfe;
-  --toast-bg: rgba(22, 25, 43, .94); --foot-note: #b9c1c9;
-  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(22, 25, 43, .18);
+  --bg1: #f8f6fc; --bg2: #ede9f7; --card: #fff; --text: #1e1a2e; --muted: #78718c;
+  --line: rgba(30, 26, 46, .08); --accent: #6e56cf; --accent2: #9b7ede;
+  --accent-hi: #7d67d9; --accent-hi-2: #8d79e3;
+  --accent-ghost-bg: rgba(110, 86, 207, .09); --accent-ghost-line: rgba(110, 86, 207, .16);
+  --accent-shadow: 0 6px 18px rgba(110, 86, 207, .26);
+  --glow1: rgba(110, 86, 207, .18); --glow2: rgba(155, 126, 222, .14);
+  --glass: rgba(255, 255, 255, .82); --focus-bg: #f1edfa;
+  --ghost-active: #f0ecf9; --ghost-bg: #fcfbff;
+  --toast-bg: rgba(30, 26, 46, .94); --foot-note: #b8b2c7;
+  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(30, 26, 46, .18);
 }
 
-/* ---------- 墨石青 ---------- */
+/* ---------- 墨玉青（深） ----------
+   原「墨石青」#2dd4bf 是 tailwind teal-400，深底上像荧光笔，长时间看累。
+   现在降到 #2aa79b（对 #0d1112 有 6.3:1），背景也从绿味改成中性石墨，
+   辅助色换成灰蓝 #5c8fa6 —— 这样「墨玉」的沉静感才立得住。 */
 html[data-theme="ink"] {
-  --bg1: #0e1517; --bg2: #0a1012; --card: #131b1e; --text: #e2edee; --muted: #7d9194;
-  --line: #212e31; --accent: #2dd4bf; --accent2: #38bdf8;
-  --accent-hi: #4ae3cf; --accent-hi-2: #5ce9d6;
-  --accent-ghost-bg: rgba(45, 212, 191, .10); --accent-ghost-line: rgba(45, 212, 191, .20);
-  --accent-shadow: 0 6px 18px rgba(0, 0, 0, .4);
-  --glow1: rgba(45, 212, 191, .12); --glow2: rgba(56, 189, 248, .10);
-  --glass: rgba(255, 255, 255, .05); --focus-bg: #172326;
-  --ghost-active: #172024; --ghost-bg: #161f22;
-  --toast-bg: rgba(0, 0, 0, .75); --foot-note: #5a6c6f;
+  --bg1: #0d1112; --bg2: #080b0c; --card: #141a1b; --text: #e3e9e9; --muted: #7e8c8c;
+  --line: #222a2b; --accent: #2aa79b; --accent2: #5c8fa6;
+  --accent-hi: #35b8ab; --accent-hi-2: #45c3b6;
+  --accent-ghost-bg: rgba(42, 167, 155, .12); --accent-ghost-line: rgba(42, 167, 155, .22);
+  --accent-shadow: 0 6px 18px rgba(0, 0, 0, .42);
+  --glow1: rgba(42, 167, 155, .12); --glow2: rgba(92, 143, 166, .10);
+  --glass: rgba(255, 255, 255, .05); --focus-bg: #161e20;
+  --ghost-active: #151d1f; --ghost-bg: #121819;
+  --toast-bg: rgba(0, 0, 0, .75); --foot-note: #5c6868;
   --logo-border: rgba(255, 255, 255, .10); --logo-shadow: 0 4px 14px rgba(0, 0, 0, .5);
 }
