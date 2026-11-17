@@ -543,6 +543,52 @@ buildPanel(panel, {
 **卡片打开方式**：`x.html` 的 42 张站内卡片（`.sp-card`）**在当前标签页打开**，
 不写 `target="_blank"`；30 个快捷导航外链（`.nav-link`）保持新标签页打开。
 
+#### 7.7.9 主题跟随与画布尺寸
+
+**主题键统一为 `tk_theme`**：导航页 `x.html` 和 42 个独立页必须写同一个键，否则子页读不到导航页选的主题。
+`x.html` 原来用的是 `kb-theme`（自己的键），现已改为 `tk_theme`；旧键会在读取时迁移一次并清除。
+`x.html` 首次访问若没有记录，会按系统深浅选 `emerald` / `midnight` **并立刻落盘**，
+这样从导航页进子页时两边一致。
+
+> 哪些页面有主题机制（15 个，引 `theme-kit.css/js` + 防闪脚本）就跟随导航页；
+> 视觉屏、游戏屏、画板、手写板是**固定配色**（没有 `html[data-theme]` 变量块），
+> 不存在「跟随」这回事；`tool-delta-escort.html` 是另一套 5 套风格体系，独立。
+
+`theme-kit.js` 监听了 `storage` 事件：别的标签页改了主题，当前页立刻跟上（`storage` 只在其它标签页触发，同标签页跳转由页面自己读 localStorage）。
+
+**面板互斥（主题 / 翻译 / 调色盘）**：三个面板的按钮都 `stopPropagation`，
+所以各自「点击外部收起」的那条 `document` 监听**收不到别的面板的点击** ——
+翻译列表开着时点主题按钮，翻译列表不会收起。
+
+解法是一个广播：任一面板打开时派发 `kb:panel-open`（`detail.id` = `theme` / `translate` / `palette` / `x-theme`），
+其它面板收到就收起自己。已接入 `theme-kit.js`、`translate-kit.js`、`palette-kit.js` 和 `x.html` 的自绘主题面板。
+**新增任何浮层面板都要接这个广播**，否则又会变成"两个面板叠在一起"。
+
+**画板 / 手写板：可拖动 + 无边界**：`tool-paint.html`、`tool-handwriting.html` 的主画布结构是
+
+```
+.canvas-wrap（滚动容器，overflow:auto） → .stage（舞台，可大于屏幕） → canvas + .rsizer
+```
+
+- **大小**：右下角 `.rsizer` 把手拖动，范围 `260×200` ~ `2400×2400`（上限按位图内存定：CSS 尺寸 × DPR²，手机再大就卡死了）。
+- **手机上加不大幅度**：把手在屏幕右下角，往右下拖会出屏 → 工具栏加了「放大」（×1.4）和「铺满」两个按钮兜底。
+- **看别处**：画布比屏幕大时，触摸画布就是落笔，没法滑动 → 工具栏「移动」按钮切到平移模式（拖动 = 滚动容器）；
+  移动模式下**双击画布恢复铺满**。桌面端还可以直接滚轮滚动、Ctrl/中键拖动、双指平移。
+- 尺寸记在 localStorage（`paint-stage-size` / `hw-stage-size`），下次进来还是你调的大小。
+
+三个坑：
+
+- **`.stage` 必须用 `position:relative`，不能用 `fixed`** —— Chrome 给 fixed 元素创建层叠上下文，
+  舞台内部的 `z-index` 就压不过外面的工具栏（`.ui`, z-index 5），手机上工具栏正好盖住画布右下角，把手点不到。
+  改成 relative（不创建层叠上下文）+ `.rsizer{z-index:12}` 才浮得上去。
+- **`fs-kit` 的全屏按钮也固定在右下角**，会压住把手 → 这两个页面用 `.fsk-btn{right:64px !important}` 让开。
+- **平移只有一套**：画板原本用 `view.x/y` 平移（双指/中键），现在统一改成滚 `.canvas-wrap`，
+  否则「view 平移」和「容器滚动」两套平移叠在一起会互相打架。`view` 只保留缩放。
+
+舞台尺寸变了之后：画布位图跟着变，**旧内容要等比缩放居中**（直接 1:1 画过去会把画面裁掉一截）；
+手写板的格线可用区要按「舞台底边 → 工具栏顶边」算，不能再用 `window.innerHeight`；
+舞台尺寸**不跟视口走**（旋转屏幕时也不该把用户调好的画布改回去）。
+
 > ⚠️ 站内卡片要去掉 `target="_blank"` 时，**`rel="noopener noreferrer"` 也必须一起去掉**：
 > `noreferrer` 会清空 `document.referrer`，`game-kit.js` 里「从游戏中心进来就回游戏中心」
 > 的判断就失效了，游戏页的返回按钮会一律指回首页。

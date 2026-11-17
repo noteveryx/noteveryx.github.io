@@ -178,6 +178,22 @@
     });
   }
 
+  /* ---------- 面板互斥 ----------
+     调色盘 / 主题 / 翻译三个面板的按钮都 stopPropagation，
+     彼此收不到对方的点击，各自「点击外部收起」那条 document 监听也就失效了。
+     这里广播「我要打开了」，别的面板收到就收起自己。 */
+  function notifyPanelOpen() {
+    try {
+      window.dispatchEvent(new CustomEvent('kb:panel-open', { detail: { id: 'palette' } }));
+    } catch (e) {}
+  }
+  window.addEventListener('kb:panel-open', function (e) {
+    var d = e && e.detail;
+    if (!d || d.id === 'palette') return;
+    var open = openInstances.slice();
+    for (var i = 0; i < open.length; i++) open[i].close();
+  });
+
   /* ---------------- 组件 ---------------- */
   function mount(el, opts) {
     opts = opts || {};
@@ -740,6 +756,7 @@
       syncSliders();
       if (curTab === 'wheel') { drawWheel(); updateWheelDots(); }
       if (opts.onOpen) opts.onOpen();
+      notifyPanelOpen();
     }
     function close() {
       panel.classList.remove('show');

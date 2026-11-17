@@ -1050,10 +1050,18 @@
   <script>
     (function () {
       try {
-        var saved = localStorage.getItem('kb-theme');
+        // 主题键统一用 tk_theme —— 和 42 个独立页的 theme-kit.js 用同一个键，
+        // 子页才能读到导航页选中的主题。kb-theme 是旧键，只做一次性迁移。
+        var saved = localStorage.getItem('tk_theme');
         if (!saved) {
-          saved = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-            ? 'midnight' : 'emerald';
+          saved = localStorage.getItem('kb-theme');   // 旧键迁移
+          if (!saved) {
+            saved = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'midnight' : 'emerald';
+          }
+          // 首次确定就把默认值落盘：这样从导航页进子页时主题一致，
+          // 而不是导航页一个色、子页又一个色
+          try { localStorage.setItem('tk_theme', saved); } catch (e) {}
         }
         document.documentElement.setAttribute('data-theme', saved);
         // 有 JS 才启用入场动效的「预隐藏」：
@@ -1612,7 +1620,9 @@
         stone:    { name: '石墨灰' },
         crimson:  { name: '胭脂红' }
       };
-      var STORE_KEY = 'kb-theme';
+      // 和独立页 theme-kit.js 共用 tk_theme，子页才能跟随导航页的主题
+      var STORE_KEY = 'tk_theme';
+      var OLD_KEY = 'kb-theme';
       var root = document.documentElement;
       var btn = document.getElementById('themeBtn');
       var panel = document.getElementById('themePanel');
@@ -1629,7 +1639,10 @@
         var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.setAttribute('content', getComputedStyle(root).getPropertyValue('--brand').trim() || '#1e7a4c');
         if (persist) {
-          try { localStorage.setItem(STORE_KEY, key); } catch (e) {}
+          try {
+            localStorage.setItem(STORE_KEY, key);
+            localStorage.removeItem(OLD_KEY);   // 迁移完就把旧键清掉
+          } catch (e) {}
         }
       }
 
@@ -1637,7 +1650,20 @@
         if (!panel || !btn) return;
         panel.hidden = !open;
         btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) {
+          // 面板互斥：翻译列表开着时点主题，翻译列表要跟着收起
+          try {
+            window.dispatchEvent(new CustomEvent('kb:panel-open', { detail: { id: 'x-theme' } }));
+          } catch (e) {}
+        }
       }
+
+      // 别的面板（翻译 / 调色盘）打开时，收起本页的主题面板
+      window.addEventListener('kb:panel-open', function (e) {
+        var d = e && e.detail;
+        if (!d || d.id === 'x-theme') return;
+        if (panel && !panel.hidden) openPanel(false);
+      });
 
       if (btn && panel) {
         btn.addEventListener('click', function (e) {

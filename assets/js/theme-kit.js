@@ -97,7 +97,24 @@
     var open = typeof force === 'boolean' ? force : !panel.classList.contains('open');
     panel.classList.toggle('open', open);
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) notifyPanelOpen();
   }
+
+  /* ---------- 面板互斥 ----------
+     主题面板、翻译面板、调色盘面板三个都会 stopPropagation，
+     所以各自「点击外部收起」的那条 document 监听收不到别的面板的点击 ——
+     翻译列表开着时点主题，翻译列表不会收起。
+     这里用一个广播把「我要打开了」告诉所有面板，别的面板收到就收起自己。 */
+  function notifyPanelOpen() {
+    try {
+      window.dispatchEvent(new CustomEvent('kb:panel-open', { detail: { id: 'theme' } }));
+    } catch (e) {}
+  }
+  window.addEventListener('kb:panel-open', function (e) {
+    var d = e && e.detail;
+    if (!d || d.id === 'theme') return;
+    if (panel.classList.contains('open')) toggle(false);
+  });
 
   btn.addEventListener('click', function (e) { e.stopPropagation(); toggle(); });
   document.addEventListener('click', function (e) {
@@ -121,4 +138,13 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
+
+  /* 别的标签页改了主题（比如在导航页 x.html 切换），这边立刻跟上。
+     storage 事件只在「其它标签页」触发，同标签页跳转由页面自己读 localStorage。 */
+  window.addEventListener('storage', function (e) {
+    if (e.key !== KEY || !e.newValue) return;
+    for (var i = 0; i < THEMES.length; i++) {
+      if (THEMES[i].id === e.newValue) { apply(THEMES[i], false); break; }
+    }
+  });
 })();

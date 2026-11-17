@@ -436,12 +436,29 @@
     }
     panel.hidden = false;
     if (btn) btn.setAttribute('aria-expanded', 'true');
+    notifyPanelOpen();
   }
   function closePanel() {
     if (!panel) return;
     panel.hidden = true;
     if (btn) btn.setAttribute('aria-expanded', 'false');
   }
+
+  /* ---------- 面板互斥 ----------
+     翻译按钮自己 stopPropagation，主题面板 / 调色盘面板也各自 stopPropagation，
+     彼此都收不到对方的点击，「点击外部收起」那条 document 监听形同虚设 ——
+     翻译列表开着时点主题按钮，翻译列表不会收起。
+     这里广播「我要打开了」，别的面板收到就收起自己。 */
+  function notifyPanelOpen() {
+    try {
+      win.dispatchEvent(new CustomEvent('kb:panel-open', { detail: { id: 'translate' } }));
+    } catch (e) {}
+  }
+  win.addEventListener('kb:panel-open', function (e) {
+    var d = e && e.detail;
+    if (!d || d.id === 'translate') return;
+    if (panel && !panel.hidden) closePanel();
+  });
 
   /* ---------------- 切换语言 ---------------- */
   function applyLang(id) {
