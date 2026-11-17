@@ -23,14 +23,17 @@
   // c1 / c2 只用来画面板里那个渐变圆点，取值与 themes.css 的
   // --accent / --accent2 一一对应；meta 是移动端地址栏色（取各套 bg1）。
   // 改色时三处一起改：本数组 + themes.css + x.html（+ tool-standby.html）。
+  // 面板顺序 = 浅深交替（emerald 浅 → midnight 深 → sunset 浅 → ink 深
+  // → violet 浅 → stone 深 → crimson 浅）。改动顺序时三处（themes.css、
+  // x.html 面板、tool-standby.html）要一起改。
   var THEMES = [
     { id: 'emerald',  name: '青瓷绿', c1: '#1e7a4c', c2: '#3fa06a', meta: '#f4f9f5' },
     { id: 'midnight', name: '夜航蓝', c1: '#7aa2f7', c2: '#7dcfff', meta: '#0b1020' },
     { id: 'sunset',   name: '琥珀橙', c1: '#bf5b1b', c2: '#e99342', meta: '#fdf8f3' },
-    { id: 'violet',   name: '藕荷紫', c1: '#6e56cf', c2: '#9b7ede', meta: '#f8f6fc' },
     { id: 'ink',      name: '墨玉青', c1: '#2aa79b', c2: '#5c8fa6', meta: '#0d1112' },
-    { id: 'crimson',  name: '胭脂红', c1: '#b8324a', c2: '#e05a72', meta: '#fdf6f7' },
-    { id: 'stone',    name: '雾石灰', c1: '#3f3f46', c2: '#a8a29e', meta: '#f6f6f5' }
+    { id: 'violet',   name: '藕荷紫', c1: '#6e56cf', c2: '#9b7ede', meta: '#f8f6fc' },
+    { id: 'stone',    name: '石墨灰', c1: '#d4d4d8', c2: '#8b8b93', meta: '#131313' },
+    { id: 'crimson',  name: '胭脂红', c1: '#b8324a', c2: '#e05a72', meta: '#fdf6f7' }
   ];
   var KEY = 'tk_theme';
 
@@ -45,8 +48,11 @@
     // 且主题面板勾选的项和屏幕实际配色对不上。
     var attr = document.documentElement.getAttribute('data-theme');
     for (var j = 0; j < THEMES.length; j++) if (THEMES[j].id === attr) return THEMES[j];
-    // 兜底：紫罗兰
-    return THEMES[3];
+    // 兜底：藕荷紫。
+    // 注意不能写成 THEMES[3] —— 面板顺序调整后下标会变，
+    // 这里按 id 找，以后再调顺序也不会兜底到别的主题上。
+    for (var k = 0; k < THEMES.length; k++) if (THEMES[k].id === 'violet') return THEMES[k];
+    return THEMES[0];
   }
 
   function apply(t, persist) {

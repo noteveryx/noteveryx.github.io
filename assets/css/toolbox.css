@@ -111,7 +111,7 @@
 .tb-tab.on {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent, #fff);
   box-shadow: 0 4px 12px -4px var(--accent-ghost-line);
 }
 
@@ -272,11 +272,11 @@
 
 .tb-btn.primary {
   border: none;
-  color: #fff;
+  color: var(--on-accent, #fff);
   background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--accent2)));
   box-shadow: 0 6px 18px -6px var(--accent-ghost-line);
 }
-.tb-btn.primary:hover { color: #fff; filter: brightness(1.06); }
+.tb-btn.primary:hover { color: var(--on-accent, #fff); filter: brightness(1.06); }
 
 .tb-btn.ghost { background: transparent; }
 .tb-btn.sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }

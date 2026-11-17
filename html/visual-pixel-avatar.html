@@ -54,8 +54,8 @@
   }
   .btn:hover{border-color:var(--accent);color:var(--accent);}
   .btn:active{transform:scale(.96);}
-  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
-  .btn.primary:hover{color:#fff;filter:brightness(1.06);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff);}
+  .btn.primary:hover{color:var(--on-accent,#fff);filter:brightness(1.06);}
   .field{
     width:100%;font-family:inherit;font-size:14px;color:var(--text);background:var(--bg1);
     border:1px solid var(--line);border-radius:10px;padding:9px 11px;outline:none;margin-top:10px;
@@ -65,6 +65,7 @@
   .mini{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
   .mini canvas{width:52px;height:52px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);}
 </style>
+  <script src="../assets/js/nav-kit.js" defer></script>
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>

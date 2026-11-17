@@ -85,31 +85,6 @@
       --logo-bg: #1a0f08;
     }
 
-    /* ---------- 藕荷紫 ---------- */
-    html[data-theme="violet"] {
-      --brand: #6e56cf;
-      --brand-2: #9b7ede;
-      --brand-soft: rgba(110, 86, 207, .13);
-      --brand-ring: rgba(110, 86, 207, .35);
-
-      --bg: #f8f6fc;
-      --bg-2: #ede9f7;
-      --card: #ffffff;
-      --card-2: #fcfbff;
-      --glass: rgba(248, 246, 252, .8);
-
-      --text: #1e1a2e;
-      --text-2: #474063;
-      --muted: #78718c;
-      --line: #e8e4f4;
-      --line-soft: rgba(30, 26, 46, .07);
-
-      --shadow-sm: 0 2px 8px -4px rgba(45, 30, 110, .3);
-      --shadow: 0 10px 28px -18px rgba(45, 30, 110, .5);
-      --shadow-lg: 0 18px 40px -22px rgba(45, 30, 110, .55);
-      --logo-bg: #120c2b;
-    }
-
     /* ---------- 墨玉青（深色） ---------- */
     html[data-theme="ink"] {
       --brand: #2aa79b;
@@ -135,6 +110,56 @@
       --logo-bg: #060a0a;
     }
 
+    /* ---------- 藕荷紫 ---------- */
+    html[data-theme="violet"] {
+      --brand: #6e56cf;
+      --brand-2: #9b7ede;
+      --brand-soft: rgba(110, 86, 207, .13);
+      --brand-ring: rgba(110, 86, 207, .35);
+
+      --bg: #f8f6fc;
+      --bg-2: #ede9f7;
+      --card: #ffffff;
+      --card-2: #fcfbff;
+      --glass: rgba(248, 246, 252, .8);
+
+      --text: #1e1a2e;
+      --text-2: #474063;
+      --muted: #78718c;
+      --line: #e8e4f4;
+      --line-soft: rgba(30, 26, 46, .07);
+
+      --shadow-sm: 0 2px 8px -4px rgba(45, 30, 110, .3);
+      --shadow: 0 10px 28px -18px rgba(45, 30, 110, .5);
+      --shadow-lg: 0 18px 40px -22px rgba(45, 30, 110, .55);
+      --logo-bg: #120c2b;
+    }
+
+    /* ---------- 石墨灰（深色，无彩色） ---------- */
+    html[data-theme="stone"] {
+      --brand: #d4d4d8;
+      --brand-2: #8b8b93;
+      --brand-soft: rgba(212, 212, 216, .14);
+      --brand-ring: rgba(212, 212, 216, .4);
+
+      --bg: #131313;
+      --bg-2: #0c0c0d;
+      --card: #1a1a1b;
+      --card-2: #212123;
+      --glass: rgba(19, 19, 19, .76);
+
+      --text: #ededed;
+      --text-2: #c2c2c5;
+      --muted: #8f8f8f;
+      --line: #2b2b2d;
+      --line-soft: rgba(255, 255, 255, .06);
+
+      --shadow-sm: 0 2px 10px -4px rgba(0, 0, 0, .7);
+      --shadow: 0 12px 30px -18px rgba(0, 0, 0, .85);
+      --shadow-lg: 0 22px 46px -22px rgba(0, 0, 0, .9);
+      --logo-bg: #0a0a0a;
+    }
+
     /* ---------- 胭脂红 ---------- */
     html[data-theme="crimson"] {
       --brand: #b8324a;
@@ -158,31 +183,6 @@
       --shadow: 0 10px 28px -18px rgba(90, 20, 35, .48);
       --shadow-lg: 0 18px 40px -22px rgba(90, 20, 35, .5);
       --logo-bg: #1a0b0e;
-    }
-
-    /* ---------- 雾石灰 ---------- */
-    html[data-theme="stone"] {
-      --brand: #3f3f46;
-      --brand-2: #a8a29e;
-      --brand-soft: rgba(63, 63, 70, .12);
-      --brand-ring: rgba(63, 63, 70, .32);
-
-      --bg: #f6f6f5;
-      --bg-2: #eceae7;
-      --card: #ffffff;
-      --card-2: #fbfbfa;
-      --glass: rgba(246, 246, 245, .8);
-
-      --text: #23231f;
-      --text-2: #4a4a45;
-      --muted: #74736e;
-      --line: #e6e4e1;
-      --line-soft: rgba(35, 35, 31, .07);
-
-      --shadow-sm: 0 2px 8px -4px rgba(35, 35, 31, .28);
-      --shadow: 0 10px 28px -18px rgba(35, 35, 31, .48);
-      --shadow-lg: 0 18px 40px -22px rgba(35, 35, 31, .5);
-      --logo-bg: #17171a;
     }
 
     /* ==========================================================
@@ -1030,15 +1030,21 @@
       .bg-deco::before, .bg-deco::after { animation: none; }
     }
 
-    /* 入场动效：JS 为支持的浏览器追加 .reveal，进入视口后轻柔上浮；
-       动画结束由 JS 移除类名，避免覆盖卡片自身的 hover 过渡 */
-    .reveal {
+    /* 入场动效：进入视口时轻柔上浮。
+       初始隐藏由 <head> 的 data-reveal 提供 —— 无 JS、开了系统「减少动效」或脚本报错时，
+       那个属性会被移除，隐藏规则整体失效，内容天然可见，不会白屏。
+       .reveal 由 JS 追加、负责过渡；进入视口后加 .in 播放；
+       播完加 .done 钉住最终状态，同时把过渡还给卡片自身的 hover。 */
+    :where(html[data-reveal]) :where(.top-widgets > *, .sp-card, .nav-group) {
       opacity: 0;
       transform: translateY(18px);
+    }
+    .reveal {
       transition: opacity .6s ease, transform .6s cubic-bezier(.2, .8, .25, 1);
       will-change: opacity, transform;
     }
     .reveal.in { opacity: 1; transform: none; }
+    .done { opacity: 1; transform: none; }
   </style>
   <!-- 先于首屏渲染应用已保存的主题，避免闪白 -->
   <script>
@@ -1050,6 +1056,9 @@
             ? 'midnight' : 'emerald';
         }
         document.documentElement.setAttribute('data-theme', saved);
+        // 有 JS 才启用入场动效的「预隐藏」：
+        // 页面脚本会把这个属性移除（减少动效 / 出错时），移除后内容立刻可见。
+        document.documentElement.setAttribute('data-reveal', 'on');
       } catch (e) {}
     })();
   </script>
@@ -1096,24 +1105,24 @@
               <span class="theme-item-name">琥珀橙</span>
               <span class="theme-item-check" aria-hidden="true">✓</span>
             </button>
-            <button class="theme-item" type="button" role="menuitemradio" data-theme="violet">
-              <span class="theme-item-dot" style="background:linear-gradient(135deg,#9b7ede,#6e56cf)"></span>
-              <span class="theme-item-name">藕荷紫</span>
-              <span class="theme-item-check" aria-hidden="true">✓</span>
-            </button>
             <button class="theme-item" type="button" role="menuitemradio" data-theme="ink">
               <span class="theme-item-dot" style="background:linear-gradient(135deg,#45c3b6,#2aa79b)"></span>
               <span class="theme-item-name">墨玉青</span>
               <span class="theme-item-check" aria-hidden="true">✓</span>
             </button>
-            <button class="theme-item" type="button" role="menuitemradio" data-theme="crimson">
-              <span class="theme-item-dot" style="background:linear-gradient(135deg,#e05a72,#b8324a)"></span>
-              <span class="theme-item-name">胭脂红</span>
+            <button class="theme-item" type="button" role="menuitemradio" data-theme="violet">
+              <span class="theme-item-dot" style="background:linear-gradient(135deg,#9b7ede,#6e56cf)"></span>
+              <span class="theme-item-name">藕荷紫</span>
               <span class="theme-item-check" aria-hidden="true">✓</span>
             </button>
             <button class="theme-item" type="button" role="menuitemradio" data-theme="stone">
-              <span class="theme-item-dot" style="background:linear-gradient(135deg,#a8a29e,#3f3f46)"></span>
-              <span class="theme-item-name">雾石灰</span>
+              <span class="theme-item-dot" style="background:linear-gradient(135deg,#d4d4d8,#8b8b93)"></span>
+              <span class="theme-item-name">石墨灰</span>
+              <span class="theme-item-check" aria-hidden="true">✓</span>
+            </button>
+            <button class="theme-item" type="button" role="menuitemradio" data-theme="crimson">
+              <span class="theme-item-dot" style="background:linear-gradient(135deg,#e05a72,#b8324a)"></span>
+              <span class="theme-item-name">胭脂红</span>
               <span class="theme-item-check" aria-hidden="true">✓</span>
             </button>
           </div>
@@ -1176,31 +1185,31 @@
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🧰</span>工具 <span class="sp-count">4</span></h2>
       <p class="sp-sub">提升效率的小工具。</p>
       <div class="sp-grid">
-        <a class="sp-card" href="html/search.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/search.html">
           <span class="sp-tag">检索</span>
           <span class="sp-name">全站搜索</span>
           <p class="sp-desc">检索全部 937 篇文档，索引建在本地浏览器里，首页不受任何影响。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-translate.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-translate.html">
           <span class="sp-tag">翻译</span>
           <span class="sp-name">翻译工具</span>
           <p class="sp-desc">自动检测源语种，28 种语言互译，附翻译历史，结果本地缓存。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-quote-copy.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-quote-copy.html">
           <span class="sp-tag">工具</span>
           <span class="sp-name">文案快捷复制</span>
           <p class="sp-desc">10 条接单常用话术，一键复制，手机端直接转发给客户。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-standby.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-standby.html">
           <span class="sp-tag">工具</span>
           <span class="sp-name">待机展示</span>
           <p class="sp-desc">全屏屏保页，可自定义文字循环展示，默认显示待机时钟。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-quotes.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-quotes.html">
           <span class="sp-tag">收藏</span>
           <span class="sp-name">句子收藏</span>
           <p class="sp-desc">日常摘录的句子合集，点击任意一句即可复制，可持续补充。</p>
@@ -1214,37 +1223,37 @@
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">⚡</span>效率工具 <span class="sp-count">6</span></h2>
       <p class="sp-sub">日常和开发都用得上的小工具，全部在浏览器本地跑，数据不出本机。</p>
       <div class="sp-grid">
-        <a class="sp-card" href="html/tool-eyedropper.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-eyedropper.html">
           <span class="sp-tag">设计</span>
           <span class="sp-name">取色器</span>
           <p class="sp-desc">屏幕取色、WCAG 对比度检测、图片主色提取，配色好不好终于有据可依。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-textbox.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-textbox.html">
           <span class="sp-tag">文字</span>
           <span class="sp-name">文本工具箱</span>
           <p class="sp-desc">大小写转换、批量去重排序、中英标点互转、字数统计、密码生成。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-image.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-image.html">
           <span class="sp-tag">图片</span>
           <span class="sp-name">图片处理台</span>
           <p class="sp-desc">压到指定体积、格式互转、加文字水印、裁剪旋转，全程本地不上传。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-diff.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-diff.html">
           <span class="sp-tag">对比</span>
           <span class="sp-name">文本对比</span>
           <p class="sp-desc">左右两栏逐行比对，高亮标出到底改了哪几个词，忽略空格大小写可选。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-pomodoro.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-pomodoro.html">
           <span class="sp-tag">专注</span>
           <span class="sp-name">专注番茄钟</span>
           <p class="sp-desc">25 分钟一轮，配实时合成的雨声海浪白噪音，记下每天完成几个。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-qrcode.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-qrcode.html">
           <span class="sp-tag">工具</span>
           <span class="sp-name">二维码生成</span>
           <p class="sp-desc">网址或文本转二维码，配色与尺寸随意调，导出 PNG 或矢量 SVG。</p>
@@ -1258,31 +1267,31 @@
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🌌</span>氛围屏 <span class="sp-count">5</span></h2>
       <p class="sp-sub">打开就是一幅画，适合当屏保或壁纸。颜色都能自己调。</p>
       <div class="sp-grid">
-        <a class="sp-card" href="html/visual-aurora.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-aurora.html">
           <span class="sp-tag">氛围</span>
           <span class="sp-name">极光</span>
           <p class="sp-desc">缓慢流动的光斑与胶片颗粒，调色板选个主色，整片极光跟着变。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-starfield.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-starfield.html">
           <span class="sp-tag">氛围</span>
           <span class="sp-name">星空漫游</span>
           <p class="sp-desc">星野朝你飞来，按住屏幕进入穿越模式，星色自由调。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-rain.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-rain.html">
           <span class="sp-tag">氛围</span>
           <span class="sp-name">雨夜玻璃</span>
           <p class="sp-desc">窗外霓虹模糊成光斑，玻璃上雨珠下滑，敲一下会荡开。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-sky.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-sky.html">
           <span class="sp-tag">氛围</span>
           <span class="sp-name">实时天光</span>
           <p class="sp-desc">天空颜色跟着此刻时间走，深夜到黄昏各不相同。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-snow.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-snow.html">
           <span class="sp-tag">氛围</span>
           <span class="sp-name">雪落</span>
           <p class="sp-desc">三层视差雪花静静落下，手指划过能把雪拨开。</p>
@@ -1296,31 +1305,31 @@
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">👆</span>交互视觉 <span class="sp-count">5</span></h2>
       <p class="sp-sub">碰一下就有反馈的玩具，指针在哪它就跟着动。</p>
       <div class="sp-grid">
-        <a class="sp-card" href="html/visual-wave-grid.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-wave-grid.html">
           <span class="sp-tag">交互</span>
           <span class="sp-name">波浪点阵</span>
           <p class="sp-desc">手指划过激起波纹的点阵水面，可切线框，点色自选。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-fractal.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-fractal.html">
           <span class="sp-tag">交互</span>
           <span class="sp-name">分形缩放</span>
           <p class="sp-desc">滚轮或双指无限放大曼德博集，细节层层展开。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-constellation.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-constellation.html">
           <span class="sp-tag">交互</span>
           <span class="sp-name">粒子引力场</span>
           <p class="sp-desc">粒子被指针吸引、自动连线成星座，点击炸开再聚拢。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-text-warp.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-text-warp.html">
           <span class="sp-tag">交互</span>
           <span class="sp-name">文字形变</span>
           <p class="sp-desc">鼠标靠近，字被推开还会发亮，句子可切换。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-particle-text.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-particle-text.html">
           <span class="sp-tag">交互</span>
           <span class="sp-name">粒子文字</span>
           <p class="sp-desc">一句话碎成上千颗粒子，点一下吹散，过会儿重新聚拢。</p>
@@ -1334,31 +1343,31 @@
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">✨</span>生成器 <span class="sp-count">5</span></h2>
       <p class="sp-sub">玩完能带走一张图的工具，都能直接保存。</p>
       <div class="sp-grid">
-        <a class="sp-card" href="html/visual-poster.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-poster.html">
           <span class="sp-tag">生成</span>
           <span class="sp-name">句子海报</span>
           <p class="sp-desc">把收藏的句子做成 1080×1440 海报，四种模板，主色自选。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-mandala.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-mandala.html">
           <span class="sp-tag">生成</span>
           <span class="sp-name">曼陀罗</span>
           <p class="sp-desc">画一笔自动镜像出对称花纹，可随机生成，保存 PNG。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-gradient.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-gradient.html">
           <span class="sp-tag">生成</span>
           <span class="sp-name">渐变配色</span>
           <p class="sp-desc">一点就出一组好看的渐变，HEX 与 CSS 一键复制。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-noise.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-noise.html">
           <span class="sp-tag">生成</span>
           <span class="sp-name">噪声壁纸</span>
           <p class="sp-desc">分形噪声生成抽象纹理，每次都不一样，可存成手机壁纸。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/visual-pixel-avatar.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/visual-pixel-avatar.html">
           <span class="sp-tag">生成</span>
           <span class="sp-name">像素头像</span>
           <p class="sp-desc">输入名字生成对称像素头像，可下载当头像用。</p>
@@ -1372,13 +1381,13 @@
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🖌️</span>画板 <span class="sp-count">2</span></h2>
       <p class="sp-sub">写与画，一个写签名，一个正经画画。</p>
       <div class="sp-grid">
-        <a class="sp-card" href="html/tool-handwriting.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-handwriting.html">
           <span class="sp-tag">书写</span>
           <span class="sp-name">手写板</span>
           <p class="sp-desc">纸面随手写，导出透明底 PNG，签名、留言都好用。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-paint.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-paint.html">
           <span class="sp-tag">绘画</span>
           <span class="sp-name">画板</span>
           <p class="sp-desc">五种笔刷、橡皮、油漆桶、取色器、撤销重做。</p>
@@ -1392,79 +1401,79 @@
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🎮</span>小游戏 <span class="sp-count">13</span></h2>
       <p class="sp-sub">休闲来一局，最高分自动记录，键盘和手机滑动都能玩，右上色球随时换配色。</p>
       <div class="sp-grid">
-        <a class="sp-card" href="html/game-hub.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-hub.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">游戏中心</span>
           <p class="sp-desc">12 款小游戏一个页面逛完，按类型筛选，最高分纪录一目了然。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-gomoku.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-gomoku.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">五子棋</span>
           <p class="sp-desc">人机对弈连成五子，三档难度，胜场数自动累计。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-linkup.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-linkup.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">连连看</span>
           <p class="sp-desc">点两张相同图案即可消除，中间不通也能拐弯绕过去。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-2048.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-2048.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">2048</span>
           <p class="sp-desc">滑动或按方向键合并数字，目标是 2048，最高分自动保存。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-snake.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-snake.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">贪吃蛇</span>
           <p class="sp-desc">吃掉果实不断变长，撞墙或撞到自己就结束，速度会越来越快。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-tetris.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-tetris.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">俄罗斯方块</span>
           <p class="sp-desc">7-bag 随机、Hold 暂存、幽灵块预示落点，消行越多等级越高。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-minesweeper.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-minesweeper.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">扫雷</span>
           <p class="sp-desc">三档难度，首开不炸，右键或长按插旗，记录每一档的最快通关时间。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-flappy.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-flappy.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">Flappy</span>
           <p class="sp-desc">点击拍翅穿过管道缝隙，越往后越快，别碰管子和地面。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-pong.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-pong.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">Pong</span>
           <p class="sp-desc">鼠标或触摸操控挡板，先得 11 分获胜，回合越快球速越快。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-memory.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-memory.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">记忆翻牌</span>
           <p class="sp-desc">翻开两张相同的卡片完成配对，8 对和 12 对两档，步数越少越好。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-slide.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-slide.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">数字滑块</span>
           <p class="sp-desc">把方块滑进空位排成顺序，3×3 与 4×4 两档，记录最少步数。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-breakout.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-breakout.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">打砖块</span>
           <p class="sp-desc">左右移动挡板反弹小球，清空全部砖块进入下一关，球速越来越快。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/game-wordchain.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/game-wordchain.html">
           <span class="sp-tag">小游戏</span>
           <span class="sp-name">中文接龙</span>
           <p class="sp-desc">上一个词的尾字接下一个词的首字，60 秒内接得越多越好。</p>
@@ -1478,7 +1487,7 @@
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🛡️</span>行动突围护航社 <span class="sp-count">1</span></h2>
       <p class="sp-sub">内容已合并为统一版，主题风格在页面内一键切换。</p>
       <div class="sp-grid">
-        <a class="sp-card" href="html/tool-delta-escort.html" target="_blank" rel="noopener noreferrer">
+        <a class="sp-card" href="html/tool-delta-escort.html">
           <span class="sp-tag">统一版</span>
           <span class="sp-name">行动突围护航社</span>
           <p class="sp-desc">纯绿双护护航落地页，正文以 V6 定稿，5 套主题一键切换。</p>
@@ -1598,10 +1607,10 @@
         emerald:  { name: '青瓷绿' },
         midnight: { name: '夜航蓝' },
         sunset:   { name: '琥珀橙' },
-        violet:   { name: '藕荷紫' },
         ink:      { name: '墨玉青' },
-        crimson:  { name: '胭脂红' },
-        stone:    { name: '雾石灰' }
+        violet:   { name: '藕荷紫' },
+        stone:    { name: '石墨灰' },
+        crimson:  { name: '胭脂红' }
       };
       var STORE_KEY = 'kb-theme';
       var root = document.documentElement;
@@ -1717,29 +1726,89 @@
         })(spCards[ci]);
       }
 
-      /* ---------------- 入场动效：滚动到视口时轻柔上浮（尊重系统“减少动效”） ---------------- */
+      /* ---------------- 入场动效：滚动到视口时轻柔上浮（尊重系统“减少动效”） ----------------
+         顺序保证（三条一起才成立）：
+         1. IntersectionObserver 回调里的 entries 顺序**不保证**是文档顺序，
+            必须自己按文档序排一遍再播放；
+         2. 错峰延迟按「同一批进入视口的元素在批内的次序」算，
+            不能用全局索引取模 —— 全局取模（i % 6）会让后面板块的卡片 delay 反而变小，
+            视觉上就成了「第二个卡片比第一个先出现」；
+         3. 信息区 → 各板块卡片 → 导航分组 本来就是文档顺序，排完序自然满足；
+            同一批里就是「信息区先浮起，板块内从左到右依次浮起」。 */
       (function () {
-        if (!('IntersectionObserver' in window)) return;
-        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        var els = document.querySelectorAll('.top-widgets > *, .sp-card, .nav-group');
-        for (var i = 0; i < els.length; i++) {
-          els[i].classList.add('reveal');
-          // 同屏最多错开 6 个，长列表尾部不用干等
-          els[i].style.transitionDelay = (i % 6) * 55 + 'ms';
-        }
-        var io = new IntersectionObserver(function (entries) {
-          entries.forEach(function (en) {
-            if (!en.isIntersecting) return;
-            en.target.classList.add('in');
-            io.unobserve(en.target);
-            // 动画结束后摘掉 reveal 类，让卡片恢复自身的 hover 过渡
+        var root = document.documentElement;
+        var disable = function () { root.removeAttribute('data-reveal'); };
+        if (!('IntersectionObserver' in window)) { disable(); return; }
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { disable(); return; }
+        try {
+          var STEP = 60;   // 同批相邻元素的间隔
+          var MAX = 12;    // 单批最多错开几个，超出的同时出现（长板块不用干等）
+          var els = document.querySelectorAll('.top-widgets > *, .sp-card, .nav-group');
+          for (var i = 0; i < els.length; i++) {
+            els[i].classList.add('reveal');
+            els[i].__rank = i;          // 文档顺序，批内排序用
+          }
+
+          // 播一个元素：delay 毫秒后开始淡入；播完钉住最终状态
+          function play(el, delay) {
+            el.__played = true;
+            el.style.transitionDelay = delay + 'ms';
+            el.classList.add('in');
             setTimeout(function () {
-              en.target.classList.remove('reveal', 'in');
-              en.target.style.transitionDelay = '';
-            }, 1400);
-          });
-        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
-        for (var j = 0; j < els.length; j++) io.observe(els[j]);
+              // 摘掉 reveal / in：过渡还给卡片自身的 hover；
+              // .done 把最终状态钉住，免得又被预隐藏规则盖回透明
+              el.classList.remove('reveal', 'in');
+              el.classList.add('done');
+              el.style.transitionDelay = '';
+            }, delay + 650);
+          }
+
+          var io = new IntersectionObserver(function (entries) {
+            var fresh = [];
+            for (var k = 0; k < entries.length; k++) {
+              var en = entries[k];
+              if (!en.isIntersecting) continue;
+              if (en.target.__played) continue;
+              fresh.push(en.target);
+            }
+            if (!fresh.length) return;
+            // 批内按文档顺序排（observer 给的顺序不作数）
+            fresh.sort(function (a, b) { return a.__rank - b.__rank; });
+            var last = Math.min(fresh.length, MAX) - 1;
+            for (var j = 0; j < fresh.length; j++) {
+              var el = fresh[j];
+              io.unobserve(el);
+              play(el, (j > last ? last : j) * STEP);
+            }
+          }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
+          for (var m = 0; m < els.length; m++) io.observe(els[m]);
+
+          // 兜底：锚点跳转、刷新后浏览器恢复滚动位置、一路拉到页底 ——
+          // 中间那些被「跳过」的元素从没 intersecting 过，会永远停在透明态，
+          // 页底就是一片空白。这里按位置把它们补上。
+          var ticking = false;
+          function sweep() {
+            ticking = false;
+            for (var n = 0; n < els.length; n++) {
+              var e = els[n];
+              if (e.__played) continue;
+              if (e.getBoundingClientRect().bottom <= 0) {   // 已经滚过去了
+                io.unobserve(e);
+                play(e, 0);
+              }
+            }
+          }
+          function onScroll() {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(sweep);
+          }
+          window.addEventListener('scroll', onScroll, { passive: true });
+          window.addEventListener('resize', onScroll, { passive: true });
+          sweep();   // 初始就停在页面中段的情况
+        } catch (e) {
+          disable();
+        }
       })();
 
       /* ---------------- 顶部信息区：时钟 / 天气 / 每日一句 ---------------- */

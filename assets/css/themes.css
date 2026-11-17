@@ -13,20 +13,30 @@
      · 页面保留自己独有的变量时，写在自己的 <style> 里即可
        （同名变量以页面 <style> 为准，因为它在后面）
 
+   排列约定：**浅深浅深浅深浅** 交替，4 浅（emerald / sunset / violet / crimson）
+   + 3 深（midnight / ink / stone）。深浅交替的好处：面板里相邻两项底色一明一暗，
+   扫一眼就能看出当前项处在哪半区，划到一半也不会「连着三个一样」而失去对比。
+   本文件的块顺序 = 面板顺序 = theme-kit.js THEMES 数组顺序，三者必须一致。
+
    配色约定（改这里时一起守）：
    1. id 是持久化键（localStorage['tk_theme']）与防闪脚本的硬编码清单，
       换色相可以，改 id 会让老用户的主题失效 —— 别动。
-      **加主题 = 加一个新 id，并同步四处**（本文件、theme-kit.js 的 THEMES、
+      **加主题 = 加一个新 id，并同步五处**（本文件、theme-kit.js 的 THEMES、
       15 个页面防闪脚本的 id 数组、x.html 与 tool-standby.html 自带的变量块）。
-   2. 浅色五套（emerald / sunset / violet / crimson / stone）--accent 对白底
-      对比度 ≥ 4.5；深色两套（midnight / ink）--accent 对 --bg1 对比度 ≥ 4.5。
+   2. 浅色四套（emerald / sunset / violet / crimson）--accent 对白底
+      对比度 ≥ 4.5；深色三套（midnight / ink / stone）--accent 对 --bg1
+      对比度 ≥ 4.5。
    3. 七套色相拉开：绿 150° / 蓝 220° / 橙 25° / 紫 258° / 青 175° /
-      红 348° / 中性 0°（无彩色），相邻主题之间不做同色相微调，
+      中性 0°（无彩色）/ 红 348°，相邻主题之间不做同色相微调，
       避免「换来换去好像一样」。
    4. --accent2 是辅助色（渐变、图表），只做陪衬，不承担文字对比度。
+   5. --on-accent 是「压在强调色上的文字色」：浅色主题里强调色够深，
+      用白字（#fff）；深色主题里强调色够亮，必须换成深字，
+      否则亮蓝按钮配白字只有 2.5:1，看着发虚。
+      按钮用它：color: var(--on-accent, #fff)。
    ========================================================== */
 
-/* ---------- 默认（藕荷紫）：data-theme 缺失时的兜底 ---------- */
+/* ---------- 默认（藕荷紫，浅）：data-theme 缺失时的兜底 ---------- */
 :root {
   --bg1: #f8f6fc; --bg2: #ede9f7; --card: #fff; --text: #1e1a2e; --muted: #78718c;
   --line: rgba(30, 26, 46, .08); --accent: #6e56cf; --accent2: #9b7ede;
@@ -38,9 +48,10 @@
   --ghost-active: #f0ecf9; --ghost-bg: #fcfbff;
   --toast-bg: rgba(30, 26, 46, .94); --foot-note: #b8b2c7;
   --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(30, 26, 46, .18);
+  --on-accent: #fff;
 }
 
-/* ---------- 青瓷绿（浅） ----------
+/* ---------- 1. 青瓷绿（浅） ----------
    比原来的「翡翠绿」深两档、去灰：原 #2f9e6d 白底只有 3.0:1，
    当按钮底写白字发飘；现在 #1e7a4c 是 5.3:1，绿也更「青瓷」而非「豆绿」。 */
 html[data-theme="emerald"] {
@@ -54,11 +65,13 @@ html[data-theme="emerald"] {
   --ghost-active: #eaf3ed; --ghost-bg: #fbfdfc;
   --toast-bg: rgba(20, 33, 26, .94); --foot-note: #a9b8ae;
   --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(20, 33, 26, .18);
+  --on-accent: #fff;
 }
 
-/* ---------- 夜航蓝（深） ----------
+/* ---------- 2. 夜航蓝（深） ----------
    原「深海蓝」#5b9dff + #38c8f0 冷暖掺着，像两个来源拼的。
-   现在主色统一到 #7aa2f7（冷蓝），辅助色 #7dcfff 只做同族提亮。 */
+   现在主色统一到 #7aa2f7（冷蓝），辅助色 #7dcfff 只做同族提亮。
+   深色主题的按钮压深字（--on-accent），别再白字压亮蓝。 */
 html[data-theme="midnight"] {
   --bg1: #0b1020; --bg2: #070b14; --card: #121a2b; --text: #e6edf8; --muted: #8a9ab2;
   --line: #1e2938; --accent: #7aa2f7; --accent2: #7dcfff;
@@ -70,9 +83,10 @@ html[data-theme="midnight"] {
   --ghost-active: #16203a; --ghost-bg: #131c2e;
   --toast-bg: rgba(0, 0, 0, .75); --foot-note: #5f6f88;
   --logo-border: rgba(255, 255, 255, .10); --logo-shadow: 0 4px 14px rgba(0, 0, 0, .5);
+  --on-accent: #0b1020;
 }
 
-/* ---------- 琥珀橙（浅） ----------
+/* ---------- 3. 琥珀橙（浅） ----------
    原「暖阳橙」#f2762e 是屏幕橙，白底 2.6:1，看久了发烫。
    现在换成陶土琥珀 #bf5b1b（4.9:1），暖而不刺，辅助色 #e99342 留住「阳」的感觉。 */
 html[data-theme="sunset"] {
@@ -86,25 +100,10 @@ html[data-theme="sunset"] {
   --ghost-active: #f7efe6; --ghost-bg: #fefcf9;
   --toast-bg: rgba(43, 28, 21, .94); --foot-note: #c2ab9c;
   --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(80, 45, 20, .18);
+  --on-accent: #fff;
 }
 
-/* ---------- 藕荷紫（浅） ----------
-   原「紫罗兰」#635bff 是典型 SaaS 电光紫，饱和度过高、AI 味重。
-   现在降到 #6e56cf（4.9:1），往藕荷方向收，辅色 #9b7ede 做渐变。 */
-html[data-theme="violet"] {
-  --bg1: #f8f6fc; --bg2: #ede9f7; --card: #fff; --text: #1e1a2e; --muted: #78718c;
-  --line: rgba(30, 26, 46, .08); --accent: #6e56cf; --accent2: #9b7ede;
-  --accent-hi: #7d67d9; --accent-hi-2: #8d79e3;
-  --accent-ghost-bg: rgba(110, 86, 207, .09); --accent-ghost-line: rgba(110, 86, 207, .16);
-  --accent-shadow: 0 6px 18px rgba(110, 86, 207, .26);
-  --glow1: rgba(110, 86, 207, .18); --glow2: rgba(155, 126, 222, .14);
-  --glass: rgba(255, 255, 255, .82); --focus-bg: #f1edfa;
-  --ghost-active: #f0ecf9; --ghost-bg: #fcfbff;
-  --toast-bg: rgba(30, 26, 46, .94); --foot-note: #b8b2c7;
-  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(30, 26, 46, .18);
-}
-
-/* ---------- 墨玉青（深） ----------
+/* ---------- 4. 墨玉青（深） ----------
    原「墨石青」#2dd4bf 是 tailwind teal-400，深底上像荧光笔，长时间看累。
    现在降到 #2aa79b（对 #0d1112 有 6.3:1），背景也从绿味改成中性石墨，
    辅助色换成灰蓝 #5c8fa6 —— 这样「墨玉」的沉静感才立得住。 */
@@ -119,10 +118,47 @@ html[data-theme="ink"] {
   --ghost-active: #151d1f; --ghost-bg: #121819;
   --toast-bg: rgba(0, 0, 0, .75); --foot-note: #5c6868;
   --logo-border: rgba(255, 255, 255, .10); --logo-shadow: 0 4px 14px rgba(0, 0, 0, .5);
+  --on-accent: #071311;
 }
 
-/* ---------- 胭脂红（浅） ----------
-   补色相环 340°：此前七套里最缺的就是红，暖色只有琥珀橙一支。
+/* ---------- 5. 藕荷紫（浅） ----------
+   原「紫罗兰」#635bff 是典型 SaaS 电光紫，饱和度过高、AI 味重。
+   现在降到 #6e56cf（4.9:1），往藕荷方向收，辅色 #9b7ede 做渐变。 */
+html[data-theme="violet"] {
+  --bg1: #f8f6fc; --bg2: #ede9f7; --card: #fff; --text: #1e1a2e; --muted: #78718c;
+  --line: rgba(30, 26, 46, .08); --accent: #6e56cf; --accent2: #9b7ede;
+  --accent-hi: #7d67d9; --accent-hi-2: #8d79e3;
+  --accent-ghost-bg: rgba(110, 86, 207, .09); --accent-ghost-line: rgba(110, 86, 207, .16);
+  --accent-shadow: 0 6px 18px rgba(110, 86, 207, .26);
+  --glow1: rgba(110, 86, 207, .18); --glow2: rgba(155, 126, 222, .14);
+  --glass: rgba(255, 255, 255, .82); --focus-bg: #f1edfa;
+  --ghost-active: #f0ecf9; --ghost-bg: #fcfbff;
+  --toast-bg: rgba(30, 26, 46, .94); --foot-note: #b8b2c7;
+  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(30, 26, 46, .18);
+  --on-accent: #fff;
+}
+
+/* ---------- 6. 石墨灰（深） ----------
+   唯一一套无彩色主题：给「只想安静读文档 / 夜里不刺眼」的场景留一个不抢戏的选项。
+   主色用亮灰 #d4d4d8（对 #131313 有 11:1），靠明度而不是色相做层级，
+   因此所有强调元素（按钮、描边、角标）都是同一个色相，不会互相打架。
+   深底 + 亮灰按钮正好要靠 --on-accent 压深字，白字在这套上会糊成一片。 */
+html[data-theme="stone"] {
+  --bg1: #131313; --bg2: #0c0c0d; --card: #1a1a1b; --text: #ededed; --muted: #8f8f8f;
+  --line: #2b2b2d; --accent: #d4d4d8; --accent2: #8b8b93;
+  --accent-hi: #e4e4e7; --accent-hi-2: #f0f0f2;
+  --accent-ghost-bg: rgba(212, 212, 216, .10); --accent-ghost-line: rgba(212, 212, 216, .20);
+  --accent-shadow: 0 6px 18px rgba(0, 0, 0, .42);
+  --glow1: rgba(212, 212, 216, .10); --glow2: rgba(139, 139, 147, .10);
+  --glass: rgba(255, 255, 255, .05); --focus-bg: #232325;
+  --ghost-active: #212123; --ghost-bg: #1c1c1e;
+  --toast-bg: rgba(0, 0, 0, .75); --foot-note: #64646a;
+  --logo-border: rgba(255, 255, 255, .10); --logo-shadow: 0 4px 14px rgba(0, 0, 0, .5);
+  --on-accent: #131313;
+}
+
+/* ---------- 7. 胭脂红（浅） ----------
+   补色相环 348°：此前七套里最缺的就是红，暖色只有琥珀橙一支。
    主色 #b8324a 对白底 5.9:1，比「屏幕红」#ef4444 沉稳得多，
    也不容易和紫罗兰（258°）混。 */
 html[data-theme="crimson"] {
@@ -136,21 +172,5 @@ html[data-theme="crimson"] {
   --ghost-active: #f8eaec; --ghost-bg: #fdfbfc;
   --toast-bg: rgba(43, 20, 24, .94); --foot-note: #c4a7ac;
   --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(90, 20, 35, .18);
-}
-
-/* ---------- 雾石灰（浅） ----------
-   唯一一套无彩色主题：给「只想安静读文档」的场景留一个不抢戏的选项。
-   主色用近黑的暖灰 #3f3f46（对比 9.5:1），靠明度而不是色相做层级，
-   因此所有强调元素（按钮、描边、角标）都是同一个色相，不会互相打架。 */
-html[data-theme="stone"] {
-  --bg1: #f6f6f5; --bg2: #eceae7; --card: #fff; --text: #23231f; --muted: #74736e;
-  --line: rgba(35, 35, 31, .09); --accent: #3f3f46; --accent2: #a8a29e;
-  --accent-hi: #52525b; --accent-hi-2: #64646e;
-  --accent-ghost-bg: rgba(63, 63, 70, .08); --accent-ghost-line: rgba(63, 63, 70, .16);
-  --accent-shadow: 0 6px 18px rgba(35, 35, 31, .22);
-  --glow1: rgba(63, 63, 70, .12); --glow2: rgba(168, 162, 158, .14);
-  --glass: rgba(255, 255, 255, .84); --focus-bg: #f1f1ef;
-  --ghost-active: #ececea; --ghost-bg: #fbfbfa;
-  --toast-bg: rgba(35, 35, 31, .94); --foot-note: #b3b1ab;
-  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(35, 35, 31, .18);
+  --on-accent: #fff;
 }

@@ -275,6 +275,17 @@ header{
 header.solid{border-bottom-color:var(--line);background:var(--glass-solid)}
 .nav{display:flex;align-items:center;justify-content:space-between;gap:14px;height:66px}
 .nav-right{display:flex;align-items:center;gap:10px}
+/* 返回首页 */
+.back-btn{
+  flex:none;width:34px;height:34px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);background:var(--chip-bg);color:var(--text);
+  text-decoration:none;transition:transform .16s ease,border-color .16s ease,color .16s ease;
+}
+.back-btn svg{width:17px;height:17px;display:block}
+.back-btn:hover{border-color:var(--acid);color:var(--acid);transform:translateX(-2px)}
+.back-btn:active{transform:translateX(0) scale(.94)}
+.back-btn:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--text)}
 .brand svg{width:26px;height:26px;flex:none}
 .brand b{font-size:15px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
@@ -830,6 +841,7 @@ html[data-theme="amber"] .h-price{color:var(--acid-2)}
   } catch (e) {}
 })();
 </script>
+  <script src="../assets/js/nav-kit.js" defer></script>
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>
@@ -855,6 +867,9 @@ html[data-theme="amber"] .h-price{color:var(--acid-2)}
       <a href="#contact">联系</a>
     </nav>
     <div class="nav-right">
+      <a class="back-btn" href="../x.html" title="返回首页" aria-label="返回首页">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </a>
       <div class="theme-wrap">
         <button class="theme-btn" id="themeBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="themePanel" title="切换主题">
           <span class="theme-dot" aria-hidden="true"></span>

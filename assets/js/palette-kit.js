@@ -154,7 +154,10 @@
     if (el && el.classList.contains('on-light')) return true;
     if (el && el.closest && el.closest('.on-light')) return true;
     var t = document.documentElement.getAttribute('data-theme');
-    if (t === 'midnight' || t === 'ink') return false;
+    // 深色三套：夜航蓝 / 墨玉青 / 石墨灰。
+    // 加新深色主题时这里要一起加 —— 漏了的话，调色盘面板会在深底上用浅色面板，
+    // 一打开就是一块白，格格不入。
+    if (t === 'midnight' || t === 'ink' || t === 'stone') return false;
     if (t) return true;
     var bg = getComputedStyle(document.body).backgroundColor;
     var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(bg || '');

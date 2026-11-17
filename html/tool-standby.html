@@ -25,6 +25,7 @@
     --glow1: rgba(63, 160, 106, .08);
     --glow2: rgba(63, 160, 106, .05);
     --logo-glow: rgba(63, 160, 106, .35);
+    --on-brand: #fff;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; }
@@ -39,6 +40,24 @@
     -webkit-tap-highlight-color: transparent;
     user-select: none;
   }
+
+  /* ---------- 返回首页（待机页是全屏，没有页头，固定在左上角） ---------- */
+  .back-btn{
+    position:fixed;
+    left:calc(12px + env(safe-area-inset-left));
+    top:calc(12px + env(safe-area-inset-top));
+    z-index:70;
+    width:38px;height:38px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--line);background:var(--glass);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    color:var(--text);text-decoration:none;
+    transition:transform .16s ease,border-color .16s ease;
+  }
+  .back-btn svg{width:19px;height:19px;display:block;}
+  .back-btn:hover{transform:translateX(-2px);border-color:var(--brand);}
+  .back-btn:active{transform:translateX(0) scale(.94);}
+  .back-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 
   /* ---------- 默认待机内容（屏保态） ---------- */
   .stage {
@@ -196,12 +215,12 @@
   .cal-d.dim { color: var(--muted); opacity: .32; }
   .cal-d.today {
     background: var(--brand);
-    color: #fff;
+    color: var(--on-brand, #fff);
     font-weight: 700;
     box-shadow: 0 4px 14px -4px var(--logo-glow);
   }
   .cal-d.today .cal-d-sub { color: rgba(255, 255, 255, .82); }
-  .cal-d.today .cal-d-sub.term { color: #fff; }
+  .cal-d.today .cal-d-sub.term { color: var(--on-brand, #fff); }
   /* 节气当天恰好是农历初一：小字让位给节气，用左上小点提示「月初」 */
   .cal-d.first-mark { position: relative; }
   .cal-d.first-mark::after {
@@ -675,7 +694,7 @@
     transition: filter .15s, transform .1s;
   }
   .editor-actions button:active { transform: scale(.97); }
-  .btn-save { background: var(--brand); color: #04120b; }
+  .btn-save { background: var(--brand); color: var(--on-brand, #fff); }
   .btn-clear { background: transparent; border: 1px solid var(--line) !important; color: var(--muted); }
   .btn-cancel { background: rgba(255, 255, 255, .06); color: var(--text); }
   .btn-save:hover, .btn-clear:hover, .btn-cancel:hover { filter: brightness(1.12); }
@@ -711,7 +730,7 @@
     border: none;
     border-radius: 999px;
     background: var(--brand);
-    color: #fff;
+    color: var(--on-brand, #fff);
     font-family: inherit;
     font-size: .68rem;
     font-weight: 700;
@@ -723,60 +742,73 @@
   .tech-copy:hover { filter: brightness(1.08); }
   .tech-copy:active { transform: translateY(1px); }
   .tech-copy.done { background: var(--brand-soft); color: var(--brand); }
-  .tech-copy.failed { background: var(--muted); color: #fff; }
+  .tech-copy.failed { background: var(--muted); color: var(--on-brand, #fff); }
 
-  /* ---------- 主题（theme-kit）：青瓷绿 / 夜航蓝 / 琥珀橙 / 藕荷紫 / 墨玉青 / 胭脂红 / 雾石灰，默认夜航蓝 ----------
+  /* ---------- 主题（theme-kit）：青瓷绿 / 夜航蓝 / 琥珀橙 / 墨玉青 / 藕荷紫 / 石墨灰 / 胭脂红，默认夜航蓝 ----------
+     顺序与 themes.css、theme-kit.js 面板一致：浅深浅深浅深浅。
      夜航蓝这一套以前是缺的：防闪脚本默认就是 midnight，
      但没有对应的变量块 → 首次访问「夜航蓝」根本不生效，只能回落到 :root 的青瓷绿。
      色值与 ../assets/css/themes.css 保持同步（这里变量名不同，是屏保页自己的命名）。 */
-  html[data-theme="midnight"]{
-    --bg1:#0b1020; --bg2:#070b14; --panel:#121a2b; --line:#1e2938;
-    --text:#e6edf8; --muted:#8a9ab2; --brand:#7aa2f7; --brand-soft:rgba(122,162,247,.14);
-    --glass:rgba(255,255,255,.05); --scrim:rgba(7,11,20,.9);
-    --glow1:rgba(122,162,247,.08); --glow2:rgba(125,207,255,.05); --logo-glow:rgba(122,162,247,.3);
-  }
   html[data-theme="emerald"]{
     --bg1:#f4f9f5; --bg2:#e6efe9; --panel:#ffffff; --line:rgba(20,33,26,.12);
     --text:#14211a; --muted:#6c7f74; --brand:#1e7a4c; --brand-soft:rgba(30,122,76,.14);
     --glass:rgba(20,33,26,.05); --scrim:rgba(244,249,245,.9);
     --glow1:rgba(30,122,76,.08); --glow2:rgba(63,160,106,.05); --logo-glow:rgba(30,122,76,.3);
+    --on-brand:#fff;
+  }
+  html[data-theme="midnight"]{
+    --bg1:#0b1020; --bg2:#070b14; --panel:#121a2b; --line:#1e2938;
+    --text:#e6edf8; --muted:#8a9ab2; --brand:#7aa2f7; --brand-soft:rgba(122,162,247,.14);
+    --glass:rgba(255,255,255,.05); --scrim:rgba(7,11,20,.9);
+    --glow1:rgba(122,162,247,.08); --glow2:rgba(125,207,255,.05); --logo-glow:rgba(122,162,247,.3);
+    --on-brand:#0b1020;
   }
   html[data-theme="sunset"]{
     --bg1:#fdf8f3; --bg2:#f8eade; --panel:#ffffff; --line:rgba(43,28,21,.12);
     --text:#2b1c15; --muted:#8e7668; --brand:#bf5b1b; --brand-soft:rgba(191,91,27,.13);
     --glass:rgba(43,28,21,.05); --scrim:rgba(253,248,243,.9);
     --glow1:rgba(191,91,27,.08); --glow2:rgba(233,147,66,.05); --logo-glow:rgba(191,91,27,.3);
-  }
-  html[data-theme="violet"]{
-    --bg1:#f8f6fc; --bg2:#ede9f7; --panel:#ffffff; --line:rgba(30,26,46,.12);
-    --text:#1e1a2e; --muted:#78718c; --brand:#6e56cf; --brand-soft:rgba(110,86,207,.12);
-    --glass:rgba(30,26,46,.05); --scrim:rgba(248,246,252,.9);
-    --glow1:rgba(110,86,207,.08); --glow2:rgba(155,126,222,.05); --logo-glow:rgba(110,86,207,.3);
+    --on-brand:#fff;
   }
   html[data-theme="ink"]{
     --bg1:#0d1112; --bg2:#080b0c; --panel:#141a1b; --line:#222a2b;
     --text:#e3e9e9; --muted:#7e8c8c; --brand:#2aa79b; --brand-soft:rgba(42,167,155,.12);
     --glass:rgba(255,255,255,.05); --scrim:rgba(3,5,7,.88);
     --glow1:rgba(42,167,155,.07); --glow2:rgba(92,143,166,.05); --logo-glow:rgba(42,167,155,.3);
+    --on-brand:#071311;
+  }
+  html[data-theme="violet"]{
+    --bg1:#f8f6fc; --bg2:#ede9f7; --panel:#ffffff; --line:rgba(30,26,46,.12);
+    --text:#1e1a2e; --muted:#78718c; --brand:#6e56cf; --brand-soft:rgba(110,86,207,.12);
+    --glass:rgba(30,26,46,.05); --scrim:rgba(248,246,252,.9);
+    --glow1:rgba(110,86,207,.08); --glow2:rgba(155,126,222,.05); --logo-glow:rgba(110,86,207,.3);
+    --on-brand:#fff;
+  }
+  html[data-theme="stone"]{
+    --bg1:#131313; --bg2:#0c0c0d; --panel:#1a1a1b; --line:#2b2b2d;
+    --text:#ededed; --muted:#8f8f8f; --brand:#d4d4d8; --brand-soft:rgba(212,212,216,.12);
+    --glass:rgba(255,255,255,.05); --scrim:rgba(3,3,4,.88);
+    --glow1:rgba(212,212,216,.06); --glow2:rgba(139,139,147,.05); --logo-glow:rgba(212,212,216,.3);
+    --on-brand:#131313;
   }
   html[data-theme="crimson"]{
     --bg1:#fdf6f7; --bg2:#f7e8eb; --panel:#ffffff; --line:rgba(43,20,24,.12);
     --text:#2b1418; --muted:#8b7076; --brand:#b8324a; --brand-soft:rgba(184,50,74,.13);
     --glass:rgba(43,20,24,.05); --scrim:rgba(253,246,247,.9);
     --glow1:rgba(184,50,74,.08); --glow2:rgba(224,90,114,.05); --logo-glow:rgba(184,50,74,.3);
-  }
-  html[data-theme="stone"]{
-    --bg1:#f6f6f5; --bg2:#eceae7; --panel:#ffffff; --line:rgba(35,35,31,.12);
-    --text:#23231f; --muted:#74736e; --brand:#3f3f46; --brand-soft:rgba(63,63,70,.13);
-    --glass:rgba(35,35,31,.05); --scrim:rgba(246,246,245,.9);
-    --glow1:rgba(63,63,70,.08); --glow2:rgba(168,162,158,.05); --logo-glow:rgba(63,63,70,.3);
+    --on-brand:#fff;
   }
 </style>
+  <script src="../assets/js/nav-kit.js" defer></script>
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>
 </head>
 <body>
+
+  <a class="back-btn" href="../x.html" title="返回首页" aria-label="返回首页">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+  </a>
 
   <!-- 默认待机内容（无自定义文字时展示） -->
   <div class="stage" id="stageDefault">

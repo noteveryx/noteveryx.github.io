@@ -50,7 +50,7 @@ knowledge-base/
 ├── assets/                    # 静态资源
 │   ├── css/
 │   │   ├── vue.css            # docsify 主题；字体已本地化（@font-face 指向 ../fonts/）
-│   │   ├── themes.css         # 独立页面 7 套主题变量（emerald/midnight/sunset/violet/ink/crimson/stone）
+│   │   ├── themes.css         # 独立页面 7 套主题变量（emerald/midnight/sunset/ink/violet/stone/crimson，深浅交替）
 │   │   ├── theme-kit.css      # 主题切换按钮 + 面板
 │   │   ├── toolbox.css        # 工具箱页骨架（页头 / tab / 卡片 / 输入 / 按钮）
 │   │   ├── game-kit.css       # 游戏页骨架（HUD / 工具列 / 方向键）
@@ -392,7 +392,7 @@ buildPanel(panel, {
 | 检索 | 1 | `search.html` | `toolbox.css/js` | `x.html` → 工具 |
 | 导航 | 1 | `x.html` | 独立样式（顶栏 + 卡片网格） | 站点根路径 |
 
-所有独立页的 `<head>` 引用顺序固定为：`viewport` → `theme-color` → favicon → `themes.css` → 套件 CSS → **主题 boot 内联脚本** → `defer` 引各套件 JS。顺序别乱：主题 boot 必须在 CSS 之后、`theme-kit.js` 之前，否则首屏会闪一下默认色。
+所有独立页的 `<head>` 引用顺序固定为：`viewport` → `theme-color` → favicon → `themes.css` → 套件 CSS → **主题 boot 内联脚本** → `defer` 引各套件 JS（含 `nav-kit.js`）。顺序别乱：主题 boot 必须在 CSS 之后、`theme-kit.js` 之前，否则首屏会闪一下默认色。
 
 #### 7.7.2 工具页（13 个）
 
@@ -460,26 +460,92 @@ buildPanel(panel, {
 
 | 文件 | 作用 | 谁在用 | 关键 API / 约定 |
 | --- | --- | --- | --- |
-| `themes.css` | 7 套主题变量（青瓷绿 / 夜航蓝 / 琥珀橙 / 藕荷紫 / 墨玉青 / 胭脂红 / 雾石灰） | 所有独立页 | `data-theme` 取 `emerald / midnight / sunset / violet / ink / crimson / stone`（**id 是 localStorage 键，换色可以、换 id 不行**）；换色或加主题要同步五处：本文件、`theme-kit.js` 的 `THEMES`（色点 + `meta`）、**15 个页面防闪脚本里的 id 数组**（漏改会导致新主题被当成非法值回落到默认）、`x.html` 内联的 7 套变量与面板色点、`tool-standby.html` 自带的 7 套 |
+| `themes.css` | 7 套主题变量（青瓷绿 / 夜航蓝 / 琥珀橙 / 墨玉青 / 藕荷紫 / 石墨灰 / 胭脂红，**浅深浅深浅深浅**交替） | 所有独立页 | `data-theme` 取 `emerald / midnight / sunset / ink / violet / stone / crimson`（**id 是 localStorage 键，换色可以、换 id 不行**）；换色或加主题要同步五处：本文件、`theme-kit.js` 的 `THEMES`（色点 + `meta`）、**15 个页面防闪脚本里的 id 数组**（漏改会导致新主题被当成非法值回落到默认）、`x.html` 内联的 7 套变量与面板色点、`tool-standby.html` 自带的 7 套；**面板顺序三处必须一致**（本文件块顺序 = `THEMES` 数组顺序 = `x.html` 面板按钮顺序） |
 | `theme-kit.css/js` | 主题切换按钮 + 面板 | 工具页、生成器页 | 自动挂到页头；主题存 `localStorage['tk_theme']` |
 | `toolbox.css/js` | 工具箱页骨架 | 工具页、`search.html` | `ToolBox.mount(root, {title, sub, storageKey, tabs})`；工具方法 `ToolBox.el / toast / copy` |
 | `game-kit.css/js` | 游戏页骨架 | 12 个游戏 | `GameKit.create(opts)` 负责 HUD / 工具列 / D-pad / 返回 |
 | `palette-kit.css/js` | 调色盘悬浮球 + 面板 | 画板、视觉页、游戏 | 触发球挂在页面自己的 `.pk` 元素里；颜色跟随主题 |
 | `fs-kit.js` | 全屏按钮 | 全部独立页 | 自动避让右下角固定 UI；页面已有 `#btnFull` 时不重复挂 |
+| `nav-kit.js` | 返回按钮显隐 | **全部 42 个独立页** | 只有从站内页面跳进来才显示返回按钮，见 7.7.8 |
 | `save-kit.js` | 保存 / 导出 | 句子收藏、部分视觉页 | canvas → 图片 / 文本导出 |
 | `text-kit.css/js` + `quotes-data.js` | 句子条组件 | 粒子文字 / 海报 / 文字形变 | `TextKit.mountBar(host, {layout, limit, value, onChange})` |
 | `qrcode.js` | 二维码生成 | 二维码页 | 本地实现，无外链 |
 | `translate-kit.js` | 页面翻译 | **全部 42 页 + `x.html`** | 见 7.8.1 |
 | `dock-kit.js` | 手机端工具坞 | **全部 42 页 + `x.html`** | 见 7.8.2 |
 
+> **按钮压在强调色上的文字色**：用 `var(--on-accent, #fff)`（屏保页是 `var(--on-brand, #fff)`），不要写死 `#fff`。
+> 浅色四套的强调色够深，白字没问题；深色三套（夜航蓝 / 墨玉青 / 石墨灰）的强调色是亮色，
+> 白字压在亮蓝上只有 2.5:1，会糊成一片 —— `--on-accent` 给这三套发深色字，才是「亮底 + 深字」。
+
 #### 7.7.6 新增一个页面的标准流程
 
 1. **复制最接近的页面**：工具页抄 `tool-textbox.html`，视觉页抄 `visual-noise.html`，游戏页抄 `game-snake.html`。
-2. **`<head>` 引用顺序**：`themes.css` → 套件 CSS → 主题 boot 内联脚本 → `theme-kit.js` / 套件 JS / `translate-kit.js` / `dock-kit.js`（全部 `defer`）。
+2. **`<head>` 引用顺序**：`themes.css` → 套件 CSS → 主题 boot 内联脚本 → `theme-kit.js` / 套件 JS / **`nav-kit.js`** / `translate-kit.js` / `dock-kit.js`（全部 `defer`）。
 3. **工具页骨架**：`<body class="tb-page">`、`<div id="tbRoot"></div>`、`ToolBox.mount(...)`，并把 `<meta name="theme-color">` 改成该页主题色。
 4. **注册到导航**：在 `x.html` 加一张 `.sp-card` 卡片，并在 JS 的 `CARD_ICONS` 映射表里加 emoji 图标（不加就没有图标徽章）；游戏要另加到 `game-hub.html` 的卡片网格。
 5. **同步文案里的数量**：`x.html` 搜索卡片写着「检索全部 937 篇文档」，`html/` 页面卡片写着「42 个页面」，加文档 / 加页面后记得改（本文档正文里的篇数口径也要跟着改）。
 6. **新增悬浮按钮时**：要么放进页面的 `.ui.tools` 容器，要么调用 `DockKit.add(node)`，否则手机端不会被工具坞收纳（见 7.8.2）。
+
+#### 7.7.7 `x.html` 的滚动入场动效（顺序保证）
+
+信息区 → 各板块卡片 → 导航分组，进入视口时**按文档顺序依次浮起**。改这段逻辑前先看三条约定：
+
+1. **延迟按「同一批进入视口的元素在批内的次序」算，不能用全局索引取模。**
+   原来写的是 `(i % 6) * 55` —— 第 7 个元素起延迟又从 0 重新开始，于是板块二的第一张卡片
+   延迟反而比板块一最后几张小，视觉上就成了「第二个卡片比第一个先加载」。
+   现在改成批内序号 `k * 60`，一批最多错开 12 个，超出的同时出现。
+2. **IntersectionObserver 给的 `entries` 顺序不作数**，必须自己按 `__rank`（文档顺序）排一遍再播放。
+3. **预隐藏由 `<head>` 的 `data-reveal` 提供**：`html[data-reveal]` 选择器把目标元素初始设为透明，
+   JS 负责加 `.reveal`（过渡）、进入视口后加 `.in`（播放）、播完加 `.done`（钉住最终状态）。
+   这样元素从第一帧就是透明的，不会出现「先显示 → 突然消失 → 再浮现」的闪烁。
+   **降级**：无 JS、开了系统「减少动效」、或脚本报错时，脚本会移除 `data-reveal`，隐藏规则整体失效，内容天然可见（不会白屏）。
+
+**必须保留的兜底**：`sweep()` —— 锚点跳转、刷新后浏览器恢复滚动位置、一路拉到页底时，
+中间那些被「跳过」的元素从没 intersecting 过，会永远停在透明态，页底一片空白。
+所以 `scroll` / `resize` 时要按位置扫一遍：元素底边已在视口上方（`bottom <= 0`）的直接补上。
+
+**验证方式**：用 playwright 记录每个目标元素 opacity 首次 ≥ 0.9 的时间戳，
+按文档序检查是否单调递增；再跳到页底，确认 52 个目标元素全部可见（`hidden` 为 0）。
+
+#### 7.7.8 返回按钮与卡片打开方式
+
+**返回按钮（42 个页面全覆盖）**：
+
+| 来源 | 类名 | 说明 |
+| --- | --- | --- |
+| `toolbox.js` | `.tb-back` | 工具页骨架自动生成，`opts.back` 可指定 |
+| `game-kit.js` | `.gk-back` | 游戏页自动生成；**从 `game-hub.html` 进来就回游戏中心**，否则回首页（靠 `document.referrer` 判断） |
+| `search.html` | `.tb-back` | 页面自带 |
+| 视觉页 / 手写 / 画板 | `.ui.back` / `.back` | 页面自带 |
+| 句子收藏 / 快捷复制 / 待机展示 / 行动突围护航社 | `.back-btn` | 这 4 个页没有页头骨架，返回按钮是手写的 |
+
+**新增页面时必须自带返回入口**，否则用户进得去出不来。巡检脚本要同时判三件事：
+元素存在 → 可见（尺寸非 0、opacity 非 0）→ 指向 `x.html` 或 `game-hub.html`。
+
+**返回按钮只在「从站内进来」时显示**（`assets/js/nav-kit.js`，全部 42 个独立页都要引）：
+
+| 场景 | `document.referrer` | 返回按钮 |
+| --- | --- | --- |
+| 从 `x.html` 点卡片进入 | 站内 | **显示** |
+| 进子页后再刷新 | 站内（referrer 保留） | **显示** |
+| 从 `game-hub.html` 进游戏 | 站内 | **显示**（返回目标仍是游戏中心） |
+| 直接打开 / 收藏夹 / 复制链接 | 空 | 不显示 |
+| 从站外网站跳入 | 外站 | 不显示 |
+
+判定逻辑在 `nav-kit.js`：referrer 同源且不是本页 → 给 `<html>` 加 `.no-back`，
+再用 CSS 隐藏 `a.tb-back / a.gk-back / a.ui.back / a.back / a.back-btn`。
+**用 CSS class 而不是 JS 直接隐藏**，因为返回按钮有一半是运行时插进来的
+（`toolbox.js` 的 `.tb-back`、`game-kit.js` 的 `.gk-back`），CSS 才能无差别覆盖。
+
+> 直接打开的页面之所以不给返回按钮：那种场景下「返回」无处可退，
+> 浏览器后退键就够了，摆个死按钮反而误导。
+
+**卡片打开方式**：`x.html` 的 42 张站内卡片（`.sp-card`）**在当前标签页打开**，
+不写 `target="_blank"`；30 个快捷导航外链（`.nav-link`）保持新标签页打开。
+
+> ⚠️ 站内卡片要去掉 `target="_blank"` 时，**`rel="noopener noreferrer"` 也必须一起去掉**：
+> `noreferrer` 会清空 `document.referrer`，`game-kit.js` 里「从游戏中心进来就回游戏中心」
+> 的判断就失效了，游戏页的返回按钮会一律指回首页。
 
 ---
 

@@ -65,12 +65,13 @@
   }
   .btn:hover{border-color:var(--accent);color:var(--accent);}
   .btn:active{transform:scale(.96);}
-  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
-  .btn.primary:hover{color:#fff;filter:brightness(1.06);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff);}
+  .btn.primary:hover{color:var(--on-accent,#fff);filter:brightness(1.06);}
 
   .hint{font-size:12px;color:var(--muted);text-align:center;margin:16px 0 0;}
   @media (max-width:520px){ .code{flex:1 1 45%;} }
 </style>
+  <script src="../assets/js/nav-kit.js" defer></script>
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>
