@@ -11,9 +11,9 @@
  *   1. <head> 里加一行防闪脚本（在样式表之后、正文渲染前设置 data-theme）：
  *      <script>try{var t=localStorage.getItem('tk_theme');document
  *        .documentElement.setAttribute('data-theme',
- *        ['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'violet')
+ *        ['emerald','midnight','sunset','violet','ink','crimson','stone'].indexOf(t)>-1?t:'violet')
  *      }catch(e){}</script>
- *      五个 id 是持久化契约，换名字换颜色都行，别改 id。
+ *      七个 id 是持久化契约，换名字换颜色都行，别改 id。
  *   2. 引入 theme-kit.css 与本文件。
  *   3. CSS 里按 data-theme 写变量覆盖（五套 id 见下 THEMES）。
  */
@@ -28,7 +28,9 @@
     { id: 'midnight', name: '夜航蓝', c1: '#7aa2f7', c2: '#7dcfff', meta: '#0b1020' },
     { id: 'sunset',   name: '琥珀橙', c1: '#bf5b1b', c2: '#e99342', meta: '#fdf8f3' },
     { id: 'violet',   name: '藕荷紫', c1: '#6e56cf', c2: '#9b7ede', meta: '#f8f6fc' },
-    { id: 'ink',      name: '墨玉青', c1: '#2aa79b', c2: '#5c8fa6', meta: '#0d1112' }
+    { id: 'ink',      name: '墨玉青', c1: '#2aa79b', c2: '#5c8fa6', meta: '#0d1112' },
+    { id: 'crimson',  name: '胭脂红', c1: '#b8324a', c2: '#e05a72', meta: '#fdf6f7' },
+    { id: 'stone',    name: '雾石灰', c1: '#3f3f46', c2: '#a8a29e', meta: '#f6f6f5' }
   ];
   var KEY = 'tk_theme';
 

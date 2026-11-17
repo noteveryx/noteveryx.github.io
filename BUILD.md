@@ -50,7 +50,7 @@ knowledge-base/
 ├── assets/                    # 静态资源
 │   ├── css/
 │   │   ├── vue.css            # docsify 主题；字体已本地化（@font-face 指向 ../fonts/）
-│   │   ├── themes.css         # 独立页面 5 套主题变量（emerald/midnight/sunset/violet/ink）
+│   │   ├── themes.css         # 独立页面 7 套主题变量（emerald/midnight/sunset/violet/ink/crimson/stone）
 │   │   ├── theme-kit.css      # 主题切换按钮 + 面板
 │   │   ├── toolbox.css        # 工具箱页骨架（页头 / tab / 卡片 / 输入 / 按钮）
 │   │   ├── game-kit.css       # 游戏页骨架（HUD / 工具列 / 方向键）
@@ -154,7 +154,7 @@ docsify 自带：点一下回到 `README.md`，那里有今日新增的文章列
 | 🛡️ 行动突围护航社 | 1 | 独立活动页 |
 | 🧭 快捷导航 | 30 | 常用外部站点直达 |
 
-页面本身附带：**主题切换**（5 套，存 `tk_theme`）、**页面翻译**（28 种语言，存 `kb_translate_lang`）、卡片图标徽章、滚动入场动效、实时时间 + 两地天气。
+页面本身附带：**主题切换**（7 套，存 `tk_theme`）、**页面翻译**（28 种语言，存 `kb_translate_lang`）、卡片图标徽章、滚动入场动效、实时时间 + 两地天气。
 
 手机端所有悬浮工具按钮会收进**可折叠工具坞**（右下或右上角 `⋮`），详见 7.8.2。
 
@@ -369,7 +369,7 @@ buildPanel(panel, {
 - 点按钮类的参数（如翻转按钮）不走 `input` 事件，按钮回调里要手动调 `ui.refresh()`。
 
 **验证方式**（改完必跑）：
-`layout-regress` 检测脚本扫 320/360/390/414/480/640/768/1024/1280/1920 十档宽度 × 5 套主题，
+`layout-regress` 检测脚本扫 320/360/390/414/480/640/768/1024/1280/1920 十档宽度 × 7 套主题，
 查三类问题：横向溢出、标题文字被下方元素压住（间距 < 6px）、移动端输入框字号 < 16px。
 修复前 178 个问题，修复后 **0 个**。
 
@@ -460,7 +460,7 @@ buildPanel(panel, {
 
 | 文件 | 作用 | 谁在用 | 关键 API / 约定 |
 | --- | --- | --- | --- |
-| `themes.css` | 5 套主题变量（青瓷绿 / 夜航蓝 / 琥珀橙 / 藕荷紫 / 墨玉青） | 所有独立页 | `data-theme` 取 `emerald / midnight / sunset / violet / ink`（**id 是 localStorage 键，换色可以、换 id 不行**）；换色要同步四处：本文件、`theme-kit.js` 的 `THEMES`（色点 + `meta`）、`x.html` 内联的 5 套变量与面板色点、`tool-standby.html` 自带的 5 套 |
+| `themes.css` | 7 套主题变量（青瓷绿 / 夜航蓝 / 琥珀橙 / 藕荷紫 / 墨玉青 / 胭脂红 / 雾石灰） | 所有独立页 | `data-theme` 取 `emerald / midnight / sunset / violet / ink / crimson / stone`（**id 是 localStorage 键，换色可以、换 id 不行**）；换色或加主题要同步五处：本文件、`theme-kit.js` 的 `THEMES`（色点 + `meta`）、**15 个页面防闪脚本里的 id 数组**（漏改会导致新主题被当成非法值回落到默认）、`x.html` 内联的 7 套变量与面板色点、`tool-standby.html` 自带的 7 套 |
 | `theme-kit.css/js` | 主题切换按钮 + 面板 | 工具页、生成器页 | 自动挂到页头；主题存 `localStorage['tk_theme']` |
 | `toolbox.css/js` | 工具箱页骨架 | 工具页、`search.html` | `ToolBox.mount(root, {title, sub, storageKey, tabs})`；工具方法 `ToolBox.el / toast / copy` |
 | `game-kit.css/js` | 游戏页骨架 | 12 个游戏 | `GameKit.create(opts)` 负责 HUD / 工具列 / D-pad / 返回 |

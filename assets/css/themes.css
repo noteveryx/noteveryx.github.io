@@ -1,5 +1,5 @@
 /* ==========================================================
-   themes.css —— 公共主题变量（theme-kit 的 5 套主题）
+   themes.css —— 公共主题变量（theme-kit 的 7 套主题）
 
    为什么抽出来：
    主题清单原本在三个地方各写一遍 —— theme-kit.js 的 THEMES 数组、
@@ -9,17 +9,20 @@
    导致「切到深海蓝没反应」。
 
    现在只维护这一份：
-     · 页面引本文件 → 五套主题变量自动齐全，不会再漏
+     · 页面引本文件 → 七套主题变量自动齐全，不会再漏
      · 页面保留自己独有的变量时，写在自己的 <style> 里即可
        （同名变量以页面 <style> 为准，因为它在后面）
 
    配色约定（改这里时一起守）：
    1. id 是持久化键（localStorage['tk_theme']）与防闪脚本的硬编码清单，
       换色相可以，改 id 会让老用户的主题失效 —— 别动。
-   2. 浅色三套（emerald / sunset / violet）--accent 对白底对比度 ≥ 4.5；
-      深色两套（midnight / ink）--accent 对 --bg1 对比度 ≥ 4.5。
-   3. 五套色相拉开：绿 150° / 蓝 220° / 橙 25° / 紫 258° / 青 175°，
-      相邻主题之间不做同色相微调，避免「换来换去好像一样」。
+      **加主题 = 加一个新 id，并同步四处**（本文件、theme-kit.js 的 THEMES、
+      15 个页面防闪脚本的 id 数组、x.html 与 tool-standby.html 自带的变量块）。
+   2. 浅色五套（emerald / sunset / violet / crimson / stone）--accent 对白底
+      对比度 ≥ 4.5；深色两套（midnight / ink）--accent 对 --bg1 对比度 ≥ 4.5。
+   3. 七套色相拉开：绿 150° / 蓝 220° / 橙 25° / 紫 258° / 青 175° /
+      红 348° / 中性 0°（无彩色），相邻主题之间不做同色相微调，
+      避免「换来换去好像一样」。
    4. --accent2 是辅助色（渐变、图表），只做陪衬，不承担文字对比度。
    ========================================================== */
 
@@ -116,4 +119,38 @@ html[data-theme="ink"] {
   --ghost-active: #151d1f; --ghost-bg: #121819;
   --toast-bg: rgba(0, 0, 0, .75); --foot-note: #5c6868;
   --logo-border: rgba(255, 255, 255, .10); --logo-shadow: 0 4px 14px rgba(0, 0, 0, .5);
+}
+
+/* ---------- 胭脂红（浅） ----------
+   补色相环 340°：此前七套里最缺的就是红，暖色只有琥珀橙一支。
+   主色 #b8324a 对白底 5.9:1，比「屏幕红」#ef4444 沉稳得多，
+   也不容易和紫罗兰（258°）混。 */
+html[data-theme="crimson"] {
+  --bg1: #fdf6f7; --bg2: #f7e8eb; --card: #fff; --text: #2b1418; --muted: #8b7076;
+  --line: rgba(43, 20, 24, .09); --accent: #b8324a; --accent2: #e05a72;
+  --accent-hi: #c93e57; --accent-hi-2: #d94f66;
+  --accent-ghost-bg: rgba(184, 50, 74, .09); --accent-ghost-line: rgba(184, 50, 74, .16);
+  --accent-shadow: 0 6px 18px rgba(184, 50, 74, .26);
+  --glow1: rgba(184, 50, 74, .16); --glow2: rgba(224, 90, 114, .14);
+  --glass: rgba(255, 255, 255, .82); --focus-bg: #fdf1f3;
+  --ghost-active: #f8eaec; --ghost-bg: #fdfbfc;
+  --toast-bg: rgba(43, 20, 24, .94); --foot-note: #c4a7ac;
+  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(90, 20, 35, .18);
+}
+
+/* ---------- 雾石灰（浅） ----------
+   唯一一套无彩色主题：给「只想安静读文档」的场景留一个不抢戏的选项。
+   主色用近黑的暖灰 #3f3f46（对比 9.5:1），靠明度而不是色相做层级，
+   因此所有强调元素（按钮、描边、角标）都是同一个色相，不会互相打架。 */
+html[data-theme="stone"] {
+  --bg1: #f6f6f5; --bg2: #eceae7; --card: #fff; --text: #23231f; --muted: #74736e;
+  --line: rgba(35, 35, 31, .09); --accent: #3f3f46; --accent2: #a8a29e;
+  --accent-hi: #52525b; --accent-hi-2: #64646e;
+  --accent-ghost-bg: rgba(63, 63, 70, .08); --accent-ghost-line: rgba(63, 63, 70, .16);
+  --accent-shadow: 0 6px 18px rgba(35, 35, 31, .22);
+  --glow1: rgba(63, 63, 70, .12); --glow2: rgba(168, 162, 158, .14);
+  --glass: rgba(255, 255, 255, .84); --focus-bg: #f1f1ef;
+  --ghost-active: #ececea; --ghost-bg: #fbfbfa;
+  --toast-bg: rgba(35, 35, 31, .94); --foot-note: #b3b1ab;
+  --logo-border: rgba(255, 255, 255, .16); --logo-shadow: 0 4px 14px rgba(35, 35, 31, .18);
 }

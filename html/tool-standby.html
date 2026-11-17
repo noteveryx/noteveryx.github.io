@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
 <link rel="apple-touch-icon" href="../assets/image/logo.png">
 <link rel="stylesheet" href="../assets/css/theme-kit.css">
-<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink'].indexOf(t)>-1?t:'midnight')}catch(e){}</script>
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink','crimson','stone'].indexOf(t)>-1?t:'midnight')}catch(e){}</script>
 <style>
   /* 默认 = 深海蓝（屏保感）；其余四套见下方 html[data-theme=…] 覆盖块 */
   :root {
@@ -725,7 +725,7 @@
   .tech-copy.done { background: var(--brand-soft); color: var(--brand); }
   .tech-copy.failed { background: var(--muted); color: #fff; }
 
-  /* ---------- 主题（theme-kit）：青瓷绿 / 夜航蓝 / 琥珀橙 / 藕荷紫 / 墨玉青，默认夜航蓝 ----------
+  /* ---------- 主题（theme-kit）：青瓷绿 / 夜航蓝 / 琥珀橙 / 藕荷紫 / 墨玉青 / 胭脂红 / 雾石灰，默认夜航蓝 ----------
      夜航蓝这一套以前是缺的：防闪脚本默认就是 midnight，
      但没有对应的变量块 → 首次访问「夜航蓝」根本不生效，只能回落到 :root 的青瓷绿。
      色值与 ../assets/css/themes.css 保持同步（这里变量名不同，是屏保页自己的命名）。 */
@@ -758,6 +758,18 @@
     --text:#e3e9e9; --muted:#7e8c8c; --brand:#2aa79b; --brand-soft:rgba(42,167,155,.12);
     --glass:rgba(255,255,255,.05); --scrim:rgba(3,5,7,.88);
     --glow1:rgba(42,167,155,.07); --glow2:rgba(92,143,166,.05); --logo-glow:rgba(42,167,155,.3);
+  }
+  html[data-theme="crimson"]{
+    --bg1:#fdf6f7; --bg2:#f7e8eb; --panel:#ffffff; --line:rgba(43,20,24,.12);
+    --text:#2b1418; --muted:#8b7076; --brand:#b8324a; --brand-soft:rgba(184,50,74,.13);
+    --glass:rgba(43,20,24,.05); --scrim:rgba(253,246,247,.9);
+    --glow1:rgba(184,50,74,.08); --glow2:rgba(224,90,114,.05); --logo-glow:rgba(184,50,74,.3);
+  }
+  html[data-theme="stone"]{
+    --bg1:#f6f6f5; --bg2:#eceae7; --panel:#ffffff; --line:rgba(35,35,31,.12);
+    --text:#23231f; --muted:#74736e; --brand:#3f3f46; --brand-soft:rgba(63,63,70,.13);
+    --glass:rgba(35,35,31,.05); --scrim:rgba(246,246,245,.9);
+    --glow1:rgba(63,63,70,.08); --glow2:rgba(168,162,158,.05); --logo-glow:rgba(63,63,70,.3);
   }
 </style>
   <script src="../assets/js/fs-kit.js" defer></script>
@@ -902,7 +914,7 @@
             <span class="sw" data-c="#34c77b" style="background:#34c77b" title="绿"></span>
             <span class="sw" data-c="#4d9bff" style="background:#4d9bff" title="蓝"></span>
             <span class="sw" data-c="#a37bff" style="background:#a37bff" title="紫"></span>
-            <input type="color" id="styleColor" value="#635bff" title="自定义颜色">
+            <input type="color" id="styleColor" value="#6e56cf" title="自定义颜色">
           </div>
         </div>
         <button class="style-reset" id="styleReset" type="button">恢复默认样式</button>

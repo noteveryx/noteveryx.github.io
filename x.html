@@ -135,6 +135,56 @@
       --logo-bg: #060a0a;
     }
 
+    /* ---------- 胭脂红 ---------- */
+    html[data-theme="crimson"] {
+      --brand: #b8324a;
+      --brand-2: #e05a72;
+      --brand-soft: rgba(184, 50, 74, .13);
+      --brand-ring: rgba(184, 50, 74, .35);
+
+      --bg: #fdf6f7;
+      --bg-2: #f7e8eb;
+      --card: #ffffff;
+      --card-2: #fdfbfc;
+      --glass: rgba(253, 246, 247, .8);
+
+      --text: #2b1418;
+      --text-2: #5b3d43;
+      --muted: #8b7076;
+      --line: #f0dfe3;
+      --line-soft: rgba(43, 20, 24, .07);
+
+      --shadow-sm: 0 2px 8px -4px rgba(90, 20, 35, .28);
+      --shadow: 0 10px 28px -18px rgba(90, 20, 35, .48);
+      --shadow-lg: 0 18px 40px -22px rgba(90, 20, 35, .5);
+      --logo-bg: #1a0b0e;
+    }
+
+    /* ---------- 雾石灰 ---------- */
+    html[data-theme="stone"] {
+      --brand: #3f3f46;
+      --brand-2: #a8a29e;
+      --brand-soft: rgba(63, 63, 70, .12);
+      --brand-ring: rgba(63, 63, 70, .32);
+
+      --bg: #f6f6f5;
+      --bg-2: #eceae7;
+      --card: #ffffff;
+      --card-2: #fbfbfa;
+      --glass: rgba(246, 246, 245, .8);
+
+      --text: #23231f;
+      --text-2: #4a4a45;
+      --muted: #74736e;
+      --line: #e6e4e1;
+      --line-soft: rgba(35, 35, 31, .07);
+
+      --shadow-sm: 0 2px 8px -4px rgba(35, 35, 31, .28);
+      --shadow: 0 10px 28px -18px rgba(35, 35, 31, .48);
+      --shadow-lg: 0 18px 40px -22px rgba(35, 35, 31, .5);
+      --logo-bg: #17171a;
+    }
+
     /* ==========================================================
        基础
        ========================================================== */
@@ -1056,6 +1106,16 @@
               <span class="theme-item-name">墨玉青</span>
               <span class="theme-item-check" aria-hidden="true">✓</span>
             </button>
+            <button class="theme-item" type="button" role="menuitemradio" data-theme="crimson">
+              <span class="theme-item-dot" style="background:linear-gradient(135deg,#e05a72,#b8324a)"></span>
+              <span class="theme-item-name">胭脂红</span>
+              <span class="theme-item-check" aria-hidden="true">✓</span>
+            </button>
+            <button class="theme-item" type="button" role="menuitemradio" data-theme="stone">
+              <span class="theme-item-dot" style="background:linear-gradient(135deg,#a8a29e,#3f3f46)"></span>
+              <span class="theme-item-name">雾石灰</span>
+              <span class="theme-item-check" aria-hidden="true">✓</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1539,7 +1599,9 @@
         midnight: { name: '夜航蓝' },
         sunset:   { name: '琥珀橙' },
         violet:   { name: '藕荷紫' },
-        ink:      { name: '墨玉青' }
+        ink:      { name: '墨玉青' },
+        crimson:  { name: '胭脂红' },
+        stone:    { name: '雾石灰' }
       };
       var STORE_KEY = 'kb-theme';
       var root = document.documentElement;
