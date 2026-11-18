@@ -24,7 +24,10 @@
     'https://cdn.jsdelivr.net/gh/xnx3/translate@4.0.0/translate.js/translate.min.js',
     'https://gitee.com/mail_osc/translate/raw/master/translate.js'
   ];
-  var SOURCE_TIMEOUT = 12000;
+  /* 单个源最多等这么久，超时就换下一个源。
+     串行加载（一次只注入一个 script），避免多个源同时成功时
+     translate.js 自己抛「重复加载」异常把控制台刷红。 */
+  var SOURCE_TIMEOUT = 7000;
 
   var LOCAL = 'chinese_simplified';    /* 本站原文语种 */
   var STORE_KEY = 'kb_translate_lang'; /* 本地记忆的语言 */
@@ -207,49 +210,59 @@
   }
   function langName(id) { var m = metaOf(id); return m ? m[1] : id; }
 
-  /* ---------------- 加载远程组件 ---------------- */
+  /* ---------------- 加载远程组件 ----------------
+     串行换源：先试第一个，7 秒内没成功（报错 / 超时）再试下一个。
+     三个源并行注入时，只要有两个加载成功，translate.js 就会自己抛
+     「重复加载」异常（虽然它自己会拦下来，但控制台一片红），
+     所以改成一次只加载一个。首屏不依赖它，晚几秒出现翻译按钮没有影响。 */
   function loadScript(cb) {
     if (win.translate && win.translate.version) { T = win.translate; cb(true); return; }
     var done = false;
-    var pending = SOURCES.length;
+    var idx = 0;
 
     function finish(ok) {
       if (done) return;
       done = true;
       cb(ok);
     }
-    function claim() {
-      if (done) return false;
-      if (win.translate && win.translate.version) {
-        T = win.translate;   /* 锁定实例：其他源即使后到也不会影响 */
-        finish(true);
-        return true;
-      }
-      return false;
+
+    function tryNext() {
+      if (done) return;
+      if (idx >= SOURCES.length) { finish(false); return; }
+      var url = SOURCES[idx++];
+      var s = doc.createElement('script');
+      s.src = url;
+      s.async = true;
+      var settled = false;
+      var timer = setTimeout(function () {
+        /* 超时的源摘掉，不占带宽，直接换下一个 */
+        if (settled) return;
+        settled = true;
+        if (s.parentNode) s.parentNode.removeChild(s);
+        tryNext();
+      }, SOURCE_TIMEOUT);
+      s.onload = function () {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (win.translate && win.translate.version) {
+          T = win.translate;   /* 锁定实例 */
+          finish(true);
+        } else {
+          tryNext();
+        }
+      };
+      s.onerror = function () {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (s.parentNode) s.parentNode.removeChild(s);
+        tryNext();
+      };
+      (doc.head || doc.documentElement).appendChild(s);
     }
 
-    for (var i = 0; i < SOURCES.length; i++) {
-      (function (url) {
-        var s = doc.createElement('script');
-        s.src = url;
-        s.async = true;
-        var timer = setTimeout(function () {
-          /* 超时的源摘掉，不占带宽 */
-          if (s.parentNode) s.parentNode.removeChild(s);
-          if (--pending === 0) finish(false);
-        }, SOURCE_TIMEOUT);
-        s.onload = function () {
-          clearTimeout(timer);
-          if (claim()) return;
-          if (--pending === 0) finish(false);
-        };
-        s.onerror = function () {
-          clearTimeout(timer);
-          if (--pending === 0) finish(false);
-        };
-        (doc.head || doc.documentElement).appendChild(s);
-      })(SOURCES[i]);
-    }
+    tryNext();
   }
 
   function injectStyle() {

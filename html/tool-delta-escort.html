@@ -828,6 +828,19 @@ html[data-theme="amber"] .h-price{color:var(--acid-2)}
   .d-price{font-size:21px}
   .mtab a{font-size:10px}
 }
+/* 320px 级小屏（iPhone SE 一代等）：顶栏品牌 + 返回 + 主题 + CTA 会顶出屏幕右侧 */
+@media (max-width:360px){
+  .wrap{padding:0 12px}
+  .brand{gap:8px}
+  .brand svg{width:22px;height:22px}
+  .brand b{font-size:14px}
+  .nav-right{gap:7px}
+  .nav-right .btn-sm{padding:7px 10px;font-size:12px}
+  .back-btn{width:30px;height:30px}
+  .theme-btn{padding:0 8px}
+  /* 底部快捷栏比 62px 稍高，正文留够空间 */
+  body{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+}
 </style>
 <!-- 首屏之前应用已保存的主题，避免闪白 -->
 <script>

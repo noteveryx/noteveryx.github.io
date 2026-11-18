@@ -80,8 +80,9 @@
   .tool i{width:14px;height:14px;border-radius:50%;background:#23262d;display:block;}
   .sep{width:1px;height:20px;background:rgba(0,0,0,.1);flex:0 0 auto;}
   .tool.primary{background:#23262d;color:#fff;}
+  /* 底栏实际高度 = 14(下边距) + 50，提示行压在 62px 会被工具栏盖住上边缘，抬高到 72 */
   .hint{
-    left:50%;bottom:calc(62px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    left:50%;bottom:calc(72px + env(safe-area-inset-bottom));transform:translateX(-50%);
     font-size:11.5px;color:#98a0ad;pointer-events:none;white-space:nowrap;
   }
 

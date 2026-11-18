@@ -95,8 +95,16 @@
     var prevCard = el('div', { class: 'tb-card' });
     prevCard.appendChild(el('div', { class: 'tb-card-title', text: '预览' }));
     var prevBox = el('div', { class: 'tb-preview' });
-    var canvas = el('canvas', { style: 'max-width:100%;display:block' });
+    /* 没上传时画布是空的，直接显示会留一块没内容的方框，先藏起来放提示语 */
+    var canvas = el('canvas', { style: 'max-width:100%;display:none' });
+    var emptyTip = el('p', { class: 'tb-hint', style: 'margin:0;padding:16px 0;text-align:center', text: '上传图片后在这里预览' });
     prevBox.appendChild(canvas);
+    prevBox.appendChild(emptyTip);
+    function markPreview() {
+      if (canvas.style.display === 'block') return;
+      canvas.style.display = 'block';
+      if (emptyTip.parentNode) emptyTip.parentNode.removeChild(emptyTip);
+    }
     prevCard.appendChild(prevBox);
     var meta = el('p', { class: 'tb-hint', style: 'margin-top:8px' });
     prevCard.appendChild(meta);
@@ -134,6 +142,7 @@
 
     /* 把任意工作画布贴到预览 canvas 上（显示尺寸交给 CSS 的 max-width） */
     function showCanvas(cv) {
+      markPreview();
       canvas.width = cv.width;
       canvas.height = cv.height;
       var ctx = canvas.getContext('2d');
@@ -143,6 +152,7 @@
     }
 
     function showOriginal() {
+      markPreview();
       var w = state.img.naturalWidth, h = state.img.naturalHeight;
       canvas.width = w; canvas.height = h;
       var ctx = canvas.getContext('2d');
