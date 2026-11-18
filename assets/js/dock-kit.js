@@ -39,7 +39,11 @@
        右边距 18px、圆钮 44px 与导航页的悬浮目录按钮一致，
        这样全屏钮 / 工具坞 / 目录钮落在同一条竖线上。 */
     '.dk{position:fixed;z-index:46;right:calc(18px + env(safe-area-inset-right));',
-    'display:flex;flex-direction:column;align-items:flex-end;gap:8px;}',
+    'display:flex;flex-direction:column;align-items:flex-end;gap:8px;',
+    /* 限高：按钮多的时候（画布页 + 工具条）不能把坞撑到屏幕外，
+       顶部的按钮会被挤出视口，点不到。限高后由 .dk-items 自己滚动。 */
+    'max-height:calc(100vh - 36px - env(safe-area-inset-top) - env(safe-area-inset-bottom));',
+    'max-height:calc(100dvh - 36px - env(safe-area-inset-top) - env(safe-area-inset-bottom));}',
     '.dk.dk-bottom{bottom:calc(18px + env(safe-area-inset-bottom));}',
     '.dk.dk-top{top:calc(64px + env(safe-area-inset-top));}',
     /* 折叠开关：基础样子（游戏页右上工具列里也用这个类，那边保持 38px 紧凑） */
@@ -51,8 +55,24 @@
     'transition:transform .14s ease,background-color .2s,color .2s,border-color .2s;}',
     '.dk-toggle:active{transform:scale(.92);}',
     '.dk-toggle:focus-visible{outline:2px solid rgba(255,255,255,.55);outline-offset:2px;}',
-    /* 展开后的按钮列：按钮紧挨着开关往下排，整体靠右对齐 */
-    '.dk-items{display:flex;flex-direction:column;align-items:flex-end;gap:8px;animation:dkIn .18s ease;}',
+    /* 开关不许被压缩：.dk 是 flex column，开关作为直接子项默认 shrink=1，
+       限高之后会被压扁成椭圆（44×38 那种），看着像变形了 */
+    '.dk > .dk-toggle{flex:0 0 auto;}',
+    /* 展开后的按钮列：按钮紧挨着开关往下排，整体靠右对齐。
+       按钮多到一屏放不下时，这一列自己上下滑动（限高由 .dk 的 max-height 给），
+       不能让最上面的按钮被顶到屏幕外。
+       这里不要加 padding：加了之后按钮列的内容右边缘会比开关左移 2px，
+       两者就不在同一条竖线上了（开关要圆、按钮列也要圆，必须对齐中心）。 */
+    '.dk-items{display:flex;flex-direction:column;align-items:flex-end;gap:8px;animation:dkIn .18s ease;',
+    'flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;',
+    'touch-action:pan-y;-webkit-overflow-scrolling:touch;}',
+    /* 不显示滚动条：按钮列是纯手势区，滚动条会像一根多余的线挂在右边缘。
+       滚动能力保留（overflow-y:auto + touch-action:pan-y），只是不画条。 */
+    '.dk-items{scrollbar-width:none;}',
+    '.dk-items::-webkit-scrollbar{width:0;height:0;display:none;}',
+    /* 子项不许被压扁：flex 默认 shrink=1，高度不够时按钮会被挤成扁片，
+       高度超出就交给 .dk-items 滚动 */
+    '.dk-items > *{flex:0 0 auto;}',
     '@keyframes dkIn{from{opacity:0;transform:translateY(6px) scale(.96);}to{opacity:1;transform:none;}}',
     /* 被收纳的节点统一解除各自 fixed 定位，跟随坞排列（样式本身保留）。
        用 relative 而不是 static：主题/语言的面板是绝对定位的，需要相对按钮展开。 */
@@ -61,6 +81,9 @@
     '.dk-collapsed .dk-items{display:none;}',
     /* 游戏页：gk-tools 原地折叠 */
     '.gk-tools.dk-collapsed > *:not(.dk-toggle){display:none;}',
+    /* 游戏页的右上工具列同理：按钮多到一屏放不下时限高 + 可滚动 */
+    '.gk-tools:not(.dk-collapsed){max-height:calc(100vh - 120px);max-height:calc(100dvh - 120px);',
+    'overflow-y:auto;overscroll-behavior:contain;}',
     /* 坞里的返回键（统一外观，不再用各页面自己的圆形样式） */
     '.dk-back{display:flex;align-items:center;justify-content:center;',
     'text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;',
@@ -148,6 +171,7 @@
 
   function teardown() {
     var i;
+    if (mo) { mo.disconnect(); mo = null; }
     for (i = moved.length - 1; i >= 0; i--) {
       var n = moved[i];
       var rec = n.__dk;
@@ -195,9 +219,34 @@
   /* 展开动画期间 .dk-items 上有 transform，会把 fixed 子元素的包含块改成它自己，
      这时量出来的位置是错的 —— 等动画结束再算一次 */
   var placeTimer = null;
-  function schedulePlace() {
+  function schedulePlace(delay) {
     if (placeTimer) clearTimeout(placeTimer);
-    placeTimer = setTimeout(function () { placeTimer = null; place(); }, 280);
+    placeTimer = setTimeout(function () { placeTimer = null; place(); }, delay || 280);
+  }
+
+  /* ---------------- 页面布局变了要重算 ----------------
+     坞的避让是「算一次、写死在下边」的，可页面自己的固定 UI 会随时变：
+     句子条展开/收起、面板开合、工具条显隐……
+     页面变了而坞没重算，就会出现「句子条都收起了，坞还顶在屏幕中间」——
+     坞只会往上躲，不会自己下来。
+     所以盯着 DOM 变化，变了就重算一次（坞自己改 style/class 不算）。 */
+  var mo = null;
+  var resizeBound = false;
+  function watchLayout() {
+    if (mo || !win.MutationObserver || !doc.body) return;
+    mo = new win.MutationObserver(function (recs) {
+      for (var i = 0; i < recs.length; i++) {
+        var t = recs[i].target;
+        if (t === dock) continue;                 /* 坞自己改 style / class */
+        if (dock && dock.contains(t)) continue;   /* 坞内部的变化 */
+        schedulePlace(120);
+        return;
+      }
+    });
+    mo.observe(doc.body, {
+      childList: true, subtree: true, attributes: true,
+      attributeFilter: ['class', 'style', 'hidden']
+    });
   }
 
   function makeToggle() {
@@ -249,17 +298,30 @@
     dock.classList.toggle('dk-themed', doc.documentElement.hasAttribute('data-theme'));
   }
 
+  /* 坞被顶上去之后，屏幕留给它的高度就只剩这么多了 —— 必须限高，
+     否则按钮多的时候坞会撑出屏幕，最上面的按钮够不着。
+     限高后按钮列（.dk-items）自己滚动，滑到底能看全所有按钮。
+     60 = 底部安全区(约 34) + 顶部留白 */
+  function applyLimit(off) {
+    var avail = win.innerHeight - off - 60;
+    dock.style.maxHeight = Math.max(150, avail) + 'px';
+  }
+
   function place() {
     if (!dock) return;
     dock.style.bottom = '';
     dock.style.top = '';
+    dock.style.maxHeight = '';
     var isTop = dock.classList.contains('dk-top');
+    var off = 18;
+    applyLimit(off);
     for (var i = 0; i < 6; i++) {
-      if (!overlapsFixed(dock)) return;
+      if (!overlapsFixed(dock)) break;
       /* 18 = 贴边距，52 = 44px 钮高 + 8px 间距 */
-      var off = 18 + (i + 1) * 52;
+      off = 18 + (i + 1) * 52;
       if (isTop) dock.style.top = 'calc(' + off + 'px + env(safe-area-inset-top))';
       else dock.style.bottom = 'calc(' + off + 'px + env(safe-area-inset-bottom))';
+      applyLimit(off);
     }
   }
 
@@ -451,6 +513,17 @@
       /* 有返回键也算一件：几乎每个页面都该有坞 */
       if (list.length + (findBack() ? 1 : 0) >= 1) buildDock(list);
     }
+
+    /* 窗口尺寸变了（旋转屏幕、地址栏收放）要重算限高与避让 */
+    if (!resizeBound) {
+      resizeBound = true;
+      win.addEventListener('resize', function () {
+        if (dock) { place(); schedulePlace(80); }
+      }, { passive: true });
+    }
+
+    /* 页面布局一变就重算坞的避让位置 */
+    watchLayout();
 
     /* 点坞外自动收起（点坞内按钮不收起，方便连着用） */
     doc.addEventListener('click', function (e) {
