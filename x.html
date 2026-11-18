@@ -190,7 +190,9 @@
        基础
        ========================================================== */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { margin: 0; padding: 0; width: 100%; max-width: 100%; overflow-x: hidden; }
+    /* overflow-x 用 clip 而不是 hidden：hidden 会让 html 变成滚动容器，
+       顶栏的 position:sticky 直接失效（滚动后顶栏就跟着页面走了）。clip 只裁剪不建滚动容器。 */
+    html, body { margin: 0; padding: 0; width: 100%; max-width: 100%; overflow-x: clip; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
                    "Microsoft YaHei", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -994,6 +996,139 @@
     }
 
     /* ==========================================================
+       页面内快捷导航（悬浮目录 + 回到顶部）
+       页面有 9 个板块、40 多张卡片，目录给出「一键定位」的入口。
+       桌面靠右下（让开全屏钮）；手机右下是工具坞，所以挪到左下。
+       ========================================================== */
+    .toc-fab,
+    .toc-top {
+      position: fixed;
+      right: 18px;
+      z-index: 40;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: var(--card);
+      color: var(--text-2);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .16s ease, color .2s ease, border-color .2s ease,
+                  opacity .2s ease, visibility .2s ease;
+    }
+    /* 右边距 18px、44px 圆钮：和全屏钮 / 工具坞同一条竖线 */
+    .toc-fab { bottom: 72px; }          /* 全屏钮占 18~62px，这里让开 */
+    .toc-top { bottom: 124px; opacity: 0; visibility: hidden; transform: translateY(6px); }
+    .toc-top.on { opacity: 1; visibility: visible; transform: none; }
+    .toc-fab:hover,
+    .toc-top:hover { color: var(--brand); border-color: var(--brand-ring); }
+    .toc-fab:active,
+    .toc-top:active { transform: scale(.93); }
+    .toc-fab svg,
+    .toc-top svg { width: 20px; height: 20px; display: block; }
+    /* 目录展开时，回到顶部先让位，避免叠在一起 */
+    .toc.open .toc-top { opacity: 0; visibility: hidden; }
+
+    .toc-panel {
+      position: fixed;
+      right: 18px;
+      bottom: 126px;
+      z-index: 41;
+      width: 252px;
+      max-height: min(62vh, 520px);
+      display: flex;
+      flex-direction: column;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      transform-origin: 100% 100%;
+      animation: tocIn .18s ease;
+    }
+    .toc-panel[hidden] { display: none !important; }
+    @keyframes tocIn {
+      from { opacity: 0; transform: translateY(8px) scale(.97); }
+      to { opacity: 1; transform: none; }
+    }
+    .toc-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px 10px;
+      font-size: .82rem;
+      font-weight: 800;
+      color: var(--text);
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .toc-title span {
+      margin-left: auto;
+      font-size: .68rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .toc-list {
+      padding: 6px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    .toc-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 10px;
+      border-radius: 10px;
+      font-size: .84rem;
+      font-weight: 600;
+      color: var(--text-2);
+      text-decoration: none;
+      transition: background-color .16s ease, color .16s ease;
+    }
+    .toc-item:hover { background: var(--brand-soft); color: var(--text); }
+    .toc-item[aria-current="true"] { background: var(--brand-soft); color: var(--brand); }
+    .toc-item .e { font-size: .95rem; line-height: 1; }
+    .toc-item .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .toc-item .c { font-family: "Roboto Mono", "SF Mono", Monaco, Consolas, monospace; font-size: .68rem; color: var(--muted); }
+
+    /* 板块锚点跳转时不被吸顶栏盖住。
+       顶栏高度是自适应的（手机副标题两行会更高），所以由 JS 写入 --topbar-h */
+    html { scroll-behavior: smooth; }
+    .sp-section { scroll-margin-top: calc(var(--topbar-h, 84px) + 14px); }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .toc-panel { animation: none; }
+    }
+
+    @media (max-width: 720px) {
+      /* 手机上右下角被工具坞（⋮）占着，目录挪到左下（边距 18px 与工具坞镜像对称） */
+      .toc-fab {
+        left: 18px;
+        right: auto;
+        bottom: calc(18px + env(safe-area-inset-bottom));
+      }
+      .toc-top {
+        left: 18px;
+        right: auto;
+        bottom: calc(70px + env(safe-area-inset-bottom));
+      }
+      .toc-panel {
+        left: 10px;
+        right: 10px;
+        bottom: calc(72px + env(safe-area-inset-bottom));
+        width: auto;
+        max-height: 56vh;
+        transform-origin: 0 100%;
+      }
+      .toc-item { padding: 11px 10px; }   /* 手指更好点 */
+    }
+
+    /* ==========================================================
        响应式
        ========================================================== */
     @media (max-width: 720px) {
@@ -1200,7 +1335,7 @@
     </div>
 
     <!-- ============ 板块一：工具 ============ -->
-    <section class="sp-section">
+    <section class="sp-section" id="sec-tools">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🧰</span>工具 <span class="sp-count">4</span></h2>
       <p class="sp-sub">提升效率的小工具。</p>
       <div class="sp-grid">
@@ -1238,7 +1373,7 @@
     </section>
 
     <!-- ============ 板块一·二：效率工具 ============ -->
-    <section class="sp-section">
+    <section class="sp-section" id="sec-eff">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">⚡</span>效率工具 <span class="sp-count">6</span></h2>
       <p class="sp-sub">日常和开发都用得上的小工具，全部在浏览器本地跑，数据不出本机。</p>
       <div class="sp-grid">
@@ -1282,7 +1417,7 @@
     </section>
 
     <!-- ============ 板块二：氛围屏 ============ -->
-    <section class="sp-section">
+    <section class="sp-section" id="sec-ambient">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🌌</span>氛围屏 <span class="sp-count">5</span></h2>
       <p class="sp-sub">打开就是一幅画，适合当屏保或壁纸。颜色都能自己调。</p>
       <div class="sp-grid">
@@ -1320,7 +1455,7 @@
     </section>
 
     <!-- ============ 板块三：交互视觉 ============ -->
-    <section class="sp-section">
+    <section class="sp-section" id="sec-inter">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">👆</span>交互视觉 <span class="sp-count">5</span></h2>
       <p class="sp-sub">碰一下就有反馈的玩具，指针在哪它就跟着动。</p>
       <div class="sp-grid">
@@ -1358,7 +1493,7 @@
     </section>
 
     <!-- ============ 板块四：生成器 ============ -->
-    <section class="sp-section">
+    <section class="sp-section" id="sec-gen">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">✨</span>生成器 <span class="sp-count">5</span></h2>
       <p class="sp-sub">玩完能带走一张图的工具，都能直接保存。</p>
       <div class="sp-grid">
@@ -1396,7 +1531,7 @@
     </section>
 
     <!-- ============ 板块五：画板 ============ -->
-    <section class="sp-section">
+    <section class="sp-section" id="sec-paint">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🖌️</span>画板 <span class="sp-count">2</span></h2>
       <p class="sp-sub">写与画，一个写签名，一个正经画画。</p>
       <div class="sp-grid">
@@ -1416,7 +1551,7 @@
     </section>
 
     <!-- ============ 板块六：小游戏 ============ -->
-    <section class="sp-section">
+    <section class="sp-section" id="sec-games">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🎮</span>小游戏 <span class="sp-count">13</span></h2>
       <p class="sp-sub">休闲来一局，最高分自动记录，键盘和手机滑动都能玩，右上色球随时换配色。</p>
       <div class="sp-grid">
@@ -1502,7 +1637,7 @@
     </section>
 
     <!-- ============ 板块七：行动突围护航社 ============ -->
-    <section class="sp-section">
+    <section class="sp-section" id="sec-escort">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🛡️</span>行动突围护航社 <span class="sp-count">1</span></h2>
       <p class="sp-sub">内容已合并为统一版，主题风格在页面内一键切换。</p>
       <div class="sp-grid">
@@ -1516,7 +1651,7 @@
     </section>
 
     <!-- ============ 板块八：快捷导航 ============ -->
-    <section class="sp-section">
+    <section class="sp-section" id="sec-nav">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🧭</span>快捷导航 <span class="sp-count" id="navCount">30</span></h2>
       <p class="sp-sub">新闻 · 财经 · 门户常用站点直达，点击在新标签页打开。</p>
       <div class="nav-search" id="navSearchBox">
@@ -1618,6 +1753,26 @@
   </footer>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ============ 页面内快捷导航：悬浮目录 + 回到顶部 ============ -->
+  <div class="toc" id="toc">
+    <button class="toc-fab" id="tocFab" type="button"
+            aria-label="页面目录" aria-haspopup="true" aria-expanded="false" aria-controls="tocPanel"
+            title="页面目录">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M4 7h16M4 12h11M4 17h7"/>
+      </svg>
+    </button>
+    <button class="toc-top" id="tocTop" type="button" aria-label="回到顶部" title="回到顶部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 19V5M6 11l6-6 6 6"/>
+      </svg>
+    </button>
+    <div class="toc-panel" id="tocPanel" hidden>
+      <div class="toc-title">页面目录 <span>共 <b id="tocCount">9</b> 个板块</span></div>
+      <nav class="toc-list" id="tocList" aria-label="页面板块"></nav>
+    </div>
+  </div>
 
   <script>
     (function () {
@@ -2166,6 +2321,175 @@
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handle(); }
         });
       }
+    })();
+  </script>
+
+  <script>
+    /* ==========================================================
+       页面内快捷导航：目录由页面结构自动生成
+       标题 / 图标 / 数量都从 .sp-head 里读，增删板块不用改这里
+       ========================================================== */
+    (function () {
+      var toc = document.getElementById('toc');
+      var fab = document.getElementById('tocFab');
+      var panel = document.getElementById('tocPanel');
+      var listEl = document.getElementById('tocList');
+      var topBtn = document.getElementById('tocTop');
+      var countEl = document.getElementById('tocCount');
+      if (!toc || !fab || !panel || !listEl) return;
+
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var secs = Array.prototype.slice.call(document.querySelectorAll('.sp-section'));
+      var items = [];
+
+      /* ---------------- 建列表 ---------------- */
+      secs.forEach(function (sec, i) {
+        if (!sec.id) sec.id = 'sec-' + (i + 1);
+        var head = sec.querySelector('.sp-head');
+        var emoji = '', count = '', name = '';
+        if (head) {
+          var em = head.querySelector('.sp-emoji');
+          if (em) emoji = em.textContent.trim();
+          var cn = head.querySelector('.sp-count');
+          if (cn) count = cn.textContent.trim();
+
+          // 克隆一份去掉图标和数字，剩下的就是纯板块名
+          var clone = head.cloneNode(true);
+          Array.prototype.slice.call(clone.querySelectorAll('.sp-emoji, .sp-count'))
+            .forEach(function (n) { n.parentNode.removeChild(n); });
+          name = clone.textContent.replace(/\s+/g, ' ').trim();
+        }
+        if (!name) name = '板块 ' + (i + 1);
+
+        var a = document.createElement('a');
+        a.className = 'toc-item';
+        a.href = '#' + sec.id;
+
+        var e = document.createElement('span');
+        e.className = 'e';
+        e.setAttribute('aria-hidden', 'true');
+        e.textContent = emoji || '•';
+
+        var n = document.createElement('span');
+        n.className = 'n';
+        n.textContent = name;
+
+        a.appendChild(e);
+        a.appendChild(n);
+        if (count) {
+          var c = document.createElement('span');
+          c.className = 'c';
+          c.textContent = count;
+          a.appendChild(c);
+        }
+        a.addEventListener('click', close);
+        listEl.appendChild(a);
+        items.push({ a: a, sec: sec });
+      });
+      if (countEl) countEl.textContent = String(items.length);
+
+      /* ---------------- 开合 ---------------- */
+      function open() {
+        if (!panel.hidden) return;
+        panel.hidden = false;
+        toc.classList.add('open');
+        fab.setAttribute('aria-expanded', 'true');
+        // 手机端面板是通栏抽屉，展开时把右下角的工具坞收起来，免得叠在一起
+        try {
+          if (window.DockKit && typeof window.DockKit.collapsed === 'function' &&
+              !window.DockKit.collapsed()) window.DockKit.toggle();
+        } catch (err) {}
+        syncCurrent();
+        // 与主题/翻译面板互斥：本页的约定是广播 kb:panel-open
+        try {
+          window.dispatchEvent(new CustomEvent('kb:panel-open', { detail: { id: 'x-toc' } }));
+        } catch (err) {}
+      }
+      function close() {
+        if (panel.hidden) return;
+        panel.hidden = true;
+        toc.classList.remove('open');
+        fab.setAttribute('aria-expanded', 'false');
+      }
+
+      fab.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (panel.hidden) open(); else close();
+      });
+
+      window.addEventListener('kb:panel-open', function (e) {
+        var d = e && e.detail;
+        if (!d || d.id !== 'x-toc') close();
+      });
+
+      document.addEventListener('click', function (e) {
+        if (panel.hidden) return;
+        if (toc.contains(e.target)) return;
+        close();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !panel.hidden) { close(); fab.focus(); }
+      });
+
+      /* ---------------- 当前板块高亮 + 回到顶部显隐 ---------------- */
+      /* 吸顶栏高度写进 CSS 变量：锚点跳转的 scroll-margin-top 要用它，
+         手机上副标题两行时顶栏会更高，写死数值会盖住板块标题 */
+      function syncTopbarVar() {
+        var bar = document.querySelector('.topbar');
+        if (!bar) return;
+        var h = Math.round(bar.getBoundingClientRect().height);
+        document.documentElement.style.setProperty('--topbar-h', h + 'px');
+      }
+      syncTopbarVar();
+      window.addEventListener('load', syncTopbarVar);
+      window.addEventListener('resize', syncTopbarVar, { passive: true });
+
+      function headOffset() {
+        var bar = document.querySelector('.topbar');
+        return (bar ? bar.getBoundingClientRect().height : 0) + 90;
+      }
+
+      function syncCurrent() {
+        var line = headOffset();
+        var cur = null;
+        var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].sec.getBoundingClientRect().top <= line) cur = items[i];
+        }
+        // 最后一个板块可能永远顶不到线（太矮），滚到底就直接算它
+        var doc = document.documentElement;
+        if (items.length && y + window.innerHeight >= doc.scrollHeight - 4) {
+          cur = items[items.length - 1];
+        }
+        // 页面还在最顶上：不高亮任何一项
+        if (!cur && y < 80) cur = null;
+
+        for (var j = 0; j < items.length; j++) {
+          items[j].a.setAttribute('aria-current', items[j] === cur ? 'true' : 'false');
+        }
+      }
+
+      var ticking = false;
+      function onScroll() {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(function () {
+          ticking = false;
+          if (topBtn) topBtn.classList.toggle('on', (window.pageYOffset || 0) > 420);
+          syncCurrent();
+        });
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll, { passive: true });
+
+      if (topBtn) {
+        topBtn.addEventListener('click', function () {
+          window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+        });
+      }
+
+      onScroll();
     })();
   </script>
 </body>

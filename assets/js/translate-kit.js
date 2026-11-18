@@ -26,8 +26,10 @@
   ];
   /* 单个源最多等这么久，超时就换下一个源。
      串行加载（一次只注入一个 script），避免多个源同时成功时
-     translate.js 自己抛「重复加载」异常把控制台刷红。 */
-  var SOURCE_TIMEOUT = 7000;
+     translate.js 自己抛「重复加载」异常把控制台刷红。
+     这个值不能太小：源只是慢（不是挂）的时候提前换源，前一个稍后还是会执行完，
+     就又变成重复加载了。10 秒基本只有真挂/被墙才会触发换源。 */
+  var SOURCE_TIMEOUT = 10000;
 
   var LOCAL = 'chinese_simplified';    /* 本站原文语种 */
   var STORE_KEY = 'kb_translate_lang'; /* 本地记忆的语言 */
@@ -211,7 +213,7 @@
   function langName(id) { var m = metaOf(id); return m ? m[1] : id; }
 
   /* ---------------- 加载远程组件 ----------------
-     串行换源：先试第一个，7 秒内没成功（报错 / 超时）再试下一个。
+     串行换源：先试第一个，SOURCE_TIMEOUT 内没成功（报错 / 超时）再试下一个。
      三个源并行注入时，只要有两个加载成功，translate.js 就会自己抛
      「重复加载」异常（虽然它自己会拦下来，但控制台一片红），
      所以改成一次只加载一个。首屏不依赖它，晚几秒出现翻译按钮没有影响。 */
@@ -228,6 +230,13 @@
 
     function tryNext() {
       if (done) return;
+      /* 上一个源虽然超时被摘掉了，但如果它已经执行完，这里直接收工，
+         不要再注入下一个（否则就是两份 translate.js） */
+      if (win.translate && win.translate.version) {
+        T = win.translate;
+        finish(true);
+        return;
+      }
       if (idx >= SOURCES.length) { finish(false); return; }
       var url = SOURCES[idx++];
       var s = doc.createElement('script');
@@ -534,8 +543,24 @@
     readyCbs = [];
   }
 
+  /* 把组件加载推迟到页面 load 之后：translate.js 走第三方 CDN，
+     一旦它卡住，动态插入的 script 会一直拖着 window.load 不触发，
+     连带页面里等 load 的逻辑（懒加载、统计、首屏收尾）一起延后。
+     CDN 正常时也就晚几百毫秒，用户根本感觉不到。最多等 2.5s 兜底。 */
+  function deferLoad(cb) {
+    var started = false;
+    function start() {
+      if (started) return;
+      started = true;
+      loadScript(cb);
+    }
+    if (doc.readyState === 'complete') { start(); return; }
+    win.addEventListener('load', start, { once: true });
+    setTimeout(start, 2500);
+  }
+
   function boot() {
-    loadScript(function (ok) {
+    deferLoad(function (ok) {
       if (!ok || !T) {
         if (win.console && console.warn) console.warn('[translate-kit] 组件加载失败，页面翻译不可用');
         fireReady();

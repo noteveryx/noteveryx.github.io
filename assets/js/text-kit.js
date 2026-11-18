@@ -10,6 +10,7 @@
        var tk = window.TextKit.mountBar(document.getElementById('host'), {
          layout: 'row',        // 'row' 横向（默认） | 'list' 竖排
          limit: 8,             // 展示前几条
+         collapsible: true,    // 加一个折叠箭头；默认收起，folded: false 可初始展开
          value: '初始文字',
          onChange: function (text, meta) {
            // meta.custom 为 true 表示是用户自己写的
@@ -95,8 +96,10 @@
     ok.textContent = opts.okText || '用这句';
     bar.appendChild(ok);
 
-    /* 折叠按钮：收起后只剩一个小箭头，画布不再被挡 */
-    var folded = !!opts.folded;
+    /* 折叠按钮：收起后只剩一个小箭头，画布不再被挡。
+       默认就是收起的 —— 句子列表一展开就横在画布中央（手机上占掉小半屏），
+       而这一条的主要内容是画布本身。想要初始展开就显式传 folded: false */
+    var folded = !!opts.collapsible && opts.folded !== false;
     var fold = null;
     if (opts.collapsible) {
       fold = document.createElement('button');
@@ -116,6 +119,7 @@
       if (fold) {
         fold.title = folded ? '展开句子列表' : '收起句子列表';
         fold.setAttribute('aria-label', fold.title);
+        fold.setAttribute('aria-expanded', folded ? 'false' : 'true');
       }
     }
 

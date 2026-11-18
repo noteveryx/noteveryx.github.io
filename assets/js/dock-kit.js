@@ -35,18 +35,20 @@
     'stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 
   var STYLE = [
-    /* 工具坞容器 */
-    '.dk{position:fixed;z-index:46;right:calc(14px + env(safe-area-inset-right));',
+    /* 工具坞容器。
+       右边距 18px、圆钮 44px 与导航页的悬浮目录按钮一致，
+       这样全屏钮 / 工具坞 / 目录钮落在同一条竖线上。 */
+    '.dk{position:fixed;z-index:46;right:calc(18px + env(safe-area-inset-right));',
     'display:flex;flex-direction:column;align-items:flex-end;gap:8px;}',
-    '.dk.dk-bottom{bottom:calc(14px + env(safe-area-inset-bottom));}',
+    '.dk.dk-bottom{bottom:calc(18px + env(safe-area-inset-bottom));}',
     '.dk.dk-top{top:calc(64px + env(safe-area-inset-top));}',
-    /* 折叠开关 */
+    /* 折叠开关：基础样子（游戏页右上工具列里也用这个类，那边保持 38px 紧凑） */
     '.dk-toggle{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.22);',
     'background:rgba(14,16,26,.66);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);',
     'color:rgba(255,255,255,.9);font:700 16px/1 -apple-system,system-ui,sans-serif;',
     'display:flex;align-items:center;justify-content:center;cursor:pointer;',
     '-webkit-tap-highlight-color:transparent;box-shadow:0 2px 10px rgba(0,0,0,.26);',
-    'transition:transform .14s ease,background-color .2s;}',
+    'transition:transform .14s ease,background-color .2s,color .2s,border-color .2s;}',
     '.dk-toggle:active{transform:scale(.92);}',
     '.dk-toggle:focus-visible{outline:2px solid rgba(255,255,255,.55);outline-offset:2px;}',
     /* 展开后的按钮列：按钮紧挨着开关往下排，整体靠右对齐 */
@@ -60,20 +62,53 @@
     /* 游戏页：gk-tools 原地折叠 */
     '.gk-tools.dk-collapsed > *:not(.dk-toggle){display:none;}',
     /* 坞里的返回键（统一外观，不再用各页面自己的圆形样式） */
-    '.dk-back{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.22);',
-    'background:rgba(14,16,26,.66);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);',
-    'color:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;',
-    'text-decoration:none;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.26);',
-    '-webkit-tap-highlight-color:transparent;transition:transform .14s ease;}',
+    '.dk-back{display:flex;align-items:center;justify-content:center;',
+    'text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;',
+    'transition:transform .14s ease,color .2s,border-color .2s,background-color .2s;}',
     '.dk-back:active{transform:scale(.92);}',
     '.dk-back svg{width:19px;height:19px;display:block;}',
     /* 主题按钮：它自带 fixed 定位（右上角），进坞后要复位 */
     '.dk .tk-btn{position:relative !important;top:auto !important;right:auto !important;}',
     /* 语言按钮：inline 模式带 margin-left:auto，进坞后居中；顺带改成圆形，和别的钮一致 */
     '.dk .tk-t{margin-left:0 !important;}',
-    '.dk .tk-t-btn{width:38px;height:38px;padding:0;border-radius:50%;justify-content:center;gap:0;}',
+    '.dk .tk-t-btn{padding:0;justify-content:center;gap:0;}',
     '.dk .tk-t-btn .tk-t-cur,.dk .tk-t-btn .tk-t-caret{display:none;}',
     '.dk .tk-t-btn .tk-t-ico{font-size:17px;}',
+    /* 工具坞里的圆钮统一成 44px（对齐导航页的悬浮目录按钮）。 */
+    '.dk .dk-toggle,.dk .dk-back,.dk .tk-btn,.dk .tk-t-btn,.dk .fsk-btn{',
+    'width:44px;height:44px;border-radius:50%;}',
+    /* 默认：深色玻璃（氛围屏 / 画板这类无主题页面）。
+       注意不能直接用 var(--card)：text-kit.css 给 :root 写了一套浅色兜底值
+       （--card:#fff），深色页面加载 text-kit 后坞钮会被染成白底白字。
+       .tk-t 这一层要带上：translate-kit 是后注入的，同等优先级会被它自己的配色顶回去。 */
+    '.dk .dk-toggle,.dk .dk-back,.dk .tk-btn,.dk .tk-t .tk-t-btn,.dk .fsk-btn{',
+    'background:rgba(14,16,26,.66);',
+    'border:1px solid rgba(255,255,255,.22);',
+    'color:rgba(255,255,255,.9);',
+    'box-shadow:0 2px 10px rgba(0,0,0,.26);}',
+    '.dk .dk-toggle:hover,.dk .dk-back:hover,.dk .tk-btn:hover,',
+    '.dk .tk-t .tk-t-btn:hover,.dk .fsk-btn:hover{',
+    'background:rgba(14,16,26,.84);color:#fff;border-color:rgba(255,255,255,.42);}',
+    /* 有主题的页面（html[data-theme]）才跟主题走：卡片底 + 主题描边 + 强调色悬停 */
+    '.dk.dk-themed .dk-toggle,.dk.dk-themed .dk-back,.dk.dk-themed .tk-btn,',
+    '.dk.dk-themed .tk-t .tk-t-btn,.dk.dk-themed .fsk-btn{',
+    'background:var(--card,#fff);',
+    'border-color:var(--line,rgba(0,0,0,.08));',
+    'color:var(--text-2,var(--muted,#3d5049));',
+    'box-shadow:var(--shadow,0 2px 10px rgba(0,0,0,.12));}',
+    '.dk.dk-themed .dk-toggle:hover,.dk.dk-themed .dk-back:hover,.dk.dk-themed .tk-btn:hover,',
+    '.dk.dk-themed .tk-t .tk-t-btn:hover,.dk.dk-themed .fsk-btn:hover{',
+    'background:var(--card,#fff);',
+    'color:var(--accent,var(--brand,#1e7a4c));',
+    'border-color:var(--accent-ghost-line,rgba(0,0,0,.16));}',
+    /* 画布页那几件散落在容器里的小钮（调色球 / 工具栏按钮 / 保存），
+       进坞后一并拉到 44px，免得坞里忽大忽小、右边缘参差。
+       .tk-t 要带上：translate-kit 是后注入的，同等优先级会被它的 40px 顶回。 */
+    '.dk .tk-t .tk-t-btn,.dk .pk-trigger,.dk .tools .btn,.dk .tools .svk-btn,.dk .palette .btn{',
+    'width:44px;height:44px;}',
+    '.dk.dk-themed .pk-trigger{background:var(--card,#fff);border:1px solid var(--line,rgba(0,0,0,.08));}',
+    /* 近期颜色是「一叠色块」不是按钮，只把宽度拉齐，圆角保留 */
+    '.dk .recent{width:44px;box-sizing:border-box;}',
     /* 主题面板：手机上改成底部抽屉，跟语言面板一致 */
     '.dk .tk-panel{position:fixed !important;left:10px !important;right:10px !important;',
     'top:auto !important;bottom:10px !important;width:auto !important;max-width:none !important;',
@@ -207,6 +242,13 @@
     }
     return false;
   }
+  /* 有主题的页面才让坞钮跟主题走。theme-kit 是 defer 的，
+     首帧可能还没有 data-theme，所以下面的补扫循环里会再校一次。 */
+  function syncThemed() {
+    if (!dock) return;
+    dock.classList.toggle('dk-themed', doc.documentElement.hasAttribute('data-theme'));
+  }
+
   function place() {
     if (!dock) return;
     dock.style.bottom = '';
@@ -214,7 +256,8 @@
     var isTop = dock.classList.contains('dk-top');
     for (var i = 0; i < 6; i++) {
       if (!overlapsFixed(dock)) return;
-      var off = 14 + (i + 1) * 52;
+      /* 18 = 贴边距，52 = 44px 钮高 + 8px 间距 */
+      var off = 18 + (i + 1) * 52;
       if (isTop) dock.style.top = 'calc(' + off + 'px + env(safe-area-inset-top))';
       else dock.style.bottom = 'calc(' + off + 'px + env(safe-area-inset-bottom))';
     }
@@ -232,6 +275,9 @@
        原先按「第一个被收纳工具的原位置」判上/下，工具挂在页头时坞就跑到右上角，
        看起来像「程序坞位置不对」。 */
     dock.classList.add('dk-bottom');
+    /* 只有真的有主题系统（html[data-theme]）的页面才让坞钮跟主题变色，
+       否则按深色玻璃处理 —— 有些页面（如 text-kit）会给 :root 塞浅色兜底变量 */
+    syncThemed();
     /* 沉浸式画布页：跟随页面的闲置淡出节奏（.ui 基类只含 fixed/z-index/透明度过渡） */
     if (!doc.body.classList.contains('gk-page') && doc.querySelector('.ui')) dock.classList.add('ui');
 
@@ -423,6 +469,7 @@
     var tries = 0;
     var timer = setInterval(function () {
       tries++;
+      syncThemed();
       if (gk) {
         var gb = doc.querySelector('a.gk-back');
         if (gb && gb.parentNode !== gk) { remember(gb); gk.appendChild(gb); }

@@ -155,7 +155,7 @@ docsify 自带：点一下回到 `README.md`，那里有今日新增的文章列
 | 🛡️ 行动突围护航社 | 1 | 独立活动页 |
 | 🧭 快捷导航 | 30 | 常用外部站点直达 |
 
-页面本身附带：**主题切换**（7 套，存 `tk_theme`）、**页面翻译**（28 种语言，存 `kb_translate_lang`）、卡片图标徽章、滚动入场动效、实时时间 + 两地天气。
+页面本身附带：**主题切换**（7 套，存 `tk_theme`）、**页面翻译**（28 种语言，存 `kb_translate_lang`）、**页面目录**（悬浮按钮 → 9 个板块一键跳转 + 回到顶部，板块锚点为 `#sec-tools`…`#sec-nav`）、卡片图标徽章、滚动入场动效、实时时间 + 两地天气。
 
 手机端所有悬浮工具按钮会收进**可折叠工具坞**（右下角 `⋮`），页面自己的底部工具条保持在屏幕最下方，详见 7.8.2。
 
@@ -469,7 +469,7 @@ buildPanel(panel, {
 | `fs-kit.js` | 全屏按钮 | 全部独立页 | 自动避让右下角固定 UI；页面已有 `#btnFull` 时不重复挂 |
 | `nav-kit.js` | 返回按钮显隐 | **全部 42 个独立页** | 只有从站内页面跳进来才显示返回按钮，见 7.7.8 |
 | `save-kit.js` | 保存 / 导出 | 句子收藏、部分视觉页 | canvas → 图片 / 文本导出 |
-| `text-kit.css/js` + `quotes-data.js` | 句子条组件 | 粒子文字 / 海报 / 文字形变 | `TextKit.mountBar(host, {layout, limit, value, onChange})` |
+| `text-kit.css/js` + `quotes-data.js` | 句子条组件 | 粒子文字 / 海报 / 文字形变 | `TextKit.mountBar(host, {layout, limit, value, onChange})`；`collapsible: true` 时带折叠箭头且**默认收起**（`folded: false` 可改为初始展开） |
 | `qrcode.js` | 二维码生成 | 二维码页 | 本地实现，无外链 |
 | `translate-kit.js` | 页面翻译 | **全部 42 页 + `x.html`** | 见 7.8.1 |
 | `dock-kit.js` | 手机端工具坞 | **全部 42 页 + `x.html`** | 见 7.8.2 |
@@ -636,7 +636,7 @@ PanelKit.announce('ptext-type');            // 我打开时告诉别人收起
 
 **实现**：封装开源 [translate.js](https://gitee.com/mail_osc/translate)，但隐藏它自带的原生下拉框，改用与站点一致的语言面板。
 
-**加载**：三个源**并行**加载，先成功者生效（锁定实例，后续源即使到达也不影响）：
+**加载**：三个源**串行**加载（一次只注入一个 `<script>`），报错或 10 秒超时才换下一个；成功后锁定实例：
 
 1. `https://res.zvo.cn/translate/translate.js`（官方 CDN）
 2. `https://cdn.jsdelivr.net/gh/xnx3/translate@4.0.0/translate.js/translate.min.js`（jsDelivr 镜像）
@@ -660,6 +660,10 @@ PanelKit.announce('ptext-type');            // 我打开时告诉别人收起
 - 语言列表通过 `selectLanguageTag.customUI` 注入；`changeLanguage` 会触发重新渲染，所以 `customUI` 里**必须判断 UI 是否已存在**，只更新状态、不要重建，否则面板会重复。
 - 面板根节点带 `ignore` 类，否则页面翻译时连语言名一起被翻掉。
 - 切换语言**不要**手写 `localStorage['to']`，那是 translate.js 的内部键，会和页面翻译记忆打架。
+- **多源不能并行注入**：两个源同时加载成功时，translate.js 自己会抛「重复加载」异常把控制台刷红。
+  必须串行；且**换源之前要先检查 `window.translate && window.translate.version`** ——
+  超时被摘掉的慢源稍后仍然会执行完，不检查就会出现「摘掉一个、注入下一个、两个都生效」。
+  `SOURCE_TIMEOUT` 也因此定在 10 秒（早先 7 秒太短，只是慢不是挂的源经常被误判）。
 
 #### 7.8.2 手机端工具坞 `dock-kit.js`
 
@@ -688,6 +692,11 @@ PanelKit.announce('ptext-type');            // 我打开时告诉别人收起
 
 - **坞固定在右下角**（`dk-bottom`）。早期按「第一个被收纳工具的原位置」判上/下，工具挂在页头时坞就跑到右上角，
   用户反馈「程序坞位置不对」。现在除游戏页原地折叠外，一律右下角。
+- **坞钮外观统一成「跟主题走的卡片式圆钮」**：44×44、右边距 18px，和 `x.html` 的悬浮目录钮、
+  全屏钮落在同一条竖线上（三者中心 x 相同）。颜色用 `var(--card)` / `var(--line)` / `var(--text-2)`
+  / `var(--shadow)`，主题一换整坞一起变；**无主题变量的画布页**（氛围屏 / 画板 / 手写板）自动回落到原来的
+  深色玻璃 `rgba(14,16,26,.66)`，否则白底白钮看不见。游戏页右上角 `.gk-tools` 工具列**不在统一范围内**，
+  保持 38px 紧凑，不挤占画面。
 - **展开后按钮紧挨着开关往下排**，间距 8px，整列靠右对齐（`align-items:flex-end`）。
 - **`.ui.bar` 工具条不进坞**（`__dkRank` 里没有它）：它本身就是「贴底通栏 + 横向滚动」
   （`left:50%` + `translateX(-50%)` + `max-width:calc(100vw - 20px)` + `overflow-x:auto`）。

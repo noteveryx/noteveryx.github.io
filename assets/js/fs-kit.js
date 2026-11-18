@@ -42,25 +42,38 @@
 
   /* ---------- 样式 ---------- */
   var STYLE = [
+    /* 尺寸 / 边距 / 配色与「悬浮目录」按钮保持一致：
+       44px 圆钮、右边距 18px，和工具坞、目录钮共用同一条竖线。 */
     '.fsk-btn{',
     'position:fixed;',
-    'right:calc(14px + env(safe-area-inset-right));',
-    'bottom:calc(14px + env(safe-area-inset-bottom));',
-    'width:40px;height:40px;border-radius:50%;',
+    'right:calc(18px + env(safe-area-inset-right));',
+    'bottom:calc(18px + env(safe-area-inset-bottom));',
+    'width:44px;height:44px;border-radius:50%;',
     'display:flex;align-items:center;justify-content:center;',
     'border:1px solid rgba(255,255,255,.24);',
     'background:rgba(14,16,26,.62);',
     '-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);',
     'color:rgba(255,255,255,.94);cursor:pointer;z-index:60;',
-    'opacity:.78;-webkit-tap-highlight-color:transparent;',
+    '-webkit-tap-highlight-color:transparent;',
     'box-shadow:0 2px 10px rgba(0,0,0,.28);',
     'transition:transform .16s cubic-bezier(.2,.9,.3,1),opacity .2s,color .2s,border-color .2s,background .2s;',
     '}',
-    '.fsk-btn svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.45));}',
-    '.fsk-btn:hover{opacity:1;transform:scale(1.07);color:#fff;border-color:rgba(255,255,255,.42);background:rgba(14,16,26,.85);}',
+    '.fsk-btn svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.28));}',
+    '.fsk-btn:hover{transform:scale(1.06);background:rgba(14,16,26,.85);color:#fff;border-color:rgba(255,255,255,.42);}',
     '.fsk-btn:active{transform:scale(.93);}',
     '.fsk-btn:focus-visible{outline:2px solid rgba(255,255,255,.6);outline-offset:2px;}',
-    '@media (hover:none){.fsk-btn{opacity:.75;}}',
+    /* 只有真的有主题系统（html[data-theme]）的页面才跟主题色。
+       不能无条件用 var(--card)：text-kit.css 给 :root 写过一套浅色兜底值，
+       深色氛围屏加载它之后按钮会变成白底白字。 */
+    '.fsk-btn.fsk-themed{',
+    'border-color:var(--line,rgba(0,0,0,.08));',
+    'background:var(--card,#fff);',
+    'color:var(--text-2,var(--muted,#3d5049));',
+    'box-shadow:var(--shadow,0 2px 10px rgba(0,0,0,.12));',
+    '}',
+    '.fsk-btn.fsk-themed svg{filter:none;}',
+    '.fsk-btn.fsk-themed:hover{background:var(--card,#fff);color:var(--accent,var(--brand,#1e7a4c));border-color:var(--accent-ghost-line,rgba(0,0,0,.16));}',
+    '.fsk-btn.fsk-themed:focus-visible{outline:2px solid var(--accent,#1e7a4c);}',
     '.fsk-toast{',
     'position:fixed;left:50%;transform:translateX(-50%);',
     'bottom:calc(76px + env(safe-area-inset-bottom));',
@@ -132,7 +145,7 @@
     if (doc.getElementById('fsKitBtn')) return;
     btn = doc.createElement('button');
     btn.id = 'fsKitBtn';
-    btn.className = 'fsk-btn';
+    btn.className = 'fsk-btn' + (doc.documentElement.hasAttribute('data-theme') ? ' fsk-themed' : '');
     btn.type = 'button';
     btn.setAttribute('aria-label', '全屏');
     btn.title = '全屏（F）';
@@ -177,11 +190,11 @@
   function place() {
     if (!btn) return;
     btn.style.bottom = '';
-    var gap = 14;
+    var gap = 18;
     for (var i = 0; i < 8; i++) {
       if (!findOverlap()) return;
-      gap += 48;
-      btn.style.bottom = gap + 'px';
+      gap += 52;   /* 44px 钮高 + 8px 间距，和工具坞一致 */
+      btn.style.bottom = 'calc(' + gap + 'px + env(safe-area-inset-bottom))';
     }
   }
 
