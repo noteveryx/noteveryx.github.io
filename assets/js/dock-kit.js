@@ -79,12 +79,10 @@
     'top:auto !important;bottom:10px !important;width:auto !important;max-width:none !important;',
     'transform:none !important;border-radius:20px !important;z-index:9998 !important;}',
     /* 语言面板：手机端本来是底部抽屉，保持不动 */
-    /* 底部工具条：收进坞后作为坞里的「一行」，紧挨着上面的按钮往下排，
-       不再浮在屏幕底部（那样会脱离程序坞，看着像另一个控件）。
-       工具多，保留横向滚动。 */
-    '.dk .ui.bar{position:relative !important;left:auto !important;right:auto !important;',
-    'bottom:auto !important;transform:none !important;',
-    'max-width:calc(100vw - 28px) !important;width:max-content !important;}',
+    /* 底部工具条（.ui.bar）**不进坞**：页面自己写的就是「贴底通栏 + 横向滚动」
+       （left:50% + translateX(-50%) + max-width:calc(100vw - 20px) + overflow-x:auto），
+       收进坞后宽度被压到坞那一列里，只能露出一截，示例/描红/撤销/保存全被挤到屏幕外，
+       看着像「按钮不可用」。让它留在原位，坞改成避让它（见 place()）。 */
     /* 页面里给全屏钮让位的偏移，进坞后复位 */
     '.dk .fsk-btn{right:auto !important;}',
     /* 游戏页返回键挪进工具列后要解除固定定位 */
@@ -190,6 +188,11 @@
     for (var i = 0; i < els.length; i++) {
       var x = els[i];
       if (x === el) continue;               /* 自己不算 */
+      /* 坞内部的节点也不算：主题面板 / 语言面板收进坞后仍是 position:fixed
+         （CSS 里给它们改成了底部抽屉），不排除的话坞会一直判定「和自己重叠」，
+         每轮上移 52px，最后停在屏幕正中间 —— 工具条跟着飘到半空。 */
+      if (dock && dock.contains(x)) continue;
+      if (gk && gk.contains(x)) continue;
       if (x === toggle || x === itemsBox) continue;  /* 坞自己的开关与列（静态定位，本来也跳过） */
       var cs;
       try { cs = getComputedStyle(x); } catch (e) { continue; }
@@ -225,13 +228,10 @@
 
     dock = doc.createElement('div');
     dock.className = 'dk';
-    /* 坞的位置跟随第一个被收纳工具原来的位置：上半屏 → 右上，否则右下 */
-    try {
-      var r = list[0].getBoundingClientRect();
-      dock.classList.add(r.top < win.innerHeight / 2 ? 'dk-top' : 'dk-bottom');
-    } catch (e) {
-      dock.classList.add('dk-bottom');
-    }
+    /* 坞固定在右下角：手机端拇指最容易够到，也不会和页面自己的右上角工具打架。
+       原先按「第一个被收纳工具的原位置」判上/下，工具挂在页头时坞就跑到右上角，
+       看起来像「程序坞位置不对」。 */
+    dock.classList.add('dk-bottom');
     /* 沉浸式画布页：跟随页面的闲置淡出节奏（.ui 基类只含 fixed/z-index/透明度过渡） */
     if (!doc.body.classList.contains('gk-page') && doc.querySelector('.ui')) dock.classList.add('ui');
 
@@ -349,12 +349,19 @@
     /* ④ 全屏 */
     var fs2 = doc.getElementById('fsKitBtn');
     if (fs2 && !inDock(fs2)) list.push(rank(fs2, 3));
-    /* ⑤ 页面自己的悬浮工具条 —— 画板的「保存」按钮就在这条里 */
-    var bar = doc.querySelector('.ui.bar');
-    if (bar && isFixed(bar) && !inDock(bar)) list.push(rank(bar, 4));
-    /* ⑥ 调色盘组 */
-    var tools = doc.querySelector('.ui.tools');
+    /* ⑤ 底部工具条（.ui.bar）**故意不收**：它本身就是「贴底通栏 + 横向滚动」，
+       收进坞后被压成坞里的一行，示例/描红/撤销/保存会被挤到屏幕外，
+       用户点不到就以为「按钮坏了」。留在原位，坞避让它即可。 */
+    /* ⑥ 散落在右上角 / 右侧的小工具：
+       .ui.tools（视觉页的调色盘组）、.ui.side（画板右侧的近期颜色 + 调色盘）、
+       .ui.palette（曼陀罗的调色盘）—— 都属于「一堆小按钮」，收进坞最整齐 */
+    var tools = doc.querySelector('.ui.tools, .ui.side, .ui.palette');
     if (tools && isFixed(tools) && !inDock(tools)) list.push(rank(tools, 5));
+    /* ⑥b 只装一个调色盘的 .ui.panel（手写板就是这种结构） */
+    if (!tools) {
+      var upanel = doc.querySelector('.ui.panel');
+      if (upanel && isFixed(upanel) && !inDock(upanel)) list.push(rank(upanel, 5));
+    }
     /* ⑦ 生成器页的 pk-float 调色球 */
     if (!tools) {
       var pkf = doc.querySelector('.pk.pk-float');

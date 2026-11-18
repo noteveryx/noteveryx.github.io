@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#06090c">
 <title>待机展示</title>
+  <meta name="description" content="待机屏：全屏时钟、日期与文字滚动展示，适合放在副屏或平板当显示器。">
 <link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
 <link rel="apple-touch-icon" href="../assets/image/logo.png">
 <link rel="stylesheet" href="../assets/css/theme-kit.css">
@@ -578,7 +579,7 @@
   }
   .editor-box textarea:focus { border-color: var(--brand); }
   /* ---------- 文字样式设置 ---------- */
-  .editor-box { max-height: calc(100vh - 48px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .editor-box { max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .style-set {
     margin-top: 14px;
     border-top: 1px dashed var(--line);
@@ -961,6 +962,7 @@
   </div>
 
 <script src="../assets/js/theme-kit.js"></script>
+<script src="../assets/js/panel-kit.js"></script>
 <script>
 (function () {
   'use strict';
@@ -1374,9 +1376,11 @@
       font: style.font, size: style.size, color: style.color, speed: style.speed
     };
     syncStyleUI();
+    PanelKit.announce('standby-editor');   // 主题 / 翻译面板打开时，编辑器要跟着收起
     editor.classList.add('open');
     if (document.activeElement) document.activeElement.blur();
   }
+  PanelKit.claim('standby-editor', closeEditor);
   function closeEditor() {
     if (styleSnapshot) {
       style.font = styleSnapshot.font;

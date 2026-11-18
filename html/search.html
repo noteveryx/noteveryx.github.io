@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
 <link rel="apple-touch-icon" href="../assets/image/logo.png">
 <title>全站搜索</title>
+  <meta name="description" content="全站文档检索：在本地建立索引并搜索知识库全部 Markdown 文档，文件不离开浏览器。">
 <link rel="stylesheet" href="../assets/css/theme-kit.css">
 <link rel="stylesheet" href="../assets/css/themes.css">
 <link rel="stylesheet" href="../assets/css/toolbox.css">
@@ -120,6 +121,12 @@
   padding: 1px 6px;
   color: var(--text);
 }
+
+  /* 键盘 Tab 时的焦点提示：上面的 outline:none 只针对鼠标点击，键盘用户仍需看得见焦点 */
+  button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,
+  textarea:focus-visible,[tabindex]:focus-visible,[contenteditable]:focus-visible{
+    outline:2px solid currentColor;outline-offset:2px;
+  }
 </style>
 <script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink','crimson','stone'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
 <script src="../assets/js/theme-kit.js" defer></script>

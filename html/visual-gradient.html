@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
 <link rel="apple-touch-icon" href="../assets/image/logo.png">
 <title>渐变配色</title>
+  <meta name="description" content="渐变配色：全屏 Canvas 实时渲染的氛围屏，可一键保存为壁纸。">
 <link rel="stylesheet" href="../assets/css/theme-kit.css">
 <link rel="stylesheet" href="../assets/css/themes.css">
 <link rel="stylesheet" href="../assets/css/palette-kit.css">
@@ -20,7 +21,7 @@
     margin:0;width:100%;max-width:100%;overflow-x:hidden;overflow-x:clip;
     font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
     color:var(--text);background:linear-gradient(180deg,var(--bg1),var(--bg2));
-    min-height:100vh;padding-bottom:calc(28px + env(safe-area-inset-bottom));
+    min-height:100vh;min-height:100dvh;padding-bottom:calc(28px + env(safe-area-inset-bottom));
     -webkit-font-smoothing:antialiased;transition:background .28s ease,color .28s ease;
   }
   .wrap{max-width:900px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left));}
@@ -70,6 +71,12 @@
 
   .hint{font-size:12px;color:var(--muted);text-align:center;margin:16px 0 0;}
   @media (max-width:520px){ .code{flex:1 1 45%;} }
+
+  /* 键盘 Tab 时的焦点提示：上面的 outline:none 只针对鼠标点击，键盘用户仍需看得见焦点 */
+  button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,
+  textarea:focus-visible,[tabindex]:focus-visible,[contenteditable]:focus-visible{
+    outline:2px solid currentColor;outline-offset:2px;
+  }
 </style>
   <script src="../assets/js/nav-kit.js" defer></script>
   <script src="../assets/js/fs-kit.js" defer></script>
@@ -258,7 +265,7 @@
       o.fillStyle = g;
       o.fillRect(0, 0, 1600, 900);
 
-      var name = 'gradient-' + new Date().toISOString().slice(0, 10) + '-' + Date.now() % 10000 + '.png';
+      var name = 'gradient-' + new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10) + '-' + Date.now() % 10000 + '.png';
       out.toBlob(function (blob) {
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);

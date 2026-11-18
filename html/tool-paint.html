@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
 <link rel="apple-touch-icon" href="../assets/image/logo.png">
 <title>画板</title>
+  <meta name="description" content="在线画板：圆笔/方笔/铅笔/马克笔/喷枪五种笔触，支持橡皮、填充、取色、撤销重做与导出 PNG。">
 <link rel="stylesheet" href="../assets/css/palette-kit.css">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -112,6 +113,12 @@
     pointer-events:none;
   }
   .simp-tip{margin:9px 0 0;font-size:10.5px;line-height:1.6;color:#98a0ad;}
+
+  /* 键盘 Tab 时的焦点提示：上面的 outline:none 只针对鼠标点击，键盘用户仍需看得见焦点 */
+  button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,
+  textarea:focus-visible,[tabindex]:focus-visible,[contenteditable]:focus-visible{
+    outline:2px solid currentColor;outline-offset:2px;
+  }
 </style>
   <script src="../assets/js/nav-kit.js" defer></script>
   <script src="../assets/js/fs-kit.js" defer></script>
@@ -159,6 +166,7 @@
 <div class="ui hint" id="hint">直接在画布上画 · 工具栏可左右滑动</div>
 
 <script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/panel-kit.js"></script>
 <script>
 (function () {
   'use strict';
@@ -629,6 +637,7 @@
 
   function placeSimp() {
     if (!simpPop || !simpBtn) return;
+    PanelKit.announce('paint-simp');   // 调色盘 / 主题打开时，本弹窗要跟着收起
     simpPop.hidden = false;
     simpPop.style.visibility = 'hidden';
     var r = simpBtn.getBoundingClientRect();
@@ -642,6 +651,7 @@
     simpPop.style.visibility = 'visible';
   }
   function closeSimp() { if (simpPop) simpPop.hidden = true; }
+  PanelKit.claim('paint-simp', closeSimp);
 
   function renderSimples() {
     if (!simpGrid) return;
@@ -757,7 +767,7 @@
       out.toBlob(function (blob) {
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'paint-' + new Date().toISOString().slice(0, 10) + '-' + Date.now() % 10000 + '.png';
+        a.download = 'paint-' + new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10) + '-' + Date.now() % 10000 + '.png';
         document.body.appendChild(a);
         a.click();
         setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);

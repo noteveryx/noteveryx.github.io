@@ -845,6 +845,7 @@ html[data-theme="amber"] .h-price{color:var(--acid-2)}
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>
+<script src="../assets/js/panel-kit.js"></script>
 </head>
 <body>
 <div class="progress" id="progress"></div>
@@ -1421,7 +1422,9 @@ html[data-theme="amber"] .h-price{color:var(--acid-2)}
     if (!panel || !btn) return;
     panel.hidden = !open;
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) PanelKit.announce('delta-theme');   // 翻译面板打开时，本主题面板要跟着收起
   }
+  PanelKit.claim('delta-theme', function () { openPanel(false); });
 
   if (btn && panel) {
     btn.addEventListener('click', function (e) {

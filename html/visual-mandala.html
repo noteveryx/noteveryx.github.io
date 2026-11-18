@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
 <link rel="apple-touch-icon" href="../assets/image/logo.png">
 <title>曼陀罗</title>
+  <meta name="description" content="曼陀罗：全屏 Canvas 实时渲染的氛围屏，可一键保存为壁纸。">
 <link rel="stylesheet" href="../assets/css/palette-kit.css">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -358,7 +359,7 @@
       var dw = cv.width * scale, dh = cv.height * scale;
       octx.drawImage(cv, (OUT - dw) / 2, (OUT - dh) / 2, dw, dh);
 
-      var name = 'mandala-' + new Date().toISOString().slice(0, 10) + '-' + Date.now() % 10000 + '.png';
+      var name = 'mandala-' + new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10) + '-' + Date.now() % 10000 + '.png';
       if (out.toBlob) {
         out.toBlob(function (blob) {
           if (!blob) return;

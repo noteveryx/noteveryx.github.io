@@ -62,7 +62,8 @@ knowledge-base/
 │   │   ├── ebook-search.js / living-better-search.js / static-pages.js
 │   │   ├── theme-kit.js / toolbox.js / game-kit.js / palette-kit.js
 │   │   ├── fs-kit.js / save-kit.js / text-kit.js / quotes-data.js / qrcode.js
-│   │   └── translate-kit.js / dock-kit.js   # 全站注入：页面翻译 / 手机端工具坞
+│   │   ├── translate-kit.js / dock-kit.js   # 全站注入：页面翻译 / 手机端工具坞
+│   │   └── panel-kit.js              # 面板互斥：页面自绘浮层接入 kb:panel-open 广播
 │   ├── fonts/                 # 本地 woff2（Source Sans Pro ×3 + Roboto Mono，~56 KB）
 │   ├── image/                 # 图标 / logo / favicon
 │   └── json/
@@ -156,7 +157,7 @@ docsify 自带：点一下回到 `README.md`，那里有今日新增的文章列
 
 页面本身附带：**主题切换**（7 套，存 `tk_theme`）、**页面翻译**（28 种语言，存 `kb_translate_lang`）、卡片图标徽章、滚动入场动效、实时时间 + 两地天气。
 
-手机端所有悬浮工具按钮会收进**可折叠工具坞**（右下或右上角 `⋮`），详见 7.8.2。
+手机端所有悬浮工具按钮会收进**可折叠工具坞**（右下角 `⋮`），页面自己的底部工具条保持在屏幕最下方，详见 7.8.2。
 
 ---
 
@@ -484,7 +485,9 @@ buildPanel(panel, {
 3. **工具页骨架**：`<body class="tb-page">`、`<div id="tbRoot"></div>`、`ToolBox.mount(...)`，并把 `<meta name="theme-color">` 改成该页主题色。
 4. **注册到导航**：在 `x.html` 加一张 `.sp-card` 卡片，并在 JS 的 `CARD_ICONS` 映射表里加 emoji 图标（不加就没有图标徽章）；游戏要另加到 `game-hub.html` 的卡片网格。
 5. **同步文案里的数量**：`x.html` 搜索卡片写着「检索全部 937 篇文档」，`html/` 页面卡片写着「42 个页面」，加文档 / 加页面后记得改（本文档正文里的篇数口径也要跟着改）。
-6. **新增悬浮按钮时**：要么放进页面的 `.ui.tools` 容器，要么调用 `DockKit.add(node)`，否则手机端不会被工具坞收纳（见 7.8.2）。
+6. **新增悬浮按钮时**：要么放进 `.ui.tools` / `.ui.side` / `.ui.palette` / `.ui.panel` 容器（这几个会被自动收纳），
+   要么调用 `DockKit.add(node)`，否则手机端会一直浮在原处（见 7.8.2）。
+   **底部工具条请用 `.ui.bar`** —— 它不进坞，会保持「贴底通栏 + 横向滚动」。。
 
 #### 7.7.7 `x.html` 的滚动入场动效（顺序保证）
 
@@ -563,6 +566,26 @@ buildPanel(panel, {
 解法是一个广播：任一面板打开时派发 `kb:panel-open`（`detail.id` = `theme` / `translate` / `palette` / `x-theme`），
 其它面板收到就收起自己。已接入 `theme-kit.js`、`translate-kit.js`、`palette-kit.js` 和 `x.html` 的自绘主题面板。
 **新增任何浮层面板都要接这个广播**，否则又会变成"两个面板叠在一起"。
+
+**页面自己画的浮层：用 `panel-kit.js`**。原先只有三个 kit 之间互斥，页面自绘的浮层没接进去，
+于是「点开字号面板 → 再打开调色盘 → 关掉调色盘」之后字号面板还杵在屏幕上（两块的按钮都
+`stopPropagation`，彼此收不到对方的点击，各自「点外部收起」那条 `document` 监听都失效了）。
+
+```html
+<script src="../assets/js/panel-kit.js"></script>
+```
+
+```js
+PanelKit.claim('ptext-type', closePanel);   // 注册：别人打开时我收起自己
+PanelKit.announce('ptext-type');            // 我打开时告诉别人收起
+```
+
+- `claim` 的 id 要和 `announce` 一致；**同页多个浮层用不同 id**，这样它们之间也互斥
+  （手写板的「格线」和「描红」就会互相顶掉）。
+- 已接入：`visual-particle-text`（字号面板）、`tool-paint`（简笔画弹窗）、
+  `tool-handwriting`（格线 / 描红）、`game-wordchain`（词库面板）、
+  `tool-standby`（文字样式编辑器）、`tool-translate`（语种下拉）、`tool-delta-escort`（主题面板）。
+- 注意 `claim` 注册的是**关闭函数**，不是开关函数 —— 别的面板打开时只能"收起"，不能"打开"。
 
 **画板 / 手写板：边界就是屏幕**：`tool-paint.html`、`tool-handwriting.html` 的主画布结构是
 
@@ -659,15 +682,19 @@ buildPanel(panel, {
 | 主题 | `button.tk-btn` + `div.tk-panel` | theme-kit 的按钮与面板是两个**独立的 fixed 节点**，必须一起搬，否则面板会跑回屏幕右上角对不上按钮 |
 | 语言 | `div.tk-t`（float 悬浮钮、inline 页头钮都收） | translate-kit 改成无条件调 `DockKit.add(wrap)`，宽屏时 `add()` 直接忽略 |
 | 全屏 | `#fsKitBtn` | fs-kit 注入；自带全屏钮的 3 个页面（aurora/starfield/standby）没有这个 id |
-| 下载/保存 | 随 `.ui.bar`（画板/手写板/mandala 的底部工具条）、`.ui.tools`、`.pk.pk-float`、固定 `.tools` 一起进坞 | **静态表单里的下载按钮不动**（`visual-gradient/poster/pixel-avatar`、toolbox 面板里的「下载 PNG」）—— 那是页面主流程，抽走就丢了上下文 |
+| 下载/保存 | 留在底部工具条 `.ui.bar` 里，**工具条本身不进坞**；进坞的是 `.ui.tools` / `.ui.side` / `.ui.palette` / `.ui.panel` / `.pk.pk-float` / 固定 `.tools` | **静态表单里的下载按钮不动**（`visual-gradient/poster/pixel-avatar`、toolbox 面板里的「下载 PNG」）—— 那是页面主流程，抽走就丢了上下文 |
 
 **细节**：
 
+- **坞固定在右下角**（`dk-bottom`）。早期按「第一个被收纳工具的原位置」判上/下，工具挂在页头时坞就跑到右上角，
+  用户反馈「程序坞位置不对」。现在除游戏页原地折叠外，一律右下角。
 - **展开后按钮紧挨着开关往下排**，间距 8px，整列靠右对齐（`align-items:flex-end`）。
-  宽条（`.ui.bar` 工具条）作为**坞里的最后一行**，右边缘和圆钮对齐、向左延伸，超宽时横向滚动。
-  早期版本把 `.ui.bar` 设成 `position:fixed` 留在屏幕底部，结果它脱离程序坞、单独贴在屏幕最下面，像另一个控件。
-- 坞内顺序用 `__dkRank` 固定：返回(0) → 主题(1) → 语言(2) → 全屏(3) → 工具条(4) → 调色盘(5)。
-  异步补进来的节点按 rank 插回正确位置，否则宽条会把竖排按钮割断。
+- **`.ui.bar` 工具条不进坞**（`__dkRank` 里没有它）：它本身就是「贴底通栏 + 横向滚动」
+  （`left:50%` + `translateX(-50%)` + `max-width:calc(100vw - 20px)` + `overflow-x:auto`）。
+  收进坞后会被压成坞里的一行，示例 / 描红 / 撤销 / 保存全被挤到屏幕外，用户点不到就以为「按钮坏了」。
+  坞改为避让它，停在它正上方。
+- 坞内顺序用 `__dkRank` 固定：返回(0) → 主题(1) → 语言(2) → 全屏(3) → 调色盘(5)。
+  异步补进来的节点按 rank 插回正确位置，否则会把竖排按钮割断。
 - 被收纳节点加 `.dk-item` 类，统一解除各自的 `fixed` 定位与 `transform`（样式本身保留）。
   `.dk-item` 用 `position: relative` 而不是 `static`：主题/语言面板是绝对定位的，要相对按钮展开。
 - 移动前记录原父级 + 相邻节点，切回桌面宽度时**逆序还原**。
@@ -681,13 +708,81 @@ buildPanel(panel, {
 
 - 开关逻辑必须是 `setCollapsed(!isCollapsed())`：早期写成 `setCollapsed(isCollapsed())`，等于永远保持当前状态，**点了没反应**。
 - 收纳进来的节点如果还带 `transform`（居中写法常见），`fixed` 子元素的包含块会跟着变，导致面板宽度塌陷 —— 所以 `.dk-item` 里统一 `transform: none !important`。
-- **避让检测不能按"祖先/后代"排除**：坞里若还有 fixed 的浮层，它正是要避让的对象；
-  早期用 `el.contains(x)` 一刀切，把它也跳过了，坞直接压在上面。
+- **避让检测必须排除「坞自己」的节点**：坞里的主题面板 / 语言面板在手机上被改成 `position:fixed` 底部抽屉，
+  不排除的话坞会判定「和自己重叠」，每轮上移 52px（最多 6 轮），最后停在屏幕正中间，
+  底部工具条也跟着飘到半空 —— 这是「工具栏跑到屏幕中央」的根因。
+  面板打开时坞被它盖住是正常的（同属一套 UI，面板 z-index 更高），关掉面板坞就回原位。
+- **但要区分「坞内」和「坞外」**：页面自己的 fixed 浮层（没进坞的 `.ui.bar`、`.ui.hint`、画布上的浮层）
+  仍是要避让的对象，不能一刀切 `document.body 全跳过`。
 - **展开动画期间量不准**：`.dk-items` 的入场动画带 `transform`，会让 `fixed` 子元素的包含块变成它自己，
   这时测出来的位置是错的（坞会一路顶到屏幕中间）。要等动画结束（约 280ms）再测一次。
 - **返回键要跟着 `nav-kit` 的 `no-back` 走**：直接打开页面（referrer 不同源）时 nav-kit 会给 `<html>` 加
   `no-back` 隐藏返回键；坞里克隆的按钮不受那条 CSS 管，得自己判断，否则直接进页面也会冒出个退不掉的返回。
 - 语言按钮 inline 模式带 `margin-left: auto`，进坞后会被推到边上，进坞要复位。
+
+---
+
+### 7.9 全站体积、移动端与可访问性约定
+
+一次性做过的清理，新页面照这个来。
+
+**`books.json` 保持原来的对象数组格式，不要再改结构**（当前 6.80 MB）：
+
+曾经试过「表头 + 二维数组 + meta」的紧凑格式（能把 6.80 MB 压到 2.07 MB），
+在本地验证一切正常，但**上线后搜书直接不可用**，已回滚。原因：
+
+`books.json` 和 `ebook-search.js` 是**两个独立的缓存单元**（CDN、浏览器各缓各的）。
+只要其中一方还是旧版，格式就对不上：
+
+- 旧 JS + 新 JSON → `ALL_BOOKS = {meta, cols, rows}`，`ALL_BOOKS.length` 是 `undefined`，
+  搜索循环一次都不执行 → 永远「没有找到相关书籍」；
+- 新 JS + 旧 JSON → 能兼容，但反之不行。
+
+而静态托管（GitHub Pages / 各种 CDN）刷新缓存是**异步、不可控**的，无法保证两者同时生效。
+数据格式要和代码**原子地一起更新**，在纯静态站里做不到。
+
+所以：**要减体积就动传输层，别动数据结构** —— 让托管开启 gzip/brotli
+（实测 864 KB / 425 KB），或者按分类分片懒加载。
+
+顺带：`docs/电子资源.md` 里没有 `<div id="ebook-categories">` 容器，
+而 `renderCategories()` 找的正是这个 id，所以**分类芯片一直不显示**（`if (!box) return;`）。
+要恢复分类筛选，需要在那个 Markdown 里补上这个容器。
+
+**移动端视口高度**：整屏页写 `min-height:100vh;min-height:100dvh;`（两行都要，
+前一行给老浏览器兜底）。只写 `100vh` 在 iOS Safari 地址栏收放时会裁掉底部。
+
+**刘海屏安全区**：引用 `toolbox.css` 的页面已统一处理（`padding-bottom: calc(48px + env(safe-area-inset-bottom))`），
+**不要**再按"页面里有没有 `env(safe-area-inset)`"判断是否漏配。
+自己写布局的页面（`x.html`、画板/手写板、氛围屏）要自己补，尤其是 `position:fixed; bottom:…` 的浮层。
+
+**焦点可见性**：页面里用了 `outline:none` 的，必须补一条键盘兜底，否则键盘用户看不到焦点：
+
+```css
+button:focus-visible,a:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+  outline:2px solid currentColor;outline-offset:2px;
+}
+```
+
+**`<meta name="description">`**：43 个独立页都有，新页面照抄一句。
+
+**文件名/日期别用 `toISOString().slice(0,10)`**：那是 UTC，中国时区 0:00–8:00 会得到前一天
+（番茄钟的「今天」统计曾因此跨日错乱）。要本地日期就用：
+
+```js
+new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10)
+```
+
+**放在后台就别跑定时器**：`setInterval` 刷时钟/动画的，配一个 `visibilitychange` 停表（`visual-sky`、`x.html` 是范例）。
+
+**两件"看着重复但不要动"的事**：
+
+- **`.back{}` 返回键样式在 18 个页面各写一份** —— 它们分成 4 类完全不同的设计：深色氛围屏（半透明深底+白边）、
+  浅色工具页（白底+blur）、跟随主题变量的（`var(--card)`/`var(--line)`，且**在工具栏里 flex 排列、不带 fixed 定位**）、
+  game-hub 专属（38px 圆角方钮）。统一注入会破坏其中一类，且独立页的设计原则是"单文件自包含、可单独复制"，
+  不引入外部 CSS。
+- **保存逻辑 9 个页面各写各的** —— `save-kit.js` 是为"氛围屏壁纸"设计的（自带圆形按钮、尺寸选择菜单、toast），
+  与这些页面已成型 UI 不匹配；强行 `mountButton` 会出现两个保存按钮。画板/手写板还有"纸色合成 / 透明底"语义。
+  只有新页面直接上 `SaveKit`，老页面保持原样。
 
 ---
 
@@ -719,7 +814,9 @@ buildPanel(panel, {
 | 搜索框里的图标偏下、没垂直居中 | 图标用 `top:50%` 定位，参照物却是「输入框 + 下方提示行」的整个容器。要给输入框单独包一层 `position:relative` 的定位容器 |
 | 某页没有翻译按钮 | 1) 网络能否访问 `res.zvo.cn` / `cdn.jsdelivr.net`；2) console 有没有 `[translate-kit] 组件加载失败`；3) 该页 `</head>` 前是否有 `translate-kit.js`；4) 是否设了 `window.__TK_NO_PAGE_UI__`（翻译工具页就是故意不显示） |
 | 手机端点翻译按钮看不到面板 / 选不了语言 | 面板被带 `backdrop-filter` / `transform` 的祖先困住了。`translate-kit` 已在手机端把面板挂到 `body`（见 7.8.1）；若新页面自己搬过容器要检查 |
-| 手机端工具栏按钮散落、挡住操作 | `dock-kit.js` 没生效：检查是否引入、宽度是否 ≤600px、新增悬浮钮是否放进 `.ui.tools` 或调用 `DockKit.add`（见 7.8.2） |
+| 手机端工具栏按钮散落、挡住操作 | `dock-kit.js` 没生效：检查是否引入、宽度是否 ≤600px、新增悬浮钮是否放进 `.ui.tools` / `.ui.side` / `.ui.palette` / `.ui.panel` 或调用 `DockKit.add`（见 7.8.2） |
+| 手机端工具条 / 坞飘到屏幕中央 | `overlapsFixed()` 没排除坞自己的节点：坞里的主题 / 语言面板是 `position:fixed`，坞会判定「和自己重叠」而每轮上移 52px，最后停在屏幕中间。确认 `if (dock.contains(x)) continue;` 还在 |
+| 手机端工具条上的「示例 / 描红 / 保存」点不到 | 工具条被收进坞了：`.ui.bar` 必须留在页面原位（贴底通栏 + 横向滚动），`collect()` 里不要收集它 |
 | 手机端点 `⋮` 展开没反应 | 开关逻辑写反了（应为 `setCollapsed(!isCollapsed())`），见 7.8.2 的坑 |
 | 手机收起工具坞后又自动变回原样 | 页面在移动端期间重建过 DOM（如重渲染 `.tools`），坞的还原记录失效；刷新页面即可 |
 | 某页翻译成外语后，所有页面都变外语 | 这是**跨页面记忆**的设计（`kb_translate_lang`）。清除：DevTools → Application → Local Storage 删 `kb_translate_lang` 和 `to` |

@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
 <link rel="apple-touch-icon" href="../assets/image/logo.png">
 <title>噪声壁纸</title>
+  <meta name="description" content="噪声壁纸：全屏 Canvas 实时渲染的氛围屏，可一键保存为壁纸。">
 <link rel="stylesheet" href="../assets/css/palette-kit.css">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -48,6 +49,12 @@
     pointer-events:none;user-select:none;
   }
   .label b{font-weight:600;letter-spacing:.16em;color:rgba(255,255,255,.9);}
+
+  /* 键盘 Tab 时的焦点提示：上面的 outline:none 只针对鼠标点击，键盘用户仍需看得见焦点 */
+  button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,
+  textarea:focus-visible,[tabindex]:focus-visible,[contenteditable]:focus-visible{
+    outline:2px solid currentColor;outline-offset:2px;
+  }
 </style>
   <script src="../assets/js/nav-kit.js" defer></script>
   <script src="../assets/js/fs-kit.js" defer></script>
@@ -206,7 +213,7 @@
       out.toBlob(function (blob) {
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'noise-' + new Date().toISOString().slice(0, 10) + '-' + Date.now() % 10000 + '.png';
+        a.download = 'noise-' + new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10) + '-' + Date.now() % 10000 + '.png';
         document.body.appendChild(a);
         a.click();
         setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);

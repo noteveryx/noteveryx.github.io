@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
 <link rel="apple-touch-icon" href="../assets/image/logo.png">
 <title>手写板</title>
+  <meta name="description" content="练字板：田字格/四线格/米字格等多种格线，可输入汉字拼音生成描红，支持深色纸与导出。">
 <link rel="stylesheet" href="../assets/css/palette-kit.css">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -195,6 +196,12 @@
   body.dark .trace .tabs button{background:rgba(255,255,255,.08);color:#a8b0bd;}
   .trace .tabs button.on{background:rgba(99,91,255,.14);color:#635bff;}
   body.dark .trace .tabs button.on{background:rgba(120,140,255,.2);color:#a9b5ff;}
+
+  /* 键盘 Tab 时的焦点提示：上面的 outline:none 只针对鼠标点击，键盘用户仍需看得见焦点 */
+  button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,
+  textarea:focus-visible,[tabindex]:focus-visible,[contenteditable]:focus-visible{
+    outline:2px solid currentColor;outline-offset:2px;
+  }
 </style>
   <script src="../assets/js/nav-kit.js" defer></script>
   <script src="../assets/js/fs-kit.js" defer></script>
@@ -271,6 +278,7 @@
 <div class="ui hint" id="hint">用手指或鼠标书写 · 导出为透明底 PNG</div>
 
 <script src="../assets/js/palette-kit.js"></script>
+<script src="../assets/js/panel-kit.js"></script>
 <script>
 (function () {
   'use strict';
@@ -799,6 +807,7 @@
 
   function placePop() {
     if (!gridPop || !gridBtn) return;
+    PanelKit.announce('hw-grid');   // 调色盘 / 主题打开时，本弹窗要跟着收起
     gridPop.hidden = false;
     gridPop.style.visibility = 'hidden';
     var r = gridBtn.getBoundingClientRect();
@@ -813,6 +822,7 @@
   }
 
   function closePop() { if (gridPop) gridPop.hidden = true; }
+  PanelKit.claim('hw-grid', closePop);
 
   if (gridBtn) gridBtn.addEventListener('click', function (e) {
     e.stopPropagation();
@@ -837,6 +847,7 @@
 
   function placeTrace() {
     if (!tracePop || !traceBtn) return;
+    PanelKit.announce('hw-trace');   // 同页两个弹窗之间也要互斥
     tracePop.hidden = false;
     tracePop.style.visibility = 'hidden';
     var r = traceBtn.getBoundingClientRect();
@@ -850,6 +861,7 @@
     tracePop.style.visibility = 'visible';
   }
   function closeTrace() { if (tracePop) tracePop.hidden = true; }
+  PanelKit.claim('hw-trace', closeTrace);
 
   if (traceBtn) traceBtn.addEventListener('click', function (e) {
     e.stopPropagation();
@@ -948,7 +960,7 @@
       out.toBlob(function (blob) {
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'handwriting-' + new Date().toISOString().slice(0, 10) + '-' + Date.now() % 10000 + '.png';
+        a.download = 'handwriting-' + new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10) + '-' + Date.now() % 10000 + '.png';
         document.body.appendChild(a);
         a.click();
         setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);

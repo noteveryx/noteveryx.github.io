@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
 <link rel="apple-touch-icon" href="../assets/image/logo.png">
 <title>粒子文字</title>
+  <meta name="description" content="粒子文字：全屏 Canvas 实时渲染的氛围屏，可一键保存为壁纸。">
 <link rel="stylesheet" href="../assets/css/palette-kit.css">
 <link rel="stylesheet" href="../assets/css/text-kit.css">
 <style>
@@ -129,6 +130,7 @@
 <script src="../assets/js/palette-kit.js"></script>
 <script src="../assets/js/quotes-data.js"></script>
 <script src="../assets/js/text-kit.js"></script>
+<script src="../assets/js/panel-kit.js"></script>
 <script>
 (function () {
   'use strict';
@@ -418,7 +420,9 @@
   /* 面板开合 */
   var typeBtn = document.getElementById('typeBtn');
   var typePanel = document.getElementById('typePanel');
+  var TYPE_PANEL_ID = 'ptext-type';
   function placePanel() {
+    PanelKit.announce(TYPE_PANEL_ID);   // 调色盘 / 主题 / 翻译打开时，本面板要跟着收起
     typePanel.hidden = false;
     typePanel.style.visibility = 'hidden';
     var r = typeBtn.getBoundingClientRect();
@@ -432,6 +436,8 @@
     typePanel.style.visibility = 'visible';
   }
   function closePanel() { typePanel.hidden = true; }
+  /* 别的面板打开时收起自己（字号面板留着会和调色盘叠在一起） */
+  PanelKit.claim(TYPE_PANEL_ID, closePanel);
 
   typeBtn.addEventListener('click', function (e) {
     e.stopPropagation();
