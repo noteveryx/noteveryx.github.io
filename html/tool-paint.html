@@ -16,13 +16,12 @@
     color:#23262d;-webkit-font-smoothing:antialiased;
     touch-action:none;user-select:none;-webkit-user-select:none;
   }
-  /* 外层滚动容器：舞台比屏幕大时，超出部分靠它滚动查看（无限画布感） */
+  /* 画布容器：边界就是屏幕大小，不需要滚动查看别处 */
   .canvas-wrap{
-    position:absolute;inset:0;overflow:auto;
-    touch-action:auto;overscroll-behavior:contain;
-    -webkit-overflow-scrolling:touch;
+    position:absolute;inset:0;overflow:hidden;
+    touch-action:none;overscroll-behavior:contain;
   }
-  /* 画布舞台：右下角把手可拖动改大小，双击把手恢复全屏 */
+  /* 画布舞台：固定铺满可视区 */
   .stage{
     position:relative;width:100%;height:100%;
     overflow:hidden;box-shadow:0 0 0 1px rgba(35,38,45,.14),0 4px 18px rgba(35,38,45,.10);
@@ -32,23 +31,6 @@
     position:absolute;inset:0;display:block;width:100%;height:100%;cursor:crosshair;
     touch-action:none;   /* 画布上触摸就是画画，不让外层跟着滚 */
   }
-  .rsizer{
-    position:absolute;right:0;bottom:0;width:44px;height:44px;
-    /* 必须高于 .ui 工具栏（z-index 5）：手机上工具栏会盖到画布右下角，
-       层级不够就点不到把手，拖不动 */
-    z-index:12;
-    cursor:nwse-resize;touch-action:none;
-    display:flex;align-items:flex-end;justify-content:flex-end;padding:0 9px 9px 0;
-  }
-  .rsizer::after{
-    content:"";width:13px;height:13px;border-radius:0 0 4px 0;
-    border-right:2px solid rgba(35,38,45,.32);border-bottom:2px solid rgba(35,38,45,.32);
-  }
-  /* 全屏按钮固定在右下角，会正好压住拖拽把手 —— 往左让开 64px */
-  .fsk-btn{right:64px !important;}
-  /* 移动画布模式：拖动变成平移，光标给出提示 */
-  body.move-mode #cv{cursor:grab;}
-  body.move-mode #cv:active{cursor:grabbing;}
   .ui{position:fixed;z-index:5;opacity:1;transition:opacity .5s ease;}
   body.idle .ui{opacity:.18;}
   body.idle .ui:hover,body.idle .ui:focus-within{opacity:1;}
@@ -97,7 +79,6 @@
   .tool i{width:14px;height:14px;border-radius:50%;background:#23262d;display:block;}
   .sep{width:1px;height:20px;background:rgba(0,0,0,.1);flex:0 0 auto;}
   .tool.primary{background:#23262d;color:#fff;}
-  .tool.zoom{min-width:0;padding:0 8px;font-variant-numeric:tabular-nums;}
   .hint{
     left:50%;bottom:calc(62px + env(safe-area-inset-bottom));transform:translateX(-50%);
     font-size:11.5px;color:#98a0ad;pointer-events:none;white-space:nowrap;
@@ -140,8 +121,7 @@
 <body>
 <div class="canvas-wrap" id="wrap">
   <div class="stage" id="stage">
-    <canvas id="cv"></canvas>
-    <div class="rsizer" id="rsizer" role="separator" aria-label="拖动调整画布大小" title="拖动调整大小 · 双击还原全屏"></div>
+  <canvas id="cv"></canvas>
   </div>
 </div>
 
@@ -158,13 +138,9 @@
   <button class="tool on" id="brushBtn" type="button" title="切换笔刷">圆笔</button>
   <button class="tool" id="wBtn" type="button" title="笔宽"><span>粗</span><i id="wDot"></i></button>
   <button class="tool" id="eraserBtn" type="button" title="橡皮（E）">橡皮</button>
-  <button class="tool" id="moveBtn" type="button" title="移动画布：画布比屏幕大时，用它拖动查看别的区域">移动</button>
-  <button class="tool" id="biggerBtn" type="button" title="把画布放大一档（手机上拖不到右下角时用它）">放大</button>
-  <button class="tool" id="fitBtn" type="button" title="画布恢复铺满屏幕">铺满</button>
   <button class="tool" id="fillBtn" type="button" title="填充（G）">填充</button>
   <button class="tool" id="pickBtn" type="button" title="取色（I）">取色</button>
   <i class="sep"></i>
-  <button class="tool zoom" id="zoomBtn" type="button" title="缩放：双指捏合 / 滚轮，点此复位 1:1"><span id="zoomText">100%</span></button>
   <button class="tool" id="simpBtn" type="button" title="简笔画示例">示例</button>
   <button class="tool" id="undoBtn" type="button" title="撤销（Z）">撤销</button>
   <button class="tool" id="redoBtn" type="button" title="重做（Y）">重做</button>
@@ -180,7 +156,7 @@
   <p class="simp-tip">点一下把简笔画画到画布中央，接着用取色器涂色即可。</p>
 </div>
 
-<div class="ui hint" id="hint">工具栏可左右滑动 · 双指捏合缩放 · 双指拖动平移</div>
+<div class="ui hint" id="hint">直接在画布上画 · 工具栏可左右滑动</div>
 
 <script src="../assets/js/palette-kit.js"></script>
 <script>
@@ -191,12 +167,6 @@
   var ctx = cv.getContext('2d', { alpha: false });
   var wrap = document.getElementById('wrap');
   var stage = document.getElementById('stage');
-  var rsizer = document.getElementById('rsizer');
-  var SIZE_KEY = 'paint-stage-size';
-  var MIN_W = 260, MIN_H = 200;
-  /* 上限按「位图内存」定：画布位图 = CSS 尺寸 × DPR²，
-     2400×2400 在 DPR=1.5 下约 52MB，再大手机会直接卡死 */
-  var MAX_W = 2400, MAX_H = 2400;
   var W = 0, H = 0, DPR = 1;
 
   var BRUSHES = ['圆笔', '方笔', '铅笔', '马克笔', '喷枪'];
@@ -210,51 +180,25 @@
   var mode = 'brush';            // brush | eraser | fill | pick
   var drawing = false, last = null;
 
-  /* ---------------- 缩放 / 平移（视口变换）----------------
+  /* ---------------- 画布两层 ----------------
      画布分两层：
        contentCv —— 内容层，按原始分辨率保存笔迹；撤销/取色/填充/导出都用它
-       cv/ctx    —— 显示层，只负责把内容层按当前视图（缩放+平移）画出来
-     这样放大后旧笔迹会跟着放大，且不损失画质，导出 PNG 始终是原始分辨率。 */
-  var view = { s: 1, x: 0, y: 0 };      // s = 倍率，x/y = 平移量（CSS 像素）
-  var MIN_S = 0.35, MAX_S = 8;
-
+       cv/ctx    —— 显示层，负责把内容层原样画出来
+     画布边界就是屏幕大小，不做缩放平移，两层始终 1:1 对齐。 */
   var contentCv = document.createElement('canvas');
   var cctx = contentCv.getContext('2d');
 
-  function clampScale(s) { return Math.max(MIN_S, Math.min(MAX_S, s)); }
-
-  /* 画布坐标 → 内容层设备像素（内容层不含视图变换） */
+  /* 画布坐标 → 内容层设备像素 */
   function toDevice(x, y) {
     return { x: Math.round(x * DPR), y: Math.round(y * DPR) };
   }
 
-  function syncZoom() {
-    var t = document.getElementById('zoomText');
-    if (t) t.textContent = Math.round(view.s * 100) + '%';
-  }
-  // 以画布上的 (px,py) 为锚点缩放 —— 手指/光标下的那一点保持不动
-  function zoomAt(px, py, factor) {
-    var ns = clampScale(view.s * factor);
-    var k = ns / view.s;
-    view.x = px - (px - view.x) * k;
-    view.y = py - (py - view.y) * k;
-    view.s = ns;
-    syncZoom();
-    render();
-  }
-  function zoomBy(factor) { zoomAt(W / 2, H / 2, factor); }
-  function resetView() { view.s = 1; view.x = 0; view.y = 0; syncZoom(); render(); }
-
-  /* 把内容层按当前视图画到显示层 */
+  /* 把内容层画到显示层（1:1，无视图变换） */
   function render() {
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.fillStyle = paper;
     ctx.fillRect(0, 0, W, H);
-    ctx.save();
-    ctx.translate(view.x, view.y);
-    ctx.scale(view.s, view.s);
     ctx.drawImage(contentCv, 0, 0, W, H);
-    ctx.restore();
   }
 
   var snaps = [], redos = [];
@@ -271,8 +215,7 @@
     }
 
     DPR = Math.min(window.devicePixelRatio || 1, 1.5);
-    // 舞台尺寸不跟视口走：画布可以比屏幕大（无限画布），
-    // 旋转屏幕 / 窗口缩小时也不该把用户调好的画布改回去
+    // 画布边界 = 屏幕尺寸（舞台铺满可视区）
     W = stage.clientWidth; H = stage.clientHeight;
     cv.width = Math.round(W * DPR);
     cv.height = Math.round(H * DPR);
@@ -289,110 +232,11 @@
       var dw = ow * k, dh = oh * k;
       cctx.drawImage(oldCv, 0, 0, ow, oh, (W - dw) / 2, (H - dh) / 2, dw, dh);
     }
-    resetView();                 // 尺寸变了，视图复位
   }
 
-  /* ---------------- 舞台尺寸：拖右下角把手改大小 ----------------
-     允许大于视口 —— 画布边界要比屏幕还大（无限画布），
-     超出的部分由外层 .canvas-wrap 滚动查看。 */
-  function setStageSize(w, h, save) {
-    w = Math.max(MIN_W, Math.min(Math.round(w), MAX_W));
-    h = Math.max(MIN_H, Math.min(Math.round(h), MAX_H));
-    stage.style.width = w + 'px';
-    stage.style.height = h + 'px';
-    resize();
-    if (save !== false) {
-      try { localStorage.setItem(SIZE_KEY, JSON.stringify({ w: w, h: h })); } catch (e) {}
-    }
-  }
-
-  function restoreSize() {
-    try {
-      var s = JSON.parse(localStorage.getItem(SIZE_KEY) || 'null');
-      if (s && s.w && s.h) {
-        stage.style.width = Math.max(MIN_W, Math.min(Math.round(s.w), MAX_W)) + 'px';
-        stage.style.height = Math.max(MIN_H, Math.min(Math.round(s.h), MAX_H)) + 'px';
-      }
-    } catch (e) {}
-  }
-
-  function initSizer() {
-    if (!rsizer) return;
-    var drag = null;
-    rsizer.addEventListener('pointerdown', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      drag = { x: e.clientX, y: e.clientY, w: stage.offsetWidth, h: stage.offsetHeight };
-      try { rsizer.setPointerCapture(e.pointerId); } catch (err) {}
-    });
-    rsizer.addEventListener('pointermove', function (e) {
-      if (!drag) return;
-      e.preventDefault();
-      setStageSize(drag.w + (e.clientX - drag.x), drag.h + (e.clientY - drag.y));
-    });
-    function end(e) {
-      if (!drag) return;
-      drag = null;
-      try { rsizer.releasePointerCapture(e.pointerId); } catch (err) {}
-      try { localStorage.setItem(SIZE_KEY, JSON.stringify({ w: stage.offsetWidth, h: stage.offsetHeight })); } catch (err) {}
-    }
-    rsizer.addEventListener('pointerup', end);
-    rsizer.addEventListener('pointercancel', end);
-    // 双击把手 → 恢复铺满
-    rsizer.addEventListener('dblclick', function (e) {
-      e.preventDefault();
-      setStageSize(window.innerWidth, window.innerHeight);
-    });
-  }
-
-  /* ---------------- 移动画布模式 ----------------
-     画布比屏幕大时，触摸画布就是落笔，没法滑动去看别的区域。
-     开「移动」后，拖动改为平移画布（滚轮、双指平移随时可用）。 */
-  var moveMode = false;
-  var pan = null;
-
-  function setMoveMode(on) {
-    moveMode = !!on;
-    document.body.classList.toggle('move-mode', moveMode);
-    var b = document.getElementById('moveBtn');
-    if (b) {
-      b.classList.toggle('on', moveMode);
-      b.textContent = moveMode ? '移动中' : '移动';
-    }
-  }
-
-  function startPan(e) {
-    pan = { x: e.clientX, y: e.clientY, sl: wrap.scrollLeft, st: wrap.scrollTop };
-    try { cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } catch (err) {}
-  }
-
-  function doPan(e) {
-    if (!pan) return;
-    wrap.scrollLeft = pan.sl - (e.clientX - pan.x);
-    wrap.scrollTop = pan.st - (e.clientY - pan.y);
-  }
-
-  var moveBtn = document.getElementById('moveBtn');
-  if (moveBtn) moveBtn.addEventListener('click', function () { setMoveMode(!moveMode); });
-
-  /* 手机上把手的拖动方向只能往屏幕内（缩小），
-     往右下拖会出屏，放大画布只能靠按钮 */
-  var biggerBtn = document.getElementById('biggerBtn');
-  if (biggerBtn) biggerBtn.addEventListener('click', function () {
-    setStageSize(stage.offsetWidth * 1.4, stage.offsetHeight * 1.4);
-  });
-  var fitBtn = document.getElementById('fitBtn');
-  if (fitBtn) fitBtn.addEventListener('click', function () {
-    setStageSize(window.innerWidth, window.innerHeight);
-  });
-
-  /* 画布放大后，把手跟着跑到视口外去了，
-     移动模式下双击画布即可恢复铺满（移动模式下双击不会落笔） */
-  cv.addEventListener('dblclick', function (e) {
-    if (!moveMode) return;
-    e.preventDefault();
-    setStageSize(window.innerWidth, window.innerHeight);
-  });
+  /* ---------------- 画布尺寸 ----------------
+     边界就是屏幕大小：舞台铺满可视区，旋转屏幕时跟着变，
+     不再提供拖拽改大小 / 放大 / 平移。 */
 
   function pushSnap() {
     if (snaps.length >= SNAP_LIMIT) snaps.shift();
@@ -416,10 +260,10 @@
 
   function pos(e) {
     var r = cv.getBoundingClientRect();
-    // 反变换：屏幕坐标 → 画布坐标
+    // 屏幕坐标 → 画布坐标（无视图变换，1:1）
     return {
-      x: (e.clientX - r.left - view.x) / view.s,
-      y: (e.clientY - r.top - view.y) / view.s
+      x: e.clientX - r.left,
+      y: e.clientY - r.top
     };
   }
 
@@ -613,41 +457,20 @@
     });
   }
 
-  /* ---------------- 交互：单指画画 / 双指缩放平移 ---------------- */
+  /* ---------------- 交互：单指画画 ----------------
+     画布边界就是屏幕，没有缩放平移；多指按下时忽略，
+     免得两只手同时按把线条画花。 */
   var ptrs = new Map();
-  var pinch = null;         // {dist, mid, s, vx, vy}
-  var panning = null;       // {sx, sy, vx, vy}
-
-  function ptrList() { return Array.from(ptrs.values()); }
-
-  function beginPinch() {
-    var it = ptrList();
-    if (it.length < 2) { pinch = null; return; }
-    pinch = {
-      dist: Math.hypot(it[0].x - it[1].x, it[0].y - it[1].y),
-      mid: { x: (it[0].x + it[1].x) / 2, y: (it[0].y + it[1].y) / 2 },
-      s: view.s, vx: view.x, vy: view.y,
-      sl: wrap.scrollLeft, st: wrap.scrollTop
-    };
-  }
 
   cv.addEventListener('pointerdown', function (e) {
     // setPointerCapture 在指针已释放 / 合成事件下会抛异常，
-    // 一旦抛出就会中断后面的处理（双指手势直接失效），必须兜住
+    // 一旦抛出就会中断后面的处理，必须兜住
     try { cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } catch (err) { }
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-    // 双指 → 缩放 / 平移，停止画线
+    // 多指：停止画线
     if (ptrs.size >= 2) {
-      drawing = false; last = null; panning = null;
-      beginPinch();
-      return;
-    }
-    // 移动模式：这一笔是拖画布，不是落笔
-    if (moveMode) { startPan(e); return; }
-    // 桌面：中键 / Ctrl 拖动 = 平移
-    if (e.button === 1 || e.ctrlKey || e.metaKey) {
-      panning = { sx: e.clientX, sy: e.clientY, sl: wrap.scrollLeft, st: wrap.scrollTop };
+      drawing = false; last = null;
       return;
     }
 
@@ -672,38 +495,6 @@
   cv.addEventListener('pointermove', function (e) {
     if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-    // 双指：捏合缩放（以捏合中心为锚点）+ 中点位移平移
-    if (ptrs.size >= 2) {
-      if (!pinch) beginPinch();
-      if (pinch) {
-        var it = ptrList();
-        var d = Math.hypot(it[0].x - it[1].x, it[0].y - it[1].y);
-        var mid = { x: (it[0].x + it[1].x) / 2, y: (it[0].y + it[1].y) / 2 };
-        var r = cv.getBoundingClientRect();
-        var px = pinch.mid.x - r.left, py = pinch.mid.y - r.top;
-        var target = clampScale(pinch.s * (pinch.dist > 0 ? d / pinch.dist : 1));
-        var k = target / pinch.s;
-        // 缩放以捏合中心为锚点；平移统一走外层滚动容器，避免两套平移互相打架
-        view.x = px - (px - pinch.vx) * k;
-        view.y = py - (py - pinch.vy) * k;
-        view.s = target;
-        wrap.scrollLeft = pinch.sl - (mid.x - pinch.mid.x);
-        wrap.scrollTop = pinch.st - (mid.y - pinch.mid.y);
-        syncZoom();
-        render();
-      }
-      return;
-    }
-    // 单指平移（桌面中键 / Ctrl）
-    if (panning) {
-      wrap.scrollLeft = panning.sl - (e.clientX - panning.sx);
-      wrap.scrollTop = panning.st - (e.clientY - panning.sy);
-      return;
-    }
-
-    // 移动模式：拖动 = 平移画布
-    if (pan) { doPan(e); return; }
-
     if (!drawing) return;
     var p = pos(e);
     drawSegment(last.x, last.y, p.x, p.y);
@@ -714,20 +505,10 @@
   ['pointerup', 'pointercancel'].forEach(function (ev) {
     cv.addEventListener(ev, function (e) {
       ptrs.delete(e.pointerId);
-      if (ptrs.size < 2) pinch = null;
-      if (ptrs.size === 0) { drawing = false; last = null; panning = null; }
-      pan = null;
+      if (ptrs.size === 0) { drawing = false; last = null; }
     });
   });
   cv.addEventListener('pointerleave', function () { drawing = false; last = null; });
-
-  // 滚轮缩放（桌面）
-  cv.addEventListener('wheel', function (e) {
-    e.preventDefault();
-    var r = cv.getBoundingClientRect();
-    var f = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-    zoomAt(e.clientX - r.left, e.clientY - r.top, f);
-  }, { passive: false });
 
   /* ==========================================================
      简笔画示例：用 SVG path 定义，画在 0–100 的坐标系里，
@@ -893,11 +674,6 @@
     else closeSimp();
   });
 
-  var zoomBtn = document.getElementById('zoomBtn');
-  if (zoomBtn) zoomBtn.addEventListener('click', function () {
-    resetView();
-    setHint('已复位到 100%');
-  });
   document.addEventListener('click', function (e) {
     if (simpPop && !simpPop.hidden && !simpPop.contains(e.target) && e.target !== simpBtn) closeSimp();
   });
@@ -1024,10 +800,6 @@
     window.__pt = {
       simples: SIMPLE.map(function (s) { return s.name; }),
       load: loadExample,
-      get view() { return { s: view.s, x: view.x, y: view.y }; },
-      setView: function (s, x, y) { view.s = s; view.x = x || 0; view.y = y || 0; syncZoom(); render(); },
-      zoomAt: zoomAt,
-      reset: resetView,
       toDevice: toDevice,
       setPen: function (c) { penColor = c; },
       // 内容层取像素（画布坐标）
@@ -1066,9 +838,7 @@
   penColor = pk.get();
   pushRecent(penColor);
 
-  restoreSize();     // 先恢复上次拖出来的画布大小
-  initSizer();       // 再挂上右下角的拖拽把手
-  resize();
+  resize();          // 画布铺满屏幕
 })();
 </script>
 </body>

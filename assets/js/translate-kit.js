@@ -326,8 +326,9 @@
       (doc.body || doc.documentElement).appendChild(wrap);
     }
 
-    /* 手机端由工具坞（dock-kit）统一收纳悬浮按钮 */
-    if (host.mode === 'float' && win.DockKit && typeof win.DockKit.add === 'function') {
+    /* 手机端由工具坞（dock-kit）统一收纳：
+       float 悬浮钮、inline 页头钮都进坞（宽屏时 DockKit.add 直接忽略） */
+    if (win.DockKit && typeof win.DockKit.add === 'function') {
       win.DockKit.add(wrap);
     }
 

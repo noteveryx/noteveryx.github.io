@@ -5,12 +5,13 @@
      <script src="../assets/js/dock-kit.js" defer></script>
 
    手机 / 窄屏（≤600px，或触屏 ≤920px）时，把散落各处的悬浮
-   工具按钮收进一个可折叠的「工具坞」，默认收起，点 ⋮ 展开：
-     · 游戏页：右上 gk-tools 工具列原地折叠，全屏钮并入其中
-     · 画布页：右下 .ui.tools（调色盘等）+ 全屏 + 翻译 收进坞
-     · 生成器页：pk-float 调色球 + 全屏 + 翻译 收进坞
-     · 待机页等：自带固定工具条 + 翻译 收进坞
-     · 只有一个悬浮按钮的页面（工具箱页 / 首页）不建坞，保持原样
+   工具按钮收进一个可折叠的「工具坞」，默认收起，点 ⋮ 展开。
+   坞里从上到下统一是这几样：
+     返回 · 主题 · 语言 · 全屏 · 页面自己的工具条（保存/下载在里头）
+   展开后按钮紧挨着开关往下排；宽的工具条作为最后一行，右边缘对齐。
+   · 游戏页：右上 gk-tools 工具列原地折叠，返回键也挪进去
+   · 画布页：底部 .ui.bar（圆笔/橡皮/…/保存）+ 调色盘 + 悬浮件 收进坞
+   · 工具箱页：页头里的语言钮也收进坞，页头只留标题
    切回桌面宽度时自动原样还原，桌面端布局零影响。
    其他组件可主动注册悬浮节点：DockKit.add(node)
    ========================================================== */
@@ -23,15 +24,20 @@
   if (!MQ) return;
 
   var dock = null;     /* 工具坞容器（非游戏页） */
+  var itemsBox = null; /* 坞里展开的那一列 */
   var toggle = null;   /* 折叠开关 */
   var gk = null;       /* 游戏页工具列（原地折叠，不建坞） */
   var moved = [];      /* 挪过位置的节点，记录原处便于还原 */
+  var backSrc = null;  /* 被坞顶替掉的原返回键 */
   var active = false;
+
+  var BACK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 
   var STYLE = [
     /* 工具坞容器 */
     '.dk{position:fixed;z-index:46;right:calc(14px + env(safe-area-inset-right));',
-    'display:flex;flex-direction:column;align-items:center;gap:8px;}',
+    'display:flex;flex-direction:column;align-items:flex-end;gap:8px;}',
     '.dk.dk-bottom{bottom:calc(14px + env(safe-area-inset-bottom));}',
     '.dk.dk-top{top:calc(64px + env(safe-area-inset-top));}',
     /* 折叠开关 */
@@ -43,15 +49,46 @@
     'transition:transform .14s ease,background-color .2s;}',
     '.dk-toggle:active{transform:scale(.92);}',
     '.dk-toggle:focus-visible{outline:2px solid rgba(255,255,255,.55);outline-offset:2px;}',
-    /* 展开后的按钮列 */
-    '.dk-items{display:flex;flex-direction:column;align-items:center;gap:8px;animation:dkIn .18s ease;}',
+    /* 展开后的按钮列：按钮紧挨着开关往下排，整体靠右对齐 */
+    '.dk-items{display:flex;flex-direction:column;align-items:flex-end;gap:8px;animation:dkIn .18s ease;}',
     '@keyframes dkIn{from{opacity:0;transform:translateY(6px) scale(.96);}to{opacity:1;transform:none;}}',
-    /* 被收纳的节点统一解除各自 fixed 定位，跟随坞排列（样式本身保留） */
-    '.dk-item{position:static !important;left:auto !important;right:auto !important;',
+    /* 被收纳的节点统一解除各自 fixed 定位，跟随坞排列（样式本身保留）。
+       用 relative 而不是 static：主题/语言的面板是绝对定位的，需要相对按钮展开。 */
+    '.dk-item{position:relative !important;left:auto !important;right:auto !important;',
     'top:auto !important;bottom:auto !important;transform:none !important;margin:0 !important;}',
     '.dk-collapsed .dk-items{display:none;}',
     /* 游戏页：gk-tools 原地折叠 */
-    '.gk-tools.dk-collapsed > *:not(.dk-toggle){display:none;}'
+    '.gk-tools.dk-collapsed > *:not(.dk-toggle){display:none;}',
+    /* 坞里的返回键（统一外观，不再用各页面自己的圆形样式） */
+    '.dk-back{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.22);',
+    'background:rgba(14,16,26,.66);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);',
+    'color:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;',
+    'text-decoration:none;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.26);',
+    '-webkit-tap-highlight-color:transparent;transition:transform .14s ease;}',
+    '.dk-back:active{transform:scale(.92);}',
+    '.dk-back svg{width:19px;height:19px;display:block;}',
+    /* 主题按钮：它自带 fixed 定位（右上角），进坞后要复位 */
+    '.dk .tk-btn{position:relative !important;top:auto !important;right:auto !important;}',
+    /* 语言按钮：inline 模式带 margin-left:auto，进坞后居中；顺带改成圆形，和别的钮一致 */
+    '.dk .tk-t{margin-left:0 !important;}',
+    '.dk .tk-t-btn{width:38px;height:38px;padding:0;border-radius:50%;justify-content:center;gap:0;}',
+    '.dk .tk-t-btn .tk-t-cur,.dk .tk-t-btn .tk-t-caret{display:none;}',
+    '.dk .tk-t-btn .tk-t-ico{font-size:17px;}',
+    /* 主题面板：手机上改成底部抽屉，跟语言面板一致 */
+    '.dk .tk-panel{position:fixed !important;left:10px !important;right:10px !important;',
+    'top:auto !important;bottom:10px !important;width:auto !important;max-width:none !important;',
+    'transform:none !important;border-radius:20px !important;z-index:9998 !important;}',
+    /* 语言面板：手机端本来是底部抽屉，保持不动 */
+    /* 底部工具条：收进坞后作为坞里的「一行」，紧挨着上面的按钮往下排，
+       不再浮在屏幕底部（那样会脱离程序坞，看着像另一个控件）。
+       工具多，保留横向滚动。 */
+    '.dk .ui.bar{position:relative !important;left:auto !important;right:auto !important;',
+    'bottom:auto !important;transform:none !important;',
+    'max-width:calc(100vw - 28px) !important;width:max-content !important;}',
+    /* 页面里给全屏钮让位的偏移，进坞后复位 */
+    '.dk .fsk-btn{right:auto !important;}',
+    /* 游戏页返回键挪进工具列后要解除固定定位 */
+    '.gk-tools .gk-back{position:static !important;left:auto !important;top:auto !important;'
   ].join('');
 
   function injectStyle() {
@@ -81,6 +118,12 @@
     for (i = moved.length - 1; i >= 0; i--) {
       var n = moved[i];
       var rec = n.__dk;
+      if (n.__dkRestore) {
+        /* 自己知道怎么还原的（克隆的返回键、主题包装层） */
+        try { n.__dkRestore(); } catch (e) { }
+        n.__dk = null; n.__dkRestore = null;
+        continue;
+      }
       try {
         if (rec.next && rec.next.parentNode === rec.parent) rec.parent.insertBefore(n, rec.next);
         else rec.parent.appendChild(n);
@@ -92,7 +135,8 @@
     if (gk) gk.classList.remove('dk-collapsed');
     if (dock && dock.parentNode) dock.parentNode.removeChild(dock);
     if (toggle && toggle.parentNode) toggle.parentNode.removeChild(toggle);
-    dock = null; toggle = null; gk = null;
+    dock = null; toggle = null; gk = null; itemsBox = null;
+    if (backSrc) { backSrc.style.display = ''; backSrc = null; }
     active = false;
   }
 
@@ -111,6 +155,16 @@
       toggle.setAttribute('aria-expanded', on ? 'false' : 'true');
       toggle.title = on ? '展开工具栏' : '收起工具栏';
     }
+    /* 展开后坞变高了，重新算一次避让（工具条这时才显形） */
+    if (dock) { place(); schedulePlace(); }
+  }
+
+  /* 展开动画期间 .dk-items 上有 transform，会把 fixed 子元素的包含块改成它自己，
+     这时量出来的位置是错的 —— 等动画结束再算一次 */
+  var placeTimer = null;
+  function schedulePlace() {
+    if (placeTimer) clearTimeout(placeTimer);
+    placeTimer = setTimeout(function () { placeTimer = null; place(); }, 280);
   }
 
   function makeToggle() {
@@ -123,6 +177,8 @@
     toggle.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
+      /* 展开时把页面从闲置淡出状态唤醒，否则工具条是半透明的 */
+      if (doc.body) doc.body.classList.remove('idle');
       setCollapsed(!isCollapsed());
     });
   }
@@ -133,7 +189,8 @@
     var els = doc.body.querySelectorAll('*');
     for (var i = 0; i < els.length; i++) {
       var x = els[i];
-      if (el === x || el.contains(x) || x.contains(el)) continue;
+      if (x === el) continue;               /* 自己不算 */
+      if (x === toggle || x === itemsBox) continue;  /* 坞自己的开关与列（静态定位，本来也跳过） */
       var cs;
       try { cs = getComputedStyle(x); } catch (e) { continue; }
       if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
@@ -162,6 +219,10 @@
 
   /* ---------------- 建坞 ---------------- */
   function buildDock(list) {
+    /* 返回键放最上面：统一克隆一个，页面上原来那个窄屏隐藏 */
+    var back = makeBack();
+    if (back) { back.__dkRank = 0; list.unshift(back); }
+
     dock = doc.createElement('div');
     dock.className = 'dk';
     /* 坞的位置跟随第一个被收纳工具原来的位置：上半屏 → 右上，否则右下 */
@@ -176,6 +237,7 @@
 
     var box = doc.createElement('div');
     box.className = 'dk-items';
+    itemsBox = box;
     makeToggle();
     dock.appendChild(toggle);
     for (var i = 0; i < list.length; i++) {
@@ -188,7 +250,140 @@
     place();
   }
 
-  /* ---------------- 收集 + 启动 ---------------- */
+  /* ---------------- 返回键 ----------------
+     全站有 5 种写法（a.ui.back / a.gk-back / a.back-btn / a.back / a.tb-back），
+     有的 fixed 悬浮、有的在页头文档流里。统一克隆一个进坞，
+     页面上原来那个在窄屏隐藏，避免出现两个「返回」。 */
+  function findBack() {
+    return doc.querySelector('a.gk-back, a.ui.back, a.back-btn, a.back, a.tb-back');
+  }
+  /* nav-kit 的规矩：直接打开（referrer 不同源）时不显示返回键，
+     坞里的返回键也得跟着 —— 否则直接进页面也会冒出个退不掉的返回。 */
+  function noBack() {
+    return doc.documentElement.classList.contains('no-back');
+  }
+  function makeBack() {
+    if (backSrc || noBack()) return null;
+    var src = findBack();
+    if (!src) return null;
+    var a = doc.createElement('a');
+    a.className = 'dk-item dk-back';
+    a.href = src.getAttribute('href') || '../x.html';
+    a.title = '返回';
+    a.setAttribute('aria-label', '返回');
+    a.innerHTML = BACK_SVG;
+    backSrc = src;
+    src.style.display = 'none';
+    a.__dkRestore = function () {
+      if (a.parentNode) a.parentNode.removeChild(a);
+    };
+    return a;
+  }
+  /* 把坞里的返回键撤掉，原键放回原处 */
+  function dropBack() {
+    if (!dock) return;
+    var bk = dock.querySelector('.dk-back');
+    if (bk && bk.__dkRestore) { try { bk.__dkRestore(); } catch (e) { } }
+    if (backSrc) { backSrc.style.display = ''; backSrc = null; }
+  }
+
+  /* ---------------- 主题按钮 ----------------
+     主题按钮(.tk-btn)和它的面板(.tk-panel)是两个独立的 fixed 节点，
+     不带着面板一起走的话，收进坞后面板会跑到屏幕右上角对不上按钮。 */
+  function themeWrap(tbtn) {
+    if (tbtn.__dkThemeWrap) return tbtn.__dkThemeWrap;
+    var panel = doc.querySelector('.tk-panel');
+    var wrap = doc.createElement('div');
+    wrap.className = 'dk-theme';
+    var btnParent = tbtn.parentNode, btnNext = tbtn.nextSibling;
+    var panelParent = panel ? panel.parentNode : null, panelNext = panel ? panel.nextSibling : null;
+    btnParent.insertBefore(wrap, tbtn);
+    wrap.appendChild(tbtn);
+    if (panel) wrap.appendChild(panel);
+    wrap.__dkRestore = function () {
+      try {
+        if (btnNext && btnNext.parentNode === btnParent) btnParent.insertBefore(tbtn, btnNext);
+        else btnParent.appendChild(tbtn);
+        if (panel && panelParent) {
+          if (panelNext && panelNext.parentNode === panelParent) panelParent.insertBefore(panel, panelNext);
+          else panelParent.appendChild(panel);
+        }
+      } catch (e) { }
+      if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+    };
+    tbtn.__dkThemeWrap = wrap;
+    return wrap;
+  }
+
+  /* ---------------- 收集：哪些节点该进坞 ----------------
+     顺序 = 坞里从上到下：返回 → 主题 → 语言 → 全屏 → 页面工具条(含保存/下载)
+     rank 决定坞里的先后；异步补进来的节点按 rank 插回正确位置，
+     免得宽条（工具条）插在竖排按钮中间，把一列割断。
+     返回键不在这里克隆，等真的要建坞时再克隆（免得收集阶段就把原键藏了）。 */
+  function inDock(n) { return !!(dock && dock.contains(n)); }
+  function rank(node, r) { node.__dkRank = r; return node; }
+
+  function collect() {
+    var list = [];
+
+    if (gk) {
+      /* 游戏页：工具列原地折叠；返回键也挪进去，左上角空出来 */
+      var fs = doc.getElementById('fsKitBtn');
+      if (fs && fs.parentNode !== gk) { remember(fs); gk.appendChild(fs); }
+      var gb = doc.querySelector('a.gk-back');
+      if (gb && gb.parentNode !== gk) { remember(gb); gk.appendChild(gb); }
+      if (!toggle) {
+        makeToggle();
+        gk.insertBefore(toggle, gk.firstChild);
+      }
+      setCollapsed(true);
+      return list;
+    }
+
+    /* ② 主题（连面板一起） */
+    var tbtn = doc.querySelector('.tk-btn');
+    if (tbtn && !inDock(tbtn)) list.push(rank(themeWrap(tbtn), 1));
+    /* ③ 语言（float 悬浮钮、inline 页头钮都收） */
+    var tk = doc.querySelector('.tk-t');
+    if (tk && !inDock(tk)) list.push(rank(tk, 2));
+    /* ④ 全屏 */
+    var fs2 = doc.getElementById('fsKitBtn');
+    if (fs2 && !inDock(fs2)) list.push(rank(fs2, 3));
+    /* ⑤ 页面自己的悬浮工具条 —— 画板的「保存」按钮就在这条里 */
+    var bar = doc.querySelector('.ui.bar');
+    if (bar && isFixed(bar) && !inDock(bar)) list.push(rank(bar, 4));
+    /* ⑥ 调色盘组 */
+    var tools = doc.querySelector('.ui.tools');
+    if (tools && isFixed(tools) && !inDock(tools)) list.push(rank(tools, 5));
+    /* ⑦ 生成器页的 pk-float 调色球 */
+    if (!tools) {
+      var pkf = doc.querySelector('.pk.pk-float');
+      if (pkf && isFixed(pkf) && !inDock(pkf)) list.push(rank(pkf, 5));
+    }
+    /* ⑧ 待机页等自带固定 .tools 工具条 */
+    if (!list.length) {
+      var plains = doc.querySelectorAll('.tools');
+      for (var i = 0; i < plains.length; i++) {
+        if (isFixed(plains[i]) && !inDock(plains[i])) { list.push(rank(plains[i], 5)); break; }
+      }
+    }
+    return list;
+  }
+
+  /* 按 rank 把节点插进坞里的那一列（rank 小的在前） */
+  function insertByRank(node) {
+    var box = itemsBox || (dock && dock.querySelector('.dk-items'));
+    if (!box) return;
+    var r = node.__dkRank || 9;
+    var ref = null;
+    var kids = box.children;
+    for (var i = 0; i < kids.length; i++) {
+      if ((kids[i].__dkRank || 9) > r) { ref = kids[i]; break; }
+    }
+    box.insertBefore(node, ref);
+  }
+
+  /* ---------------- 启动 ---------------- */
   function setup() {
     if (active) return;
     active = true;
@@ -197,37 +392,11 @@
     /* 游戏页：gk-tools 本身就是右上竖排工具列，原地折叠即可 */
     gk = doc.querySelector('.gk-tools');
     if (gk) {
-      var fs = doc.getElementById('fsKitBtn');
-      if (fs && fs.parentNode !== gk) { remember(fs); gk.appendChild(fs); }
-      makeToggle();
-      gk.insertBefore(toggle, gk.firstChild);
-      setCollapsed(true);
+      collect();
     } else {
-      var list = [];
-      /* 画布页的 .ui.tools（调色盘 + 页面自带按钮） */
-      var tools = doc.querySelector('.ui.tools');
-      if (tools && isFixed(tools)) list.push(tools);
-      /* 生成器页的 pk-float 调色球 */
-      if (!list.length) {
-        var pkf = doc.querySelector('.pk.pk-float');
-        if (pkf && isFixed(pkf)) list.push(pkf);
-      }
-      /* 待机页等自带固定 .tools 工具条 */
-      if (!list.length) {
-        var plains = doc.querySelectorAll('.tools');
-        for (var i = 0; i < plains.length; i++) {
-          if (isFixed(plains[i])) { list.push(plains[i]); break; }
-        }
-      }
-      /* 全屏钮 */
-      var fs2 = doc.getElementById('fsKitBtn');
-      if (fs2) list.push(fs2);
-      /* 翻译悬浮钮（若已加载出来；未加载的稍后通过 add() 注册） */
-      var tkf = doc.querySelector('.tk-t-float');
-      if (tkf) list.push(tkf);
-
-      if (list.length >= 2) buildDock(list);
-      /* 只有 1 个悬浮按钮的页面（工具箱页 / 首页）不建坞，保持原样 */
+      var list = collect();
+      /* 有返回键也算一件：几乎每个页面都该有坞 */
+      if (list.length + (findBack() ? 1 : 0) >= 1) buildDock(list);
     }
 
     /* 点坞外自动收起（点坞内按钮不收起，方便连着用） */
@@ -241,26 +410,63 @@
     doc.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !isCollapsed()) setCollapsed(true);
     });
+
+    /* 有些节点是别的脚本异步生成的（主题按钮、工具箱页头、语言钮、
+       页面工具条），首帧可能还没出来 → 后面再扫几次补进坞 */
+    var tries = 0;
+    var timer = setInterval(function () {
+      tries++;
+      if (gk) {
+        var gb = doc.querySelector('a.gk-back');
+        if (gb && gb.parentNode !== gk) { remember(gb); gk.appendChild(gb); }
+      } else {
+        var add = collect();
+        if (!dock) {
+          if (add.length + (findBack() ? 1 : 0) >= 1) buildDock(add);
+        } else {
+          if (add.length) {
+            for (var i = 0; i < add.length; i++) {
+              remember(add[i]);
+              insertByRank(add[i]);
+            }
+            place();
+          }
+          /* 返回键跟着 nav-kit 的判断走 */
+          var bk = dock.querySelector('.dk-back');
+          if (noBack()) { if (bk) dropBack(); }
+          else if (!bk) {
+            var nb = makeBack();
+            if (nb) {
+              remember(nb);
+              dock.querySelector('.dk-items').insertBefore(nb, dock.querySelector('.dk-items').firstChild);
+            }
+          }
+        }
+      }
+      if (tries >= 10) clearInterval(timer);
+    }, 300);
   }
 
-  /* ---------------- 供其他组件注册（如 translate-kit 的悬浮按钮） ---------------- */
+  /* ---------------- 供其他组件注册（如 translate-kit 的语言钮） ---------------- */
   win.DockKit = {
     add: function (node) {
       if (!active || !node || !node.parentNode) return;
       if (gk) return; /* 游戏页：翻译按钮已在 gk-tools 里，随列折叠 */
+      if (!node.__dkRank) node.__dkRank = 2;   /* 注册的一般是语言钮 */
       if (dock) {
         if (node.parentNode !== dock && !dock.contains(node)) {
           remember(node);
-          dock.querySelector('.dk-items').appendChild(node);
+          insertByRank(node);
+          place();
         }
         return;
       }
-      /* 还没有坞：与已有的全屏悬浮钮合起来凑够两个就建坞 */
-      var fs = doc.getElementById('fsKitBtn');
+      /* 还没有坞：直接建，把这个节点收进去（返回键会由 buildDock 补在最前） */
       var list = [];
-      if (fs) list.push(fs);
-      if (node !== fs) list.push(node);
-      if (list.length >= 2) buildDock(list);
+      var fs = doc.getElementById('fsKitBtn');
+      if (fs && fs !== node) list.push(fs);
+      list.push(node);
+      buildDock(list);
     },
     collapsed: isCollapsed,
     toggle: function () { setCollapsed(!isCollapsed()); }

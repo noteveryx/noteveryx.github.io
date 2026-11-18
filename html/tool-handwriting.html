@@ -18,13 +18,12 @@
     transition:background .25s ease,color .25s ease;
   }
   body.dark{background:#16191f;color:#e8ebf0;}
-  /* 外层滚动容器：舞台比屏幕大时，超出部分靠它滚动查看（无限画布感） */
+  /* 画布容器：边界就是屏幕大小，不需要滚动查看别处 */
   .canvas-wrap{
-    position:absolute;inset:0;overflow:auto;
-    touch-action:auto;overscroll-behavior:contain;
-    -webkit-overflow-scrolling:touch;
+    position:absolute;inset:0;overflow:hidden;
+    touch-action:none;overscroll-behavior:contain;
   }
-  /* 画布舞台：右下角把手可拖动改大小，双击把手恢复全屏 */
+  /* 画布舞台：固定铺满可视区 */
   .stage{
     position:relative;width:100%;height:100%;
     overflow:hidden;box-shadow:0 0 0 1px rgba(35,38,45,.14),0 4px 18px rgba(35,38,45,.10);
@@ -32,22 +31,6 @@
   body.dark .stage{box-shadow:0 0 0 1px rgba(255,255,255,.16),0 4px 18px rgba(0,0,0,.35);}
   /* 只作用于主画布（墨迹层是 JS 创建的离屏 canvas，不进 DOM） */
   #cv{position:absolute;inset:0;display:block;width:100%;height:100%;cursor:crosshair;}
-  .rsizer{
-    position:absolute;right:0;bottom:0;width:44px;height:44px;
-    /* 必须高于 .ui 工具栏（z-index 5）：手机上工具栏会盖到画布右下角，
-       层级不够就点不到把手，拖不动 */
-    z-index:12;
-    cursor:nwse-resize;touch-action:none;
-    display:flex;align-items:flex-end;justify-content:flex-end;padding:0 9px 9px 0;
-  }
-  .rsizer::after{
-    content:"";width:13px;height:13px;border-radius:0 0 4px 0;
-    border-right:2px solid rgba(35,38,45,.32);border-bottom:2px solid rgba(35,38,45,.32);
-  }
-  body.dark .rsizer::after{border-color:rgba(255,255,255,.34);}
-  /* 移动画布模式：拖动变成平移，光标给出提示 */
-  body.move-mode #cv{cursor:grab;}
-  body.move-mode #cv:active{cursor:grabbing;}
   /* 全屏按钮固定在右下角，会正好压住拖拽把手 —— 往左让开 64px */
   .fsk-btn{right:64px !important;}
   .ui{position:fixed;z-index:5;opacity:1;transition:opacity .5s ease;}
@@ -222,7 +205,6 @@
 <div class="canvas-wrap" id="wrap">
   <div class="stage" id="stage">
     <canvas id="cv"></canvas>
-    <div class="rsizer" id="rsizer" role="separator" aria-label="拖动调整画布大小" title="拖动调整大小 · 双击还原全屏"></div>
   </div>
 </div>
 
@@ -238,9 +220,6 @@
   <button class="tool" id="wBtn" type="button" title="笔宽"><span>笔宽</span><i id="wDot"></i></button>
   <button class="tool" id="brushBtn" type="button" title="切换笔刷：圆笔 / 铅笔">圆笔</button>
   <button class="tool" id="eraserBtn" type="button" title="橡皮（E）">橡皮</button>
-  <button class="tool" id="moveBtn" type="button" title="移动画布：画布比屏幕大时，用它拖动查看别的区域">移动</button>
-  <button class="tool" id="biggerBtn" type="button" title="把画布放大一档（手机上拖不到右下角时用它）">放大</button>
-  <button class="tool" id="fitBtn" type="button" title="画布恢复铺满屏幕">铺满</button>
   <i class="sep"></i>
   <button class="tool" id="gridBtn" type="button" title="格线：横线 / 网格 / 田字格 / 四线格 / 米字格 / 无">横线</button>
   <button class="tool" id="traceBtn" type="button" title="描红：输入汉字 / 拼音 / 英文">描红</button>
@@ -300,12 +279,6 @@
   var ctx = cv.getContext('2d');
   var wrap = document.getElementById('wrap');
   var stage = document.getElementById('stage');
-  var rsizer = document.getElementById('rsizer');
-  var SIZE_KEY = 'hw-stage-size';
-  var MIN_W = 260, MIN_H = 200;
-  /* 上限按「位图内存」定：画布位图 = CSS 尺寸 × DPR²，
-     2400×2400 在 DPR=2 下约 92MB，再大手机会直接卡死 */
-  var MAX_W = 2400, MAX_H = 2400;
   var W = 0, H = 0, DPR = 1;
 
   /* 笔迹层（透明底，导出用） */
@@ -334,8 +307,7 @@
       oldCv.getContext('2d').drawImage(inkCv, 0, 0);
     }
 
-    // 舞台尺寸不跟视口走：画布可以比屏幕大（无限画布），
-    // 旋转屏幕 / 窗口缩小时也不该把用户调好的画布改回去
+    // 画布边界 = 屏幕尺寸（舞台铺满可视区）
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     W = stage.clientWidth; H = stage.clientHeight;
     cv.width = Math.round(W * DPR);
@@ -353,109 +325,11 @@
     repaint();
   }
 
-  /* ---------------- 舞台尺寸：拖右下角把手改大小 ----------------
-     允许大于视口 —— 画布边界要比屏幕还大（无限画布），
-     超出的部分由外层 .canvas-wrap 滚动查看。 */
-  function setStageSize(w, h, save) {
-    w = Math.max(MIN_W, Math.min(Math.round(w), MAX_W));
-    h = Math.max(MIN_H, Math.min(Math.round(h), MAX_H));
-    stage.style.width = w + 'px';
-    stage.style.height = h + 'px';
-    resize();
-    if (save !== false) {
-      try { localStorage.setItem(SIZE_KEY, JSON.stringify({ w: w, h: h })); } catch (e) {}
-    }
-  }
-
-  function restoreSize() {
-    try {
-      var s = JSON.parse(localStorage.getItem(SIZE_KEY) || 'null');
-      if (s && s.w && s.h) {
-        stage.style.width = Math.max(MIN_W, Math.min(Math.round(s.w), MAX_W)) + 'px';
-        stage.style.height = Math.max(MIN_H, Math.min(Math.round(s.h), MAX_H)) + 'px';
-      }
-    } catch (e) {}
-  }
-
-  function initSizer() {
-    if (!rsizer) return;
-    var drag = null;
-    rsizer.addEventListener('pointerdown', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      drag = { x: e.clientX, y: e.clientY, w: stage.offsetWidth, h: stage.offsetHeight };
-      try { rsizer.setPointerCapture(e.pointerId); } catch (err) {}
-    });
-    rsizer.addEventListener('pointermove', function (e) {
-      if (!drag) return;
-      e.preventDefault();
-      setStageSize(drag.w + (e.clientX - drag.x), drag.h + (e.clientY - drag.y));
-    });
-    function end(e) {
-      if (!drag) return;
-      drag = null;
-      try { rsizer.releasePointerCapture(e.pointerId); } catch (err) {}
-      try { localStorage.setItem(SIZE_KEY, JSON.stringify({ w: stage.offsetWidth, h: stage.offsetHeight })); } catch (err) {}
-    }
-    rsizer.addEventListener('pointerup', end);
-    rsizer.addEventListener('pointercancel', end);
-    // 双击把手 → 恢复铺满
-    rsizer.addEventListener('dblclick', function (e) {
-      e.preventDefault();
-      setStageSize(window.innerWidth, window.innerHeight);
-    });
-  }
+  /* ---------------- 画布尺寸 ----------------
+     边界就是屏幕大小：舞台铺满可视区，旋转屏幕时跟着变，
+     不再提供拖拽改大小 / 放大 / 平移。 */
 
   function paperColor() { return dark ? '#16191f' : '#fbfaf7'; }
-
-  /* ---------------- 移动画布模式 ----------------
-     画布比屏幕大时，触摸画布就是落笔，没法滑动去看别的区域。
-     开「移动」后，拖动改为平移画布（滚轮随时可滚）。 */
-  var moveMode = false;
-  var pan = null;
-
-  function setMoveMode(on) {
-    moveMode = !!on;
-    document.body.classList.toggle('move-mode', moveMode);
-    var b = document.getElementById('moveBtn');
-    if (b) {
-      b.classList.toggle('on', moveMode);
-      b.textContent = moveMode ? '移动中' : '移动';
-    }
-  }
-
-  function startPan(e) {
-    pan = { x: e.clientX, y: e.clientY, sl: wrap.scrollLeft, st: wrap.scrollTop };
-    try { cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } catch (err) {}
-  }
-
-  function doPan(e) {
-    if (!pan) return;
-    wrap.scrollLeft = pan.sl - (e.clientX - pan.x);
-    wrap.scrollTop = pan.st - (e.clientY - pan.y);
-  }
-
-  var moveBtn = document.getElementById('moveBtn');
-  if (moveBtn) moveBtn.addEventListener('click', function () { setMoveMode(!moveMode); });
-
-  /* 手机上把手的拖动方向只能往屏幕内（缩小），
-     往右下拖会出屏，放大画布只能靠按钮 */
-  var biggerBtn = document.getElementById('biggerBtn');
-  if (biggerBtn) biggerBtn.addEventListener('click', function () {
-    setStageSize(stage.offsetWidth * 1.4, stage.offsetHeight * 1.4);
-  });
-  var fitBtn = document.getElementById('fitBtn');
-  if (fitBtn) fitBtn.addEventListener('click', function () {
-    setStageSize(window.innerWidth, window.innerHeight);
-  });
-
-  /* 画布放大后，把手跟着跑到视口外去了，
-     移动模式下双击画布即可恢复铺满（移动模式下双击不会落笔） */
-  cv.addEventListener('dblclick', function (e) {
-    if (!moveMode) return;
-    e.preventDefault();
-    setStageSize(window.innerWidth, window.innerHeight);
-  });
 
   /* ==========================================================
      拼音表：音节(不带声调) → 常用字
@@ -858,7 +732,6 @@
   var ptrs = new Map();
   cv.addEventListener('pointerdown', function (e) {
     try { cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } catch (err) { }
-    if (moveMode) { startPan(e); return; }     // 移动模式：这一笔是拖画布，不是落笔
     ptrs.set(e.pointerId, true);
     // 多指同时按下会画出从旧点跳到新点的乱线，直接停笔
     if (ptrs.size > 1) { drawing = false; last = null; return; }
@@ -869,7 +742,6 @@
     repaint();
   });
   cv.addEventListener('pointermove', function (e) {
-    if (pan) { doPan(e); return; }
     if (!drawing) return;
     var p = pos(e);
     strokeTo(last.x, last.y, p.x, p.y);
@@ -880,7 +752,6 @@
     cv.addEventListener(ev, function (e) {
       if (e && e.pointerId !== undefined) ptrs.delete(e.pointerId);
       if (ptrs.size === 0) { drawing = false; last = null; }
-      pan = null;
     });
   });
 
@@ -1188,9 +1059,7 @@
 
   setGrid(gridMode);      // 初始化格线状态与按钮文字
   setEraser(false);       // 初始化笔刷按钮状态
-  restoreSize();          // 先恢复上次拖出来的画布大小
-  initSizer();            // 再挂上右下角的拖拽把手
-  resize();
+  resize();               // 画布铺满屏幕
 })();
 </script>
 </body>
