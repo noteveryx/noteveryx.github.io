@@ -1,5 +1,17 @@
 # 知识库自动化任务长期记忆
 
+## ⚠️ 乐享 MCP 工具面变更（2026-11-19 实测确认，后续同步脚本务必按此改）
+- **`entry_import_content` 已不存在**，改用文件上传三步链：
+  1. `file_apply_upload(mime_type="text/markdown", name, size, extension="md", parent_entry_id=父文件夹entry_id, upload_type="PRE_SIGNED_URL")` → 返回 session_id + 预签名 upload_url
+  2. **HTTP PUT**（curl `-X PUT -H "Content-Type: text/markdown" --data-binary @本地文件`）上传到 upload_url
+  3. `file_commit_upload(session_id)` → 创建条目
+- PUT 必须用 `--data-binary`（`-d` 会吞换行），URL 的 `?` 不能丢（漏 `?` 全 403）
+- `entry_apply_upload` 的 `parent_entry_id` 传**父文件夹 entry_id**；成功后按 `name` 自动命名，无需 rename
+- `entry_list_children` / `file_apply_upload` **都不接受 space_id 参数**，靠 parent_entry_id 隐式限定空间
+- **校验必须三向合并**：`entry_list_children` 单次返回不完整页（limit=500 也一样），须合并 `-created_at` + `created_at` + `-name` 三种 sort_by 取并集，否则误报 2~5 个假缺口
+- 乐享侧普遍存在同名重复条目（历史遗留，不要删）；另有非日期条目 `ZZTEST-delete-me`
+- 完整流程见 automation memory.md（2026-11-19 条目）
+
 ## 乐享令牌有效期与恢复（2026-11-13 确认，重要）
 - **乐享访问令牌有效期约 1 天**：11-12 09:49 写入的令牌，11-13 10:43 已 401
 - `.credentials.v3.json` 的 `mcpOAuth` **只有 lighthouse-ops，乐享无 refresh token → 令牌无法自动续期**
