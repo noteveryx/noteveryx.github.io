@@ -105,7 +105,7 @@
     <button class="btn" id="saveBtn" type="button">保存 PNG</button>
   </div>
 
-  <p class="hint" id="hint">渐变方向：线性 · 角度 · 径向</p>
+  <p class="hint" id="hint">渐变类型：线性 / 角度 / 径向（点画布切换）</p>
 </div>
 
 <div class="pk pk-float" id="pk" data-pk="gradient" data-placement="bottom"></div>
@@ -148,15 +148,23 @@
     angle = Math.floor(Math.random() * 360);
   }
 
+  /* 当前类型用的方向角：
+     线性 = 固定 135deg（右上 → 左下），角度 = 每次随机。
+     画面和 CSS 共用同一个值，复制出来的样式才和画布对得上。 */
+  function gradAngle() {
+    return TYPES[typeIdx].id === 'angle' ? angle : 135;
+  }
+
   function cssGradient() {
     var t = TYPES[typeIdx].id;
     if (t === 'radial') {
-      return 'radial-gradient(circle at ' + (30 + Math.random() * 40).toFixed(0) + '% ' + (30 + Math.random() * 40).toFixed(0) + '%, ' + stops.join(', ') + ')';
+      /* 中心点固定 35% 35%，和 draw() 画的位置一致 */
+      return 'radial-gradient(circle at 35% 35%, ' + stops.join(', ') + ')';
     }
     if (t === 'angle') {
       return 'linear-gradient(' + angle + 'deg, ' + stops.join(', ') + ')';
     }
-    return 'linear-gradient(' + angle + 'deg, ' + stops.join(', ') + ')';
+    return 'linear-gradient(135deg, ' + stops.join(', ') + ')';
   }
 
   function draw() {
@@ -170,7 +178,7 @@
       var r = Math.max(w, h) * 0.75;
       g = ctx.createRadialGradient(w * 0.35, h * 0.35, 0, w * 0.35, h * 0.35, r);
     } else {
-      var rad = angle * Math.PI / 180;
+      var rad = gradAngle() * Math.PI / 180;
       var cx = w / 2, cy = h / 2;
       var len = Math.abs(w * Math.cos(rad)) + Math.abs(h * Math.sin(rad));
       g = ctx.createLinearGradient(
@@ -226,7 +234,7 @@
     hintEl.textContent = txt;
     clearTimeout(hintTimer);
     hintTimer = setTimeout(function () {
-      hintEl.textContent = '渐变方向：线性 · 角度 · 径向';
+      hintEl.textContent = '渐变类型：线性 / 角度 / 径向（点画布切换）';
     }, 2200);
   }
 
@@ -238,7 +246,8 @@
 
   cv.addEventListener('click', function () {
     typeIdx = (typeIdx + 1) % TYPES.length;
-    if (hintEl) hintEl.textContent = '渐变方向：' + TYPES[typeIdx].name;
+    /* 走 setHint：显示完当前类型，2.2 秒后自动恢复成默认提示 */
+    setHint('渐变类型：' + TYPES[typeIdx].name);
     draw();
   });
 
