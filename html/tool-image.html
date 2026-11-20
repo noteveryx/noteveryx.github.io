@@ -594,17 +594,179 @@
     ui.paramBody.appendChild(ff);
   }
 
+  /* ==========================================================
+     Tab 5 · 切圆角（做应用商店图标）
+     ------------------------------------------------------------
+     商店图标基本都是「正方形 PNG」，区别只在圆角由谁来加：
+     iOS 自己加（所以传上去的图不该带圆角、也不能有透明通道），
+     Android 启动图标常切成圆形，通用图标切圆角矩形。
+     ========================================================== */
+  /* 圆角矩形路径：新浏览器直接用 roundRect，老的退回 arcTo */
+  function roundRectPath(ctx, x, y, w, h, r) {
+    r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+    ctx.beginPath();
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function renderRound(panel) {
+    var shape = el('select', { class: 'tb-sel' });
+    [['round', '圆角矩形'], ['circle', '圆形'], ['square', '不切（原样方图）']]
+      .forEach(function (o) { shape.appendChild(el('option', { value: o[0], text: o[1] })); });
+    var shf = el('div', { class: 'tb-field' });
+    shf.appendChild(el('label', { text: '形状' }));
+    shf.appendChild(shape);
+
+    var radius = el('input', { type: 'range', min: '0', max: '50', value: '22', style: 'width:100%' });
+    var rLabel = el('span', { class: 'tb-hint', text: '圆角 22%（相对短边）' });
+    radius.addEventListener('input', function () { rLabel.textContent = '圆角 ' + radius.value + '%（相对短边）'; });
+    var rf = el('div', { class: 'tb-field' });
+    rf.appendChild(el('label', { text: '圆角大小' }));
+    rf.appendChild(radius);
+    rf.appendChild(rLabel);
+
+    var size = el('select', { class: 'tb-sel' });
+    [['1024', '1024 × 1024（应用商店标准）'], ['512', '512 × 512'], ['256', '256 × 256'],
+     ['180', '180 × 180（iPhone 3x）'], ['120', '120 × 120（Android）'], ['64', '64 × 64']]
+      .forEach(function (o) { size.appendChild(el('option', { value: o[0], text: o[1] })); });
+    var sf = el('div', { class: 'tb-field' });
+    sf.appendChild(el('label', { text: '输出尺寸' }));
+    sf.appendChild(size);
+
+    var bg = el('select', { class: 'tb-sel' });
+    [['#ffffff', '白色（不透明）'], ['#000000', '黑色（不透明）'],
+     ['custom', '自定义颜色'], ['#transparent', '透明（PNG 保留透明）']]
+      .forEach(function (o) { bg.appendChild(el('option', { value: o[0], text: o[1] })); });
+    var bf = el('div', { class: 'tb-field' });
+    bf.appendChild(el('label', { text: '底色' }));
+    bf.appendChild(bg);
+
+    var bgColor = el('input', { class: 'tb-in mono', type: 'text', value: '#FFFFFF', maxlength: '7' });
+    var bcf = el('div', { class: 'tb-field' });
+    bcf.appendChild(el('label', { text: '自定义底色' }));
+    bcf.appendChild(bgColor);
+    bcf.style.display = 'none';           /* 只有选了「自定义颜色」才露出来 */
+    bg.addEventListener('change', function () {
+      bcf.style.display = bg.value === 'custom' ? '' : 'none';
+    });
+
+    var square = el('input', { type: 'checkbox', checked: 'checked' });
+    var sqLabel = el('label', { class: 'tb-check' });
+    sqLabel.appendChild(square);
+    sqLabel.appendChild(el('span', { text: '裁成正方形（商店图标必须是正方形）' }));
+    var sqf = el('div', { class: 'tb-field' });
+    sqf.appendChild(el('label', { text: '裁剪' }));
+    sqf.appendChild(sqLabel);
+
+    var inset = el('input', { type: 'range', min: '0', max: '30', value: '0', style: 'width:100%' });
+    var iLabel = el('span', { class: 'tb-hint', text: '留白 0%' });
+    inset.addEventListener('input', function () { iLabel.textContent = '留白 ' + inset.value + '%（内容四周内缩）'; });
+    var inf = el('div', { class: 'tb-field' });
+    inf.appendChild(el('label', { text: '内缩留白' }));
+    inf.appendChild(inset);
+    inf.appendChild(iLabel);
+
+    var tip = el('p', {
+      class: 'tb-hint',
+      html: '<b>怎么选：</b>iOS 上传 1024×1024 <b>不透明、不带圆角</b>的方图，系统会自己加圆角；' +
+        'Android 启动图标可切成圆形；通用图标用圆角矩形（22% 左右最接近 iOS 的观感）。' +
+        '带透明通道的图提交 App Store 会被拒。'
+    });
+
+    /* 纯绘制：实时预览和「生成图标」共用同一份代码，所见即所得 */
+    function paintRound(state, maxEdge) {
+      var src = state.img;
+      var sw = src.naturalWidth, sh = src.naturalHeight;
+      var target = parseInt(size.value, 10) || 1024;
+      var out = Math.max(1, Math.min(target, maxEdge || target));
+
+      /* 源图上取哪一块：默认中心正方形 */
+      var cw = sw, ch = sh;
+      if (square.checked) { var side = Math.min(sw, sh); cw = side; ch = side; }
+      var sx = Math.round((sw - cw) / 2);
+      var sy = Math.round((sh - ch) / 2);
+
+      var cv = document.createElement('canvas');
+      cv.width = out; cv.height = out;
+      var ctx = cv.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+
+      /* 内容框：留白把内容往中间缩（Android 自适应图标的安全区） */
+      var pad = Math.max(0, Math.min(0.3, (parseFloat(inset.value) || 0) / 100));
+      var box = out * (1 - pad * 2);
+      var ox = (out - box) / 2, oy = (out - box) / 2;
+
+      var kind = shape.value;
+      ctx.save();
+      if (kind === 'circle') {
+        ctx.beginPath();
+        ctx.arc(ox + box / 2, oy + box / 2, box / 2, 0, Math.PI * 2);
+        ctx.closePath();
+      } else if (kind === 'round') {
+        roundRectPath(ctx, ox, oy, box, box, box * ((parseFloat(radius.value) || 0) / 100));
+      }
+      if (kind !== 'square') ctx.clip();
+
+      /* 底色只能填在图形内部：先铺满再裁出去，圆角外面才留得住 */
+      var bgv = bg.value === 'custom' ? (bgColor.value || '#ffffff') : bg.value;
+      if (bgv && bgv !== '#transparent') {
+        ctx.fillStyle = bgv;
+        ctx.fillRect(0, 0, out, out);
+      }
+      ctx.drawImage(src, sx, sy, cw, ch, ox, oy, box, box);
+      ctx.restore();
+      return cv;
+    }
+
+    var ui = buildPanel(panel, {
+      paramTitle: '圆角设置', runText: '生成图标',
+      filename: function (s) { return baseName(s.file.name) + '-icon.png'; },
+      paint: paintRound,
+      run: function (state) {
+        var target = parseInt(size.value, 10) || 1024;
+        var cv = paintRound(state, target);
+        return encode(cv, 'image/png').then(function (blob) {
+          var bgv = bg.value === 'custom' ? bgColor.value : bg.value;
+          var transparent = bgv === '#transparent';
+          return {
+            blob: blob,
+            text: '已生成 <b>' + cv.width + '×' + cv.height + '</b> PNG · <b>' + ToolBox.fmtBytes(blob.size) + '</b>' +
+              (transparent ? '<br><span style="color:#d97706">带透明通道，App Store 会拒收，提交前把底色改成不透明</span>' : '')
+          };
+        });
+      }
+    });
+    ui.paramBody.appendChild(shf);
+    ui.paramBody.appendChild(rf);
+    ui.paramBody.appendChild(sf);
+    ui.paramBody.appendChild(bf);
+    ui.paramBody.appendChild(bcf);
+    ui.paramBody.appendChild(sqf);
+    ui.paramBody.appendChild(inf);
+    ui.paramBody.appendChild(tip);
+    /* 预览底衬：透明区域铺棋盘格，才看得出切成了什么形状 */
+    ui.canvas.style.background = 'repeating-conic-gradient(#eceff4 0 25%, #ffffff 0 50%) 0 0/18px 18px';
+    /* 图标是正方形的，1024 的预览会撑爆卡片，限一下高度 */
+    ui.canvas.style.maxHeight = '420px';
+  }
+
   /* ---------------- 启动 ---------------- */
   function boot() {
     ToolBox.mount(document.getElementById('tbRoot'), {
       title: '图片处理台',
-      sub: '压缩 · 转格式 · 加水印 · 裁剪旋转，全部在本地完成',
+      sub: '压缩 · 转格式 · 加水印 · 裁剪旋转 · 切圆角，全部在本地完成',
       storageKey: 'tb_image',
       tabs: [
         { id: 'compress', name: '压缩', render: renderCompress },
         { id: 'convert', name: '格式转换', render: renderConvert },
         { id: 'watermark', name: '加水印', render: renderWatermark },
-        { id: 'crop', name: '裁剪旋转', render: renderCrop }
+        { id: 'crop', name: '裁剪旋转', render: renderCrop },
+        { id: 'round', name: '切圆角', render: renderRound }
       ]
     });
   }

@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f9fd">
+<link rel="icon" type="image/png" href="../assets/image/favicon-round.png">
+<link rel="apple-touch-icon" href="../assets/image/logo.png">
+<title>素材库</title>
+<meta name="description" content="素材库：粘贴 m3u8 / 图片链接，本地预览、复制、下载，不上传任何数据。">
+<link rel="stylesheet" href="../assets/css/theme-kit.css">
+<link rel="stylesheet" href="../assets/css/themes.css">
+<link rel="stylesheet" href="../assets/css/toolbox.css">
+<style>
+/* ---------------- 素材卡片 ---------------- */
+.ms-video {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #0b0d16;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ms-video > video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #0b0d16;
+}
+.ms-play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 62px;
+  height: 62px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(20, 22, 34, .62);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .14s ease, background-color .2s;
+}
+.ms-play:hover { transform: scale(1.06); background: rgba(20, 22, 34, .78); }
+.ms-state {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 12px;
+  font-size: 11.5px;
+  color: #fff;
+  background: linear-gradient(to top, rgba(0, 0, 0, .62), rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+.ms-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.ms-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-meta { font-size: 11.5px; color: var(--muted); }
+
+/* ---------------- 图片网格 ---------------- */
+.ms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+}
+.ms-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg1);
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+.ms-cell > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ms-cell .ms-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px 8px 6px;
+  font-size: 11px;
+  color: #fff;
+  background: linear-gradient(to top, rgba(0, 0, 0, .68), rgba(0, 0, 0, 0));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-act {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 5px;
+}
+.ms-act button {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .3);
+  background: rgba(14, 16, 26, .58);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ms-act button:active { transform: scale(.92); }
+/* 桌面端悬浮才显示按钮，手机没有 hover，常驻才点得到 */
+@media (hover: hover) {
+  .ms-act { opacity: 0; transition: opacity .16s ease; }
+  .ms-cell:hover .ms-act, .ms-cell:focus-within .ms-act { opacity: 1; }
+}
+
+/* ---------------- 大图预览 ---------------- */
+.ms-light {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(6, 8, 14, .88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  cursor: zoom-out;
+}
+.ms-light img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .6);
+}
+.ms-light .ms-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .3);
+  background: rgba(14, 16, 26, .6);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+.ms-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+/* 内置视频：外层已经有卡片了，这里只负责排版 */
+.ms-video-card { margin-bottom: 0; }
+</style>
+<script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink','crimson','stone'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
+<script src="../assets/js/theme-kit.js" defer></script>
+<script src="../assets/js/nav-kit.js" defer></script>
+<script src="../assets/js/toolbox.js" defer></script>
+<script src="../assets/js/hls.min.js" defer></script>
+  <script src="../assets/js/translate-kit.js" defer></script>
+  <script src="../assets/js/dock-kit.js" defer></script>
+</head>
+<body class="tb-page">
+<div id="tbRoot"></div>
+
+<script>
+(function () {
+  'use strict';
+  var el = function () { return ToolBox.el.apply(null, arguments); };
+  var STORE_KEY = 'tb_materials';
+
+  /* ---------------- 数据 ---------------- */
+  function blank() { return { videos: [], images: [] }; }
+  function load() {
+    try {
+      var d = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (d && Array.isArray(d.videos) && Array.isArray(d.images)) return d;
+    } catch (e) { }
+    return blank();
+  }
+  var data = load();
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { }
+  }
+
+  /* ---------------- 内置素材 ----------------
+     来自 basic_app 的「我的素材」页（sytalentsystem / xoll/Wl），
+     直接写死一份：打开页面就能看到，不用先粘贴链接。
+     只读展示，不进 localStorage —— 用户自己加的列表和内置素材分开。
+     视频地址统一改成 https（原来那条是 http，https 页面里会被浏览器按混合内容拦掉）。 */
+  var BUILTIN = {
+    images: [
+      { name: '素材 1', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/c12ed6a291cd4aef8f9ee56b8d9e0336.jpg?Expires=17897248110&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=LAKlHr%2FrF3yeRjm0X%2BPFanMykS0%3D' },
+      { name: '素材 2', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/4f7a340dddb54a81bd4719ea7858dabc.jpg?Expires=17897248131&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=DdXTiiE%2FvdzhXrW1trOa6z%2Bgw%2BE%3D' },
+      { name: '素材 3', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/17aa028014ce494b9d915dea648be224.jpg?Expires=17897248145&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=qXD2VtP5A671aFWnx5uFmj8rAUw%3D' },
+      { name: '素材 4', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/f4c336e0dcc348189e7f77d2ad4f9e04.jpg?Expires=17897248161&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=uGfKlp18waDKNgEeOA2ZbNV4JBc%3D' },
+      { name: '素材 5', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/0103d312e9c84a9e964370b97065956f.jpg?Expires=17897248178&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=hdRu7RFZDtItCrRTZdFmEHDQOiI%3D' },
+      { name: '素材 6', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/751892567fee48358dff2b680d43fc8e.jpg?Expires=17897248193&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=hHbLtcAZB3Llhld0lylwkDbv8eM%3D' },
+      { name: '素材 7', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/2363a9ffb9fe4e7db740c974cd5521ad.jpg?Expires=17897248210&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=CR5HkpJgERD5EnF7UeUX5drVxUo%3D' },
+      { name: '素材 8', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/70651bf0fd9a4d799f5db67646683550.jpg?Expires=17897248226&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=vyFaFMdsD0WGj%2FTyjBTYdsVO%2BxQ%3D' },
+      { name: '素材 9', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/0976f941a633468ea6882db20c8b11d8.jpg?Expires=17897248242&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=RbftmlcdRLTlCAZZ1hp%2FT7gy%2FzQ%3D' },
+      { name: '素材 10', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/0f7550e84e57479b8d90ebdb8a8709e2.jpg?Expires=17897248303&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=LrBfPIhKlZ%2FpV7hqsVOP9jct%2FNE%3D' },
+      { name: '素材 11', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/2e55fb5c6b574a6fb33e4b980cd8f4dc.jpg?Expires=17897248318&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=LwzGe0Uo4cHcSnl6dS0z9ELANjU%3D' },
+      { name: '素材 12', url: 'https://xoss.shengshitong.com/sytalentsystem/xoll/Wl/e0707b08dd6e4b15bdf8c4bb5a556069.jpg?Expires=17898746790&OSSAccessKeyId=tTPeUWQpanCDiu1a&Signature=%2B0x%2FcpdyrTGjD1mpK7fkBGKkrqw%3D' }
+    ],
+    videos: [
+      {
+        name: '视频素材 1',
+        url: 'https://xoss.shengshitong.com/bizlicense/house/Wl/bfea75fc258647f8b9d622f17c7b949c.mp4?Expires=17899812372&OSSAccessKeyId=pF8xeN6gBdseylbD&Signature=%2Fy6fRl5KQRhWOGnF9DC%2FAcl3qcQ%3D'
+      }
+    ]
+  };
+
+  /* 按扩展名猜类型：图片扩展名 → 图片，视频扩展名 → 视频，
+     认不出来（无扩展名、带签名参数的地址）按视频算 —— 这页主要就是放 m3u8 的，
+     真放错了可以在「类型」里手动指定 */
+  function kindOf(url) {
+    var u = url.split('?')[0].split('#')[0].toLowerCase();
+    if (/\.(jpe?g|png|gif|webp|avif|bmp|svg)$/.test(u)) return 'image';
+    return 'video';
+  }
+  /* mode: auto | video | image */
+  function resolveKind(url, mode) {
+    if (mode === 'video') return 'video';
+    if (mode === 'image') return 'image';
+    return kindOf(url);
+  }
+
+  /* 统一添加：分类、去重、落库。返回本次新增的条目（分开给两个列表增量渲染用） */
+  function addUrls(text, mode) {
+    var lines = String(text || '').split(/[\n\r]+/).map(function (s) { return s.trim(); })
+      .filter(function (s) { return s && /^https?:\/\//i.test(s); });
+    var out = { videos: [], images: [] };
+    if (!lines.length) { ToolBox.toast('请先粘贴至少一个 http(s) 链接'); return out; }
+    lines.forEach(function (u) {
+      var kind = resolveKind(u, mode);
+      if (kind === 'image') {
+        if (!data.images.some(function (x) { return x.url === u; })) {
+          var im = { url: u, name: nameOf(u, '图片', data.images.length) };
+          data.images.push(im);
+          out.images.push(im);
+        }
+      } else {
+        if (!data.videos.some(function (x) { return x.url === u; })) {
+          var vd = { url: u, name: nameOf(u, '视频', data.videos.length), duration: '' };
+          data.videos.push(vd);
+          out.videos.push(vd);
+        }
+      }
+    });
+    save();
+    return out;
+  }
+
+  /* 两个列表的刷新函数：切标签页时用得上 */
+  var refresh = { video: null, image: null };
+  function refreshAll() {
+    if (refresh.video) refresh.video();
+    if (refresh.image) refresh.image();
+  }
+  function nameOf(url, prefix, idx) {
+    var clean = url.split('?')[0].split('#')[0];
+    var last = clean.split('/').pop() || '';
+    last = decodeURIComponent(last).replace(/\.[a-z0-9]+$/i, '');
+    /* 光秃秃的数字（如 .../240/240）没什么信息量，换成「图片 3」这种 */
+    if (!last || /^\d+$/.test(last) || last.length < 2) last = '';
+    /* OSS 上那种一串哈希文件名（uuid）当标题没意义 */
+    if (/^[0-9a-f]{16,}$/i.test(last)) last = '';
+    return last || (prefix + ' ' + (idx + 1));
+  }
+  function fmtTime(sec) {
+    if (!sec || !isFinite(sec)) return '';
+    var s = Math.round(sec);
+    var m = Math.floor(s / 60);
+    var h = Math.floor(m / 60);
+    s = s % 60;
+    return h ? h + ':' + String(m % 60).padStart(2, '0') + ':' + String(s).padStart(2, '0')
+      : m + ':' + String(s).padStart(2, '0');
+  }
+
+  /* ---------------- 通用动作 ---------------- */
+  function downloadRemote(url, filename) {
+    fetch(url, { mode: 'cors' }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.blob();
+    }).then(function (blob) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1500);
+      ToolBox.toast('已开始下载');
+    }).catch(function () {
+      /* 源站不允许跨域时，浏览器会忽略 download 属性，只能退回新窗口 */
+      window.open(url, '_blank', 'noopener');
+      ToolBox.toast('源站不允许跨域下载，已在新标签打开');
+    });
+  }
+
+  function copyLink(url) {
+    ToolBox.copy(url);
+    ToolBox.toast('链接已复制');
+  }
+
+  /* ---------------- m3u8 播放 ---------------- */
+  var hlsList = [];
+  function attachVideo(video, url, onState) {
+    var isHls = /\.m3u8(\?|#|$)/i.test(url);
+    /* Safari 原生就能播 m3u8，不需要 hls.js */
+    if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url;
+      onState('原生播放中');
+      return null;
+    }
+    if (!isHls) {
+      video.src = url;
+      onState('');
+      return null;
+    }
+    if (!window.Hls || !window.Hls.isSupported()) {
+      onState('当前浏览器不支持 m3u8 播放，可点「新窗口」用外部播放器打开');
+      return null;
+    }
+    var hls = new window.Hls({ enableWorker: true, lowLatencyMode: false });
+    hlsList.push(hls);
+    hls.on(window.Hls.Events.ERROR, function (e, data) {
+      if (!data || !data.fatal) return;
+      if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
+        onState('加载失败：多半是源站跨域（CORS）不允许');
+      } else if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+        onState('解码失败，尝试恢复中…');
+        hls.recoverMediaError();
+      } else {
+        onState('播放失败：' + (data.details || '未知错误'));
+      }
+    });
+    hls.loadSource(url);
+    hls.attachMedia(video);
+    onState('加载中…');
+    return hls;
+  }
+  /* 只销毁「已经不在页面里」的播放器上的 hls：
+     重建列表时，正在播的那条会被换掉（该销毁），
+     但增量添加新卡片不该打断已在播的视频 */
+  function destroyHls() {
+    hlsList = hlsList.filter(function (h) {
+      var media = h && h.media;
+      if (media && media.isConnected) return true;
+      try { h.destroy(); } catch (e) { }
+      return false;
+    });
+  }
+
+  /* ---------------- 添加框 ---------------- */
+  function addBox(placeholder, hint) {
+    var card = el('div', { class: 'tb-card' });
+    card.appendChild(el('div', { class: 'tb-card-title', text: '添加链接' }));
+    var ta = el('textarea', { class: 'tb-ta mono', placeholder: placeholder, spellcheck: 'false' });
+    ta.style.minHeight = '86px';
+    card.appendChild(ta);
+    var bar = el('div', { class: 'tb-row', style: 'margin-top:10px' });
+    /* 类型：认不出扩展名时（比如签名地址、无后缀的 CDN 链接）可以手动指定 */
+    var typeSel = el('select', { class: 'tb-sel' });
+    [['auto', '自动识别'], ['video', '视频'], ['image', '图片']]
+      .forEach(function (o) { typeSel.appendChild(el('option', { value: o[0], text: o[1] })); });
+    var btnAdd = el('button', { class: 'tb-btn primary', type: 'button', text: '添加' });
+    var btnClear = el('button', { class: 'tb-btn', type: 'button', text: '清空列表' });
+    bar.appendChild(typeSel);
+    bar.appendChild(btnAdd);
+    bar.appendChild(btnClear);
+    card.appendChild(bar);
+    card.appendChild(el('p', { class: 'tb-hint', style: 'margin-top:8px', text: hint }));
+    return { card: card, ta: ta, btnAdd: btnAdd, btnClear: btnClear, typeSel: typeSel };
+  }
+
+  /* ---------------- 视频素材 ---------------- */
+  function renderVideos(panel) {
+    var box = addBox('每行一个链接，例如：\nhttps://example.com/live/index.m3u8\nhttps://example.com/clip.mp4',
+      '支持 m3u8（直播/切片）与 mp4。m3u8 依赖 hls.js，源站需要允许跨域访问，否则无法在网页里播放。');
+    panel.appendChild(box.card);
+
+    var listCard = el('div', { class: 'tb-card' });
+    var listBody = el('div', { class: 'tb-col' });
+    listCard.appendChild(listBody);
+    panel.appendChild(listCard);
+
+    function parseAdd() {
+      var r = addUrls(box.ta.value, box.typeSel.value);
+      var n = r.videos.length + r.images.length;
+      if (!n) return;
+      box.ta.value = '';
+      ToolBox.toast('已添加 ' + n + ' 条');
+      appendVideos(r.videos);
+      if (refresh.image) refresh.image();   /* 图片那边同步一下 */
+    }
+    box.btnAdd.addEventListener('click', parseAdd);
+    box.btnClear.addEventListener('click', function () {
+      if (!data.videos.length && !data.images.length) { ToolBox.toast('列表本来就是空的'); return; }
+      data = blank();
+      save();
+      renderList();
+      if (refresh.image) refresh.image();
+      ToolBox.toast('已清空');
+    });
+
+    var titleEl = el('div', { class: 'tb-card-title' });
+    function updateTitle() { titleEl.textContent = '视频素材（' + data.videos.length + '）'; }
+
+    function renderList() {
+      destroyHls();
+      listBody.innerHTML = '';
+      listBody.appendChild(titleEl);
+      updateTitle();
+      if (!data.videos.length) {
+        listBody.appendChild(el('div', { class: 'ms-empty', text: '还没有视频素材，粘贴一个 m3u8 链接试试' }));
+        return;
+      }
+      data.videos.forEach(function (item) {
+        listBody.appendChild(videoCard(item, renderList));
+      });
+    }
+    /* 增量添加：不动已在播的卡片 */
+    function appendVideos(items) {
+      updateTitle();
+      if (!items.length) return;
+      var empty = listBody.querySelector('.ms-empty');
+      if (empty) empty.parentNode.removeChild(empty);
+      items.forEach(function (item) {
+        listBody.appendChild(videoCard(item, renderList));
+      });
+    }
+    refresh.video = renderList;
+    renderList();
+    panel.appendChild(builtinVideosPanel());
+  }
+
+  function videoCard(item, onChange, builtin) {
+    /* 内置的那条已经在一张卡里了，别再套一层卡片（会变成套娃边框） */
+    var card = el('div', {
+      class: builtin ? 'ms-video-card' : 'tb-card',
+      style: builtin ? '' : 'margin-bottom:14px'
+    });
+    var wrap = el('div', { class: 'ms-video' });
+    var video = el('video', {
+      controls: 'controls', playsinline: 'playsinline', preload: 'none',
+      style: 'display:none'
+    });
+    var play = el('button', { class: 'ms-play', type: 'button', title: '播放', 'aria-label': '播放' });
+    play.textContent = '▶';
+    var state = el('div', { class: 'ms-state', style: 'display:none' });
+    wrap.appendChild(video);
+    wrap.appendChild(play);
+    wrap.appendChild(state);
+    card.appendChild(wrap);
+
+    function setState(t) {
+      state.style.display = t ? 'block' : 'none';
+      state.textContent = t || '';
+    }
+    video.addEventListener('loadedmetadata', function () {
+      item.duration = fmtTime(video.duration);
+      durLabel.textContent = item.duration ? '时长 ' + item.duration : '';
+      save();
+    });
+    video.addEventListener('error', function () {
+      setState('加载失败：链接不可用，或源站不允许跨域访问');
+    });
+    video.addEventListener('playing', function () { setState(''); });
+
+    play.addEventListener('click', function () {
+      play.style.display = 'none';
+      video.style.display = 'block';
+      attachVideo(video, item.url, setState);
+      var p = video.play();
+      if (p && p.catch) p.catch(function () { setState('浏览器拦截了自动播放，点一下播放器里的播放键'); });
+    });
+
+    var row = el('div', { class: 'ms-row' });
+    var name = el('div', { class: 'ms-name', text: item.name });
+    var durLabel = el('span', { class: 'ms-meta', text: item.duration ? '时长 ' + item.duration : '' });
+    row.appendChild(name);
+    row.appendChild(durLabel);
+    card.appendChild(row);
+
+    var bar = el('div', { class: 'ms-row' });
+    var bCopy = el('button', { class: 'tb-btn sm', type: 'button', text: '复制链接' });
+    var bOpen = el('button', { class: 'tb-btn sm', type: 'button', text: '新窗口打开' });
+    bCopy.addEventListener('click', function () { copyLink(item.url); });
+    bOpen.addEventListener('click', function () { window.open(item.url, '_blank', 'noopener'); });
+    bar.appendChild(bCopy);
+    bar.appendChild(bOpen);
+    if (!/\.m3u8(\?|#|$)/i.test(item.url)) {
+      var bDl = el('button', { class: 'tb-btn sm', type: 'button', text: '下载' });
+      bDl.addEventListener('click', function () {
+        downloadRemote(item.url, item.name + (/\.mp4$/i.test(item.url) ? '.mp4' : '.bin'));
+      });
+      bar.appendChild(bDl);
+    }
+    /* 内置素材是写死的，不能删 */
+    if (!builtin) {
+      var bDel = el('button', { class: 'tb-btn sm', type: 'button', text: '删除' });
+      bDel.addEventListener('click', function () {
+        data.videos = data.videos.filter(function (x) { return x.url !== item.url; });
+        save();
+        onChange();
+      });
+      bar.appendChild(bDel);
+    }
+    card.appendChild(bar);
+    return card;
+  }
+
+  /* ---------------- 图片素材 ---------------- */
+  function renderImages(panel) {
+    var box = addBox('每行一个图片链接，例如：\nhttps://example.com/cover.jpg',
+      '图片直接引用远程地址，不会上传本地文件；点缩略图可看大图。');
+    panel.appendChild(box.card);
+
+    var listCard = el('div', { class: 'tb-card' });
+    var listBody = el('div', { class: 'tb-col' });
+    listCard.appendChild(listBody);
+    panel.appendChild(listCard);
+
+    box.btnAdd.addEventListener('click', function () {
+      var r = addUrls(box.ta.value, box.typeSel.value);
+      var n = r.videos.length + r.images.length;
+      if (!n) return;
+      box.ta.value = '';
+      ToolBox.toast('已添加 ' + n + ' 条');
+      appendImages(r.images);
+      if (refresh.video) refresh.video();
+    });
+    box.btnClear.addEventListener('click', function () {
+      if (!data.videos.length && !data.images.length) { ToolBox.toast('列表本来就是空的'); return; }
+      data = blank();
+      save();
+      renderList();
+      if (refresh.video) refresh.video();
+      ToolBox.toast('已清空');
+    });
+
+    var titleEl = el('div', { class: 'tb-card-title' });
+    var grid = el('div', { class: 'ms-grid' });
+    function updateTitle() { titleEl.textContent = '图片素材（' + data.images.length + '）'; }
+
+    function renderList() {
+      listBody.innerHTML = '';
+      listBody.appendChild(titleEl);
+      updateTitle();
+      if (!data.images.length) {
+        listBody.appendChild(el('div', { class: 'ms-empty', text: '还没有图片素材，粘贴一个图片链接试试' }));
+        return;
+      }
+      grid.innerHTML = '';
+      data.images.forEach(function (item) {
+        grid.appendChild(imageCell(item, renderList));
+      });
+      listBody.appendChild(grid);
+    }
+    /* 增量添加 */
+    function appendImages(items) {
+      updateTitle();
+      if (!items.length) return;
+      var empty = listBody.querySelector('.ms-empty');
+      if (empty) empty.parentNode.removeChild(empty);
+      if (!grid.parentNode) listBody.appendChild(grid);
+      items.forEach(function (item) {
+        grid.appendChild(imageCell(item, renderList));
+      });
+    }
+    refresh.image = renderList;
+    renderList();
+    panel.appendChild(builtinImagesPanel());
+  }
+
+  function imageCell(item, onChange, builtin) {
+    var cell = el('div', { class: 'ms-cell' });
+    var img = el('img', { src: item.url, alt: item.name, loading: 'lazy', referrerpolicy: 'no-referrer' });
+    cell.appendChild(img);
+    var cap = el('div', { class: 'ms-cap', text: item.name });
+    cell.appendChild(cap);
+
+    var act = el('div', { class: 'ms-act' });
+    var bView = el('button', { type: 'button', title: '看大图', 'aria-label': '看大图' });
+    bView.textContent = '👁';
+    var bDl = el('button', { type: 'button', title: '下载', 'aria-label': '下载' });
+    bDl.textContent = '⬇';
+    bView.addEventListener('click', function (e) { e.stopPropagation(); openLight(item.url, item.name); });
+    bDl.addEventListener('click', function (e) {
+      e.stopPropagation();
+      downloadRemote(item.url, item.name + '.jpg');
+    });
+    act.appendChild(bView);
+    act.appendChild(bDl);
+    if (!builtin) {
+      var bDel = el('button', { type: 'button', title: '删除', 'aria-label': '删除' });
+      bDel.textContent = '✕';
+      bDel.addEventListener('click', function (e) {
+        e.stopPropagation();
+        data.images = data.images.filter(function (x) { return x.url !== item.url; });
+        save();
+        onChange();
+      });
+      act.appendChild(bDel);
+    }
+    cell.appendChild(act);
+
+    img.addEventListener('error', function () {
+      cap.textContent = item.name + ' · 加载失败';
+    });
+    cell.addEventListener('click', function () { openLight(item.url, item.name); });
+    return cell;
+  }
+
+  /* ---------------- 内置素材区块 ----------------
+     写死的那批素材，只读展示：可以看大图、复制、下载、也可以一键收进「我的素材」。 */
+  function builtinImagesPanel() {
+    var card = el('div', { class: 'tb-card' });
+    var head = el('div', { class: 'tb-row' });
+    var title = el('div', { class: 'tb-card-title', text: '内置素材（' + BUILTIN.images.length + '）', style: 'flex:1' });
+    var bAll = el('button', { class: 'tb-btn sm', type: 'button', text: '全部加入我的素材' });
+    head.appendChild(title);
+    head.appendChild(bAll);
+    card.appendChild(head);
+    card.appendChild(el('p', {
+      class: 'tb-hint',
+      text: '来自 basic_app「我的素材」页的那批图，写死在内置里，不占你的素材列表；点缩略图看大图。'
+    }));
+    var grid = el('div', { class: 'ms-grid', style: 'margin-top:12px' });
+    BUILTIN.images.forEach(function (item) {
+      grid.appendChild(imageCell(item, null, true));
+    });
+    card.appendChild(grid);
+    bAll.addEventListener('click', function () {
+      var text = BUILTIN.images.map(function (x) { return x.url; }).join('\n');
+      var r = addUrls(text, 'image');
+      ToolBox.toast(r.images.length ? '已加入 ' + r.images.length + ' 张' : '这些已经在你的素材里了');
+      if (refresh.image) refresh.image();
+    });
+    return card;
+  }
+
+  function builtinVideosPanel() {
+    var card = el('div', { class: 'tb-card' });
+    card.appendChild(el('div', { class: 'tb-card-title', text: '内置素材（' + BUILTIN.videos.length + '）' }));
+    card.appendChild(el('p', {
+      class: 'tb-hint',
+      text: '内置的那条视频素材，点播放即可；地址已改成 https，https 页面里不会被当混合内容拦掉。'
+    }));
+    BUILTIN.videos.forEach(function (item) {
+      card.appendChild(videoCard(item, null, true));
+    });
+    return card;
+  }
+
+  /* ---------------- 大图预览 ---------------- */
+  function openLight(url, name) {
+    var mask = el('div', { class: 'ms-light' });
+    var img = el('img', { src: url, alt: name || '' });
+    var close = el('button', { class: 'ms-close', type: 'button', 'aria-label': '关闭' });
+    close.textContent = '✕';
+    mask.appendChild(img);
+    mask.appendChild(close);
+    function shut() {
+      document.removeEventListener('keydown', onKey);
+      if (mask.parentNode) mask.parentNode.removeChild(mask);
+    }
+    function onKey(e) { if (e.key === 'Escape') shut(); }
+    close.addEventListener('click', shut);
+    mask.addEventListener('click', function (e) { if (e.target === mask) shut(); });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(mask);
+  }
+
+  /* ---------------- 启动 ---------------- */
+  function boot() {
+    var api = ToolBox.mount(document.getElementById('tbRoot'), {
+      title: '素材库',
+      sub: '粘贴 m3u8 / 图片链接，本地预览、复制、下载',
+      storageKey: 'tb_materials_tab',
+      tabs: [
+        { id: 'video', name: '视频素材', render: renderVideos },
+        { id: 'image', name: '图片素材', render: renderImages }
+      ]
+    });
+    /* 切走标签页时把视频停掉，别在后台一直拉流；同时刷新这一页的列表 */
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t && t.classList && t.classList.contains('tb-tab')) {
+        var id = t.getAttribute('data-tab');
+        setTimeout(function () {
+          var vids = document.querySelectorAll('.ms-video video');
+          Array.prototype.forEach.call(vids, function (v) { try { v.pause(); } catch (err) { } });
+          if (refresh[id]) refresh[id]();
+        }, 0);
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>

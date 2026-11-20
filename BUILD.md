@@ -10,7 +10,7 @@
 
 它就是**你日常积累笔记 + 资料目录**的统一入口，由一段 markdown 配合 docsify 自动渲染为网页。
 
-除此之外还有 **42 个不经过 docsify 的独立页面**（工具 / 视觉 / 游戏），统一从 `x.html` 进入，例如画板、翻译工具、雨夜玻璃、贪吃蛇。这些页面逐页说明见 [7.7](#77-独立页面html-与-xhtml)。
+除此之外还有 **43 个不经过 docsify 的独立页面**（工具 / 视觉 / 游戏），统一从 `x.html` 进入，例如画板、翻译工具、雨夜玻璃、贪吃蛇。这些页面逐页说明见 [7.7](#77-独立页面html-与-xhtml)。
 
 ---
 
@@ -25,7 +25,7 @@
 | 工作流自动化 | **workbuddy**（`.workbuddy/`，每天 10:30 跑脚本 + 同步到示例知识库） | workbuddy 由 Claw 项目托管 |
 | 搜索引擎 | 两个**自定义** docsify 插件：<br>① `assets/js/ebook-search.js`（电子资源）<br>② `assets/js/living-better-search.js`（高性价比）<br>全站文档检索独立成页 `html/search.html`（自己建索引，不用 docsify 的 `search.min.js`） | docsify 自带的全局搜索已停用：语料 20MB → 索引 13MB，超 localStorage 10MB 配额，且每次开首页都要重抓 900+ 篇（现 937 篇） |
 | 数据集 | `assets/json/books.json`（24,071 条电子书，~6.8 MB）<br>`assets/json/living-better.json`（34 章元数据，~20 KB） | 仅做静态查询，不需要服务器 |
-| 独立页面 | 原生 HTML + CSS + JS，`html/` 下 42 个页面 + `x.html` 导航 | 不经过 docsify；共享能力抽成 `assets/css/*-kit.css` + `assets/js/*-kit.js`（见 7.7.5） |
+| 独立页面 | 原生 HTML + CSS + JS，`html/` 下 43 个页面 + `x.html` 导航 | 不经过 docsify；共享能力抽成 `assets/css/*-kit.css` + `assets/js/*-kit.js`（见 7.7.5） |
 | 页面翻译 | **translate.js**（由 `assets/js/translate-kit.js` 封装） | 三源自动回退加载；Edge 直连通道，无需 API Key（见 7.8.1） |
 | 移动端工具坞 | **dock-kit.js**（自研） | 手机端把散落的悬浮按钮收进一个可折叠坞，桌面端自动还原（见 7.8.2） |
 
@@ -41,9 +41,9 @@ knowledge-base/
 ├── update_sidebar.py          # 侧栏 + README 维护脚本
 ├── syzw_personal_index.json   # （遗留，私人索引；当前未直接被 docsify 使用）
 ├── x.html                     # 独立页面导航（工具 / 氛围屏 / 生成器 / 游戏，自带主题与检索）
-├── html/                      # 独立页面（42 个，静态托管，不走 docsify）—— 逐页说明见 7.7
+├── html/                      # 独立页面（43 个，静态托管，不走 docsify）—— 逐页说明见 7.7
 │   ├── search.html            # 全站文档检索：自己抓 md 建索引，索引存 IndexedDB
-│   ├── tool-*.html   ×13      # 工具页（工具箱骨架 toolbox.css/js）
+│   ├── tool-*.html   ×14      # 工具页（工具箱骨架 toolbox.css/js）
 │   ├── visual-*.html ×15      # 视觉页（全屏 canvas + 调色盘）
 │   ├── game-hub.html          # 游戏中心（卡片索引）
 │   └── game-*.html   ×12      # 游戏页（game-kit 骨架）
@@ -146,7 +146,7 @@ docsify 自带：点一下回到 `README.md`，那里有今日新增的文章列
 | 区块 | 数量 | 内容 |
 | --- | --- | --- |
 | 🧰 工具 | 5 | 全站搜索、翻译工具、快捷复制、句子收藏、待机展示 |
-| ⚡ 效率工具 | 6 | 取色器、文本工具箱、图片处理台、文本对比、番茄钟、二维码 |
+| ⚡ 效率工具 | 7 | 取色器、文本工具箱、图片处理台、文本对比、番茄钟、二维码、素材库 |
 | 🌌 氛围屏 | 5 | 极光、星空漫游、雨夜玻璃、雪落、实时天光 |
 | 👆 交互视觉 | 5 | 波浪点阵、分形缩放、粒子引力场、文字形变、粒子文字 |
 | ✨ 生成器 | 5 | 句子海报、曼陀罗、渐变配色、噪声壁纸、像素头像 |
@@ -381,13 +381,13 @@ buildPanel(panel, {
 
 ### 7.7 独立页面（`html/` 与 `x.html`）
 
-`html/` 下 **42 个页面**全部是原生 HTML，不经过 docsify，各自独立可访问。改样式 / 加按钮前，先看 7.7.5 的套件速查。
+`html/` 下 **43 个页面**全部是原生 HTML，不经过 docsify，各自独立可访问。改样式 / 加按钮前，先看 7.7.5 的套件速查。
 
 #### 7.7.1 页面总览
 
 | 分类 | 数量 | 文件前缀 | 统一骨架 | 入口 |
 | --- | --- | --- | --- | --- |
-| 工具 | 13 | `tool-*.html` | `toolbox.css/js` + `theme-kit` | `x.html` → 工具 / 效率工具 |
+| 工具 | 14 | `tool-*.html` | `toolbox.css/js` + `theme-kit` | `x.html` → 工具 / 效率工具 |
 | 视觉 | 15 | `visual-*.html` | 全屏 canvas + `palette-kit` | `x.html` → 氛围屏 / 交互视觉 / 生成器 |
 | 游戏 | 12 + 中心 | `game-*.html` | `game-kit.css/js` | `x.html` → 小游戏 / `game-hub.html` |
 | 检索 | 1 | `search.html` | `toolbox.css/js` | `x.html` → 工具 |
@@ -395,14 +395,15 @@ buildPanel(panel, {
 
 所有独立页的 `<head>` 引用顺序固定为：`viewport` → `theme-color` → favicon → `themes.css` → 套件 CSS → **主题 boot 内联脚本** → `defer` 引各套件 JS（含 `nav-kit.js`）。顺序别乱：主题 boot 必须在 CSS 之后、`theme-kit.js` 之前，否则首屏会闪一下默认色。
 
-#### 7.7.2 工具页（13 个）
+#### 7.7.2 工具页（14 个）
 
 | 文件 | 标题 | 做什么 | 关键依赖 |
 | --- | --- | --- | --- |
 | `tool-qrcode.html` | 二维码生成 | 文本 / 链接 → 二维码，可下载 | `qrcode.js`（本地库，无外链） |
 | `tool-textbox.html` | 文本工具箱 | 多子工具 tab：字数统计、大小写、去重等 | `toolbox` |
 | `tool-diff.html` | 文本对比 | 两段文本逐行差异对比 | `toolbox` |
-| `tool-image.html` | 图片处理台 | 压缩 / 旋转 / 水印 / 格式转换；`paint`（实时预览）+ `run`（导出）双回调 | `toolbox` |
+| `tool-image.html` | 图片处理台 | 压缩 / 旋转 / 水印 / 格式转换 / 切圆角（应用商店图标）；`paint`（实时预览）+ `run`（导出）双回调 | `toolbox` |
+| `tool-materials.html` | 素材库 | 粘贴 m3u8 / 图片链接：视频卡片播放（hls.js）、图片网格预览，列表存 localStorage | `toolbox` + `hls.min.js` |
 | `tool-pomodoro.html` | 专注番茄钟 | 专注计时循环，记录存 localStorage | `toolbox` |
 | `tool-eyedropper.html` | 取色器 · 对比度检测 | 屏幕取色、配色方案、WCAG 对比度 | `palette-kit` + `toolbox` |
 | `tool-paint.html` | 画板 | 画笔 / 橡皮 / 填充 / 取色 / 撤销重做 | `palette-kit` + `fs-kit` |
@@ -467,10 +468,11 @@ buildPanel(panel, {
 | `game-kit.css/js` | 游戏页骨架 | 12 个游戏 | `GameKit.create(opts)` 负责 HUD / 工具列 / D-pad / 返回 |
 | `palette-kit.css/js` | 调色盘悬浮球 + 面板 | 画板、视觉页、游戏 | 触发球挂在页面自己的 `.pk` 元素里；颜色跟随主题 |
 | `fs-kit.js` | 全屏按钮 | 全部独立页 | 自动避让右下角固定 UI；页面已有 `#btnFull` 时不重复挂 |
-| `nav-kit.js` | 返回按钮显隐 | **全部 42 个独立页** | 只有从站内页面跳进来才显示返回按钮，见 7.7.8 |
+| `nav-kit.js` | 返回按钮显隐 | **全部 43 个独立页** | 只有从站内页面跳进来才显示返回按钮，见 7.7.8 |
 | `save-kit.js` | 保存 / 导出 | 句子收藏、部分视觉页 | canvas → 图片 / 文本导出 |
 | `text-kit.css/js` + `quotes-data.js` | 句子条组件 | 粒子文字 / 海报 / 文字形变 | `TextKit.mountBar(host, {layout, limit, value, onChange})`；`collapsible: true` 时带折叠箭头且**默认收起**（`folded: false` 可改为初始展开） |
 | `qrcode.js` | 二维码生成 | 二维码页 | 本地实现，无外链 |
+| `hls.min.js` | m3u8 播放 | 素材库 | hls.js 1.5.13，**本地化存放**（约 413 KB），不引 CDN；Safari 能原生播 m3u8 时会优先走原生 |
 | `translate-kit.js` | 页面翻译 | **全部 42 页 + `x.html`** | 见 7.8.1 |
 | `dock-kit.js` | 手机端工具坞 | **全部 42 页 + `x.html`** | 见 7.8.2 |
 
@@ -484,7 +486,7 @@ buildPanel(panel, {
 2. **`<head>` 引用顺序**：`themes.css` → 套件 CSS → 主题 boot 内联脚本 → `theme-kit.js` / 套件 JS / **`nav-kit.js`** / `translate-kit.js` / `dock-kit.js`（全部 `defer`）。
 3. **工具页骨架**：`<body class="tb-page">`、`<div id="tbRoot"></div>`、`ToolBox.mount(...)`，并把 `<meta name="theme-color">` 改成该页主题色。
 4. **注册到导航**：在 `x.html` 加一张 `.sp-card` 卡片，并在 JS 的 `CARD_ICONS` 映射表里加 emoji 图标（不加就没有图标徽章）；游戏要另加到 `game-hub.html` 的卡片网格。
-5. **同步文案里的数量**：`x.html` 搜索卡片写着「检索全部 937 篇文档」，`html/` 页面卡片写着「42 个页面」，加文档 / 加页面后记得改（本文档正文里的篇数口径也要跟着改）。
+5. **同步文案里的数量**：`x.html` 搜索卡片写着「检索全部 937 篇文档」，`html/` 页面卡片写着「43 个页面」，加文档 / 加页面后记得改（本文档正文里的篇数口径也要跟着改）。
 6. **新增悬浮按钮时**：要么放进 `.ui.tools` / `.ui.side` / `.ui.palette` / `.ui.panel` 容器（这几个会被自动收纳），
    要么调用 `DockKit.add(node)`，否则手机端会一直浮在原处（见 7.8.2）。
    **底部工具条请用 `.ui.bar`** —— 它不进坞，会保持「贴底通栏 + 横向滚动」。。
@@ -512,7 +514,7 @@ buildPanel(panel, {
 
 #### 7.7.8 返回按钮与卡片打开方式
 
-**返回按钮（42 个页面全覆盖）**：
+**返回按钮（43 个页面全覆盖）**：
 
 | 来源 | 类名 | 说明 |
 | --- | --- | --- |
@@ -525,7 +527,7 @@ buildPanel(panel, {
 **新增页面时必须自带返回入口**，否则用户进得去出不来。巡检脚本要同时判三件事：
 元素存在 → 可见（尺寸非 0、opacity 非 0）→ 指向 `x.html` 或 `game-hub.html`。
 
-**返回按钮只在「从站内进来」时显示**（`assets/js/nav-kit.js`，全部 42 个独立页都要引）：
+**返回按钮只在「从站内进来」时显示**（`assets/js/nav-kit.js`，全部 43 个独立页都要引）：
 
 | 场景 | `document.referrer` | 返回按钮 |
 | --- | --- | --- |
@@ -548,7 +550,7 @@ buildPanel(panel, {
 
 #### 7.7.9 主题跟随与画布尺寸
 
-**主题键统一为 `tk_theme`**：导航页 `x.html` 和 42 个独立页必须写同一个键，否则子页读不到导航页选的主题。
+**主题键统一为 `tk_theme`**：导航页 `x.html` 和 43 个独立页必须写同一个键，否则子页读不到导航页选的主题。
 `x.html` 原来用的是 `kb-theme`（自己的键），现已改为 `tk_theme`；旧键会在读取时迁移一次并清除。
 `x.html` 首次访问若没有记录，会按系统深浅选 `emerald` / `midnight` **并立刻落盘**，
 这样从导航页进子页时两边一致。
@@ -630,7 +632,7 @@ PanelKit.announce('ptext-type');            // 我打开时告诉别人收起
 
 ### 7.8 页面翻译与手机端工具坞
 
-`translate-kit.js` 和 `dock-kit.js` 是**全站注入**的：42 个 `html/` 页面 + `x.html`，每个文件的 `</head>` 前都有一行 `defer` 引用。
+`translate-kit.js` 和 `dock-kit.js` 是**全站注入**的：43 个 `html/` 页面 + `x.html`，每个文件的 `</head>` 前都有一行 `defer` 引用。
 
 #### 7.8.1 页面翻译 `translate-kit.js`
 
@@ -738,6 +740,41 @@ PanelKit.announce('ptext-type');            // 我打开时告诉别人收起
 - **返回键要跟着 `nav-kit` 的 `no-back` 走**：直接打开页面（referrer 不同源）时 nav-kit 会给 `<html>` 加
   `no-back` 隐藏返回键；坞里克隆的按钮不受那条 CSS 管，得自己判断，否则直接进页面也会冒出个退不掉的返回。
 - 语言按钮 inline 模式带 `margin-left: auto`，进坞后会被推到边上，进坞要复位。
+
+#### 7.8.3 素材库与 m3u8 播放 `tool-materials.html`
+
+**结构**：`ToolBox.mount` 两个 tab（视频素材 / 图片素材），列表存 `localStorage['tb_materials']`。
+
+**内置素材**：页面里写死了一批素材（12 张图 + 1 条视频，来自 `basic_app` 的「我的素材」页），
+放在两个 tab 各自的「内置素材」卡片里，**只读展示，不进 localStorage**，
+和用户自己粘的列表分开；图片区有「全部加入我的素材」按钮，可以一键收进自己的列表。
+
+**踩过的坑（内置素材这批）**：
+- 那条视频地址原本是 `http://`，站点是 https 部署 → **浏览器会按混合内容直接拦掉**，
+  页面里统一改成 `https://`（同域名支持 https，实测 200 / video/mpeg4）。
+  凡是写死在页面里的远程资源，都要检查协议，别从老项目里直接抄 http 链接。
+- 图片 / 视频能显示是因为 `<img>` / `<video>` 不需要 CORS；
+  但**下载走 fetch 会被源站挡掉**（这个 OSS 没有 `Access-Control-Allow-Origin`），
+  所以 `downloadRemote()` 失败时要退回「新窗口打开」并给出提示。
+- OSS 上的文件名是一串哈希（uuid），当标题没意义 → `nameOf()` 遇到纯数字或长哈希一律换成「图片 N」。
+
+**m3u8 播放**：
+- `hls.js` **本地化**放在 `assets/js/hls.min.js`（约 413 KB），不引 CDN —— 外链库挂了就整页播放不了。
+- Safari 原生能播 m3u8（`canPlayType('application/vnd.apple.mpegurl')`），优先走原生；
+  其余浏览器用 hls.js，Safari 走原生时不会白白加载一份 413 KB 的库。
+- **能不能播取决于源站**：跨域的 m3u8 需要源站返回 `Access-Control-Allow-Origin`，
+  不给就是「网络错误」，页面里已把这类失败翻译成「多半是源站跨域（CORS）不允许」，
+  并保留「新窗口打开」兜底。
+- 播放器**按需挂载**：卡片先显示 ▶ 按钮，点一下才 `loadSource` + `attachMedia`，
+  避免一屏十几个流同时拉。
+
+**踩过的坑**：
+- **添加链接不要整表重建**。重建会把正在播放的那张卡片换掉（播放中断），
+  现在用「增量追加」：`addUrls()` 返回本次新增的条目，只 append 新卡片；
+  顺带 `destroyHls()` 改成只销毁「media 已不在 DOM 里」的实例，不再一刀切。
+- **无扩展名的链接判不出类型**（如 `https://cdn/xxx/240/240`、带签名参数的地址），
+  按扩展名猜会把图片塞进视频列表。所以添加框带一个「类型」下拉：自动 / 视频 / 图片。
+- 图片网格用 `loading="lazy"`，图片在视口外时 `naturalWidth` 是 0 —— 这是懒加载的正常表现，不是加载失败。
 
 ---
 
@@ -878,7 +915,7 @@ python -m http.server 8765
 - **写**：在 `docs/<栏目>/` 下放 markdown，文件名按栏目规范
 - **更**：等 10:30 自动跑，或手动 `python update_sidebar.py`
 - **稳**：首页 / 电子资源 / 高性价比 三个菜单已被脚本锁定，不会乱动
-- **独立页**：`html/` 下 42 个原生页面 + `x.html` 导航，共享 12 个套件；改样式先看 7.7，加页面按 7.7.6
+- **独立页**：`html/` 下 43 个原生页面 + `x.html` 导航，共享 12 个套件；改样式先看 7.7，加页面按 7.7.6
 - **双端**：翻译（`translate-kit`）与手机工具坞（`dock-kit`）全站注入，PC 与手机共用同一套页面，靠媒体查询和运行时脚本适配
 
 « 其他文件：README.md（docsify 首页）· _sidebar.md（侧栏）· update_sidebar.py（维护脚本）· x.html（独立页面导航） »

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#1e7a4c">
   <title>独立页面</title>
-  <meta name="description" content="知识库快捷入口：常用站点导航、天气、时钟与 42 个独立工具页入口，全部纯前端运行。">
+  <meta name="description" content="知识库快捷入口：常用站点导航、天气、时钟与 43 个独立工具页入口，全部纯前端运行。">
   <link rel="icon" type="image/png" href="assets/image/favicon-round.png">
   <link rel="apple-touch-icon" href="assets/image/logo.png">
   <style>
@@ -1196,7 +1196,7 @@
   <script>
     (function () {
       try {
-        // 主题键统一用 tk_theme —— 和 42 个独立页的 theme-kit.js 用同一个键，
+        // 主题键统一用 tk_theme —— 和 43 个独立页的 theme-kit.js 用同一个键，
         // 子页才能读到导航页选中的主题。kb-theme 是旧键，只做一次性迁移。
         var saved = localStorage.getItem('tk_theme');
         if (!saved) {
@@ -1374,7 +1374,7 @@
 
     <!-- ============ 板块一·二：效率工具 ============ -->
     <section class="sp-section" id="sec-eff">
-      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">⚡</span>效率工具 <span class="sp-count">6</span></h2>
+      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">⚡</span>效率工具 <span class="sp-count">7</span></h2>
       <p class="sp-sub">日常和开发都用得上的小工具，全部在浏览器本地跑，数据不出本机。</p>
       <div class="sp-grid">
         <a class="sp-card" href="html/tool-eyedropper.html">
@@ -1392,7 +1392,7 @@
         <a class="sp-card" href="html/tool-image.html">
           <span class="sp-tag">图片</span>
           <span class="sp-name">图片处理台</span>
-          <p class="sp-desc">压到指定体积、格式互转、加文字水印、裁剪旋转，全程本地不上传。</p>
+          <p class="sp-desc">压到指定体积、格式互转、加文字水印、裁剪旋转、切圆角做应用商店图标，全程本地不上传。</p>
           <span class="sp-arrow">打开</span>
         </a>
         <a class="sp-card" href="html/tool-diff.html">
@@ -1411,6 +1411,12 @@
           <span class="sp-tag">工具</span>
           <span class="sp-name">二维码生成</span>
           <p class="sp-desc">网址或文本转二维码，配色与尺寸随意调，导出 PNG 或矢量 SVG。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/tool-materials.html">
+          <span class="sp-tag">素材</span>
+          <span class="sp-name">素材库</span>
+          <p class="sp-desc">粘贴 m3u8 或图片链接，本地预览、复制、下载，列表自动记住。</p>
           <span class="sp-arrow">打开</span>
         </a>
       </div>
@@ -1883,6 +1889,7 @@
         'html/tool-eyedropper.html': '💧', 'html/tool-textbox.html': '🔤',
         'html/tool-image.html': '🖼️', 'html/tool-diff.html': '🔀',
         'html/tool-pomodoro.html': '🍅', 'html/tool-qrcode.html': '🔳',
+        'html/tool-materials.html': '📁',
         'html/visual-aurora.html': '🌌', 'html/visual-starfield.html': '🌠',
         'html/visual-rain.html': '🌧️', 'html/visual-sky.html': '🌤️',
         'html/visual-snow.html': '❄️', 'html/visual-wave-grid.html': '🌊',
