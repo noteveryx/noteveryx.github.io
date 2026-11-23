@@ -17,15 +17,21 @@ README_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'README.m
 # 默认一级栏目展示顺序（仅当 sidebar 文件不存在或为空时使用）
 DEFAULT_ORDER = ['申论', '讲话稿', '软考', '股票推荐']
 
-# 软考中级子目录顺序 (优先级: 中级用户偏好的展示顺序)
-# 在 _sidebar.md 已存在时, 这个顺序会被已有顺序覆盖; 在新建目录时,
-# 脚本会用这个列表确保中级子目录渲染到正确位置.
-# 高级子目录保持自然排序 (已经在 _sidebar.md 排过, 默认不动).
-SOFT_EXAM_MIDDLE_ORDER = [
-    '（中级）系统集成项目管理工程师',  # 2026-10-08 用户偏好: 第一
-    '（中级）信息系统监理师',          # 第二
-    '（中级）信息系统管理工程师',      # 第三
+# 软考子目录显示顺序 (2026-11-23 用户要求)
+# 顺序: 中级系统集成 → 高级信息系统项目管理师 → 其余按既有相对顺序依次向下
+# 说明: 脚本每次都按此列表重排, 用户若要调整顺序, 改这里即可.
+SOFT_EXAM_ORDER = [
+    '（中级）系统集成项目管理工程师',  # 第一: 用户偏好
+    '（高级）信息系统项目管理师',      # 第二: 用户指定
+    '（中级）信息系统监理师',          # 其余依次向下
+    '（中级）信息系统管理工程师',
+    '（高级）系统分析师',
+    '（高级）系统架构设计师',
+    '（高级）系统规划与管理师',
 ]
+
+# 兼容旧变量名 (HOME 排序与 soft_exam_sort_key 引用)
+SOFT_EXAM_MIDDLE_ORDER = SOFT_EXAM_ORDER
 
 # 侧边栏隐藏目录 (2026-10-29 用户要求)
 # 这些目录的 md 文件仍然保留在磁盘上, README 的统计照常计算,
@@ -34,6 +40,11 @@ SOFT_EXAM_MIDDLE_ORDER = [
 HIDDEN_SIDEBAR_DIRS = {
     '（高级）网络规划设计师',
 }
+
+# 视频文案目录说明 (2026-11-23 用户要求)
+# 产出目录已由 outputs/视频文案/ 迁移到 knowledge-base/docs/视频文案/,
+# 与侧边栏扫描目录一致, 每日新产出的文案会自动出现在「视频文案」栏目下.
+# 旧的 outputs/视频文案/ 若存在, 由 sync_video_scripts.py 做兼容同步.
 
 def soft_exam_sort_key(name):
     """
@@ -47,9 +58,19 @@ def soft_exam_sort_key(name):
             return (0, i, name)
     return (1, 0, natural_sort_key(name))
 
-# 今日新增表格的一级栏目顺序 (申论 → 讲话稿 → 寓言故事 → 软考 → 其他)
-# 与侧边栏顺序保持一致: 申论/讲话稿/寓言故事属于"日常内容"区, 软考是"备考"区
-HOME_TOP_LEVEL_ORDER = ['申论', '讲话稿', '寓言故事', '软考']
+# 今日新增表格的一级栏目顺序 (2026-11-23 用户指定)
+# 与侧边栏全局顺序保持一致: 申论 → 讲话稿 → 电子资源 → 高性价比 →
+# 寓言故事 → 视频文案 → 软考各科目 → 其他
+# 未列出的栏目排在最后, 按自然序
+HOME_TOP_LEVEL_ORDER = [
+    '申论',
+    '讲话稿',
+    '电子资源',
+    '高性价比',
+    '寓言故事',
+    '视频文案',
+    '软考',
+]
 
 # 锁定菜单: 不论 _sidebar.md 如何变化, 这 3 个菜单必须存在并保持原位
 #   - 首页永远是第一个 (kind=home 由 docsify 内置渲染)
@@ -62,12 +83,76 @@ LOCKED_ENTRIES = [
     {'kind': 'section', 'title': '高性价比', 'link': 'docs/高性价比.md', 'name': '高性价比'},
 ]
 
-# 紧跟"高性价比"之后的固定菜单: 位置在 高性价比 section 之后,
-# 其它 section 之前. 新建寓言故事类目时, 在这里登记即可保证下次跑脚本
-# 时它不会因为 sort/order 变化被挪到末尾.
-LOCKED_ENTRIES_AFTER_HIGHBILITY = [
-    {'kind': 'section', 'title': '寓言故事', 'name': '寓言故事'},
+# 紧跟"高性价比"之后的固定菜单 (历史机制, 2026-11-23 起由
+# SIDEBAR_GLOBAL_ORDER 全局顺序表统一管理, 此处保留为空以避免两套规则冲突).
+#
+# 说明: 曾用于把 寓言故事 / 视频文案 锁定在高性价比之后.
+# 现已并入 SIDEBAR_GLOBAL_ORDER, 全局重排会保证它们的位置正确.
+LOCKED_ENTRIES_AFTER_HIGHBILITY = []
+
+# 全局一级栏目顺序表 (2026-11-23 用户要求)
+# 目标顺序: 首页 → 申论 → 讲话稿 → 电子资源 → 高性价比 → 再依次向下排列
+#
+# 实现方式: 每次生成侧边栏时, 按此表把所有已识别条目重新排列.
+# 表中列出的一级栏目严格按此顺序; 未列出的 (软考各科目 / 示例) 保持
+# 各自原有相对次序, 排在表内栏目之后, 即"再依次向下排列".
+#
+# 要调整顺序, 只改这个列表即可 —— 手动改 _sidebar.md 会被脚本纠正回来.
+SIDEBAR_GLOBAL_ORDER = [
+    '申论',
+    '讲话稿',
+    '电子资源',
+    '高性价比',
+    '寓言故事',
+    '视频文案',
 ]
+
+def entry_display_name(e):
+    """
+    取条目的一级栏目显示名, 兼容三种 kind:
+      - section: 直接取 title
+      - manual:  从 markdown 链接文本里取 (如 `* [电子资源](docs/电子资源.md)` -> 电子资源)
+      - home:    返回 '首页'
+    """
+    if e.get('kind') == 'home':
+        return '首页'
+    if e.get('kind') == 'section':
+        return e.get('title', '')
+    line = e.get('line', '')
+    m = re.match(r'^\*\s*\[(.+?)\]\(', line)
+    return m.group(1).strip() if m else line.strip()
+
+
+def reorder_global_sections(entries):
+    """
+    按 SIDEBAR_GLOBAL_ORDER 重排全部一级栏目 (2026-11-23 用户要求).
+
+    规则:
+      - '首页' 永远第一 (docsify 内置渲染, 保持不动)
+      - SIDEBAR_GLOBAL_ORDER 中的栏目严格按表内顺序排列
+      - 未在表中的栏目 (寓言故事/视频文案/软考各科目/示例 等) 保持
+        它们彼此之间的原有相对次序, 整体排在表内栏目之后
+        —— 即用户所说的"再依次向下排列"
+
+    实现: 先把表内栏目按 index 排序抽出, 再把其余条目按原序抽出,
+    合并后写回. 表内栏目缺失时自动跳过, 不会报错.
+    """
+    if len(entries) < 2:
+        return
+
+    home = [e for e in entries if e.get('kind') == 'home']
+    rest = [e for e in entries if e.get('kind') != 'home']
+
+    def sort_key(e):
+        name = entry_display_name(e)
+        if name in SIDEBAR_GLOBAL_ORDER:
+            return (0, SIDEBAR_GLOBAL_ORDER.index(name), '')
+        # 未列入的栏目: 排在后面, 用原始次序保持相对顺序
+        return (1, 0, rest.index(e))
+
+    ordered = sorted(rest, key=sort_key)
+    entries[:] = home + ordered
+
 
 def ensure_locked_entries(entries):
     """
@@ -130,15 +215,36 @@ def ensure_locked_entries_after_highbility(entries):
         # 把 hb_idx 推进一个, 让下一个 locked 跟在它后面
         hb_idx += 1
 
+def reorder_soft_exam_sections(entries):
+    """
+    强制软考各科目按 SOFT_EXAM_ORDER 排列 (2026-11-23 用户要求).
+    顺序: 中级系统集成 → 高级信息系统项目管理师 → 其余依次向下.
+
+    实现: 找出所有软考科目 section, 按 SOFT_EXAM_ORDER 重排后写回原位置.
+    不在 SOFT_EXAM_ORDER 中的科目 (如未来新增) 排在列表末尾, 按自然序.
+    硬编码排序后, 即使用户手动调整 _sidebar.md 也会被脚本纠正回来.
+    """
+    idxs = []
+    for i, e in enumerate(entries):
+        if e.get('kind') == 'section' and e.get('title') in SOFT_EXAM_ORDER:
+            idxs.append(i)
+    if len(idxs) < 2:
+        return
+
+    picked = [entries[i] for i in idxs]
+    picked.sort(key=lambda e: SOFT_EXAM_ORDER.index(e['title']))
+    for pos, i in enumerate(idxs):
+        entries[i] = picked[pos]
+
 def today_files_sort_key(item):
     """
     首页「今日新增」表格的自定义排序键.
     item = (label, name, rel), label 形如 "申论" 或 "软考-（中级）系统集成...".
 
     排序规则:
-    1. 申论 / 讲话稿 / 软考 按 HOME_TOP_LEVEL_ORDER 排在前
-    2. 软考 中级子目录按 SOFT_EXAM_MIDDLE_ORDER 排
-    3. 软考 其他子目录 (高级、初级等) 排在中级之后, 按 natural_key
+    1. 一级栏目按 HOME_TOP_LEVEL_ORDER 排 (与侧边栏全局顺序一致)
+    2. 软考各子科目按 SOFT_EXAM_ORDER 排 (系统集成 → 信息系统项目管理师 → 其余)
+    3. 未列入的栏目排在最后, 按自然序
     4. 同一栏目内按文件名升序 (自然排序)
     """
     label, name, rel = item
@@ -272,8 +378,12 @@ def parse_existing_sidebar():
 
     # 在解析完成后, 兜底补回锁定菜单 (首页 / 电子资源 / 高性价比)
     ensure_locked_entries(SIDEBAR_ENTRIES)
-    # 紧跟"高性价比"之后的固定菜单 (寓言故事 等)
+    # 紧跟"高性价比"之后的固定菜单 (寓言故事 / 视频文案 等)
     ensure_locked_entries_after_highbility(SIDEBAR_ENTRIES)
+    # 软考科目强制按 SOFT_EXAM_ORDER 排列
+    reorder_soft_exam_sections(SIDEBAR_ENTRIES)
+    # 全局一级栏目重排 (首页 → 申论 → 讲话稿 → 电子资源 → 高性价比 → 其余依次向下)
+    reorder_global_sections(SIDEBAR_ENTRIES)
 
 def lines_rstrip(s):
     """去掉尾部 \\r (Windows 行尾), 保留内部字符."""
