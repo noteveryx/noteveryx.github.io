@@ -207,9 +207,15 @@
   .cal-d-sub {
     font-size: .54rem;
     color: var(--muted);
-    white-space: nowrap;
+    /* 英文下 "Beginning of Winter" 这类词组一行放不下，
+       nowrap 会溢出格子、盖住相邻日期的数字 —— 允许换行才展示得完整 */
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.08;
     min-height: .8em;
     letter-spacing: -.02em;
+    text-align: center;
+    max-width: 100%;
   }
   .cal-d-sub.term { color: var(--brand); font-weight: 700; }      /* 二十四节气 */
   .cal-d-sub.first { color: var(--text); opacity: .78; font-weight: 600; } /* 农历初一显示月名 */
@@ -518,8 +524,15 @@
   .tools {
     position: fixed;
     top: calc(12px + env(safe-area-inset-top));
-    right: 60px; /* 给右侧 theme-kit 主题按钮让位 */
+    /* 让位给右侧 theme-kit 的 44 圆钮 + 语言钮（两个 44 圆钮）。
+       这里不能写死像素：主题钮的右边距是跟着内容右缘算的（--kb-float-right），
+       一旦它挪动，写死的值就会把「编辑」压住。
+       104 = 语言钮 44 + 间距 8 + 主题钮 44 + 间距 8。 */
+    right: calc(var(--kb-float-right, 18px) + 104px);
+    /* 和 44 圆钮同高 → 文字钮与圆钮落在同一条水平中线上 */
+    height: 44px;
     display: flex;
+    align-items: center;
     gap: 8px;
     z-index: 10;
   }
@@ -1036,6 +1049,31 @@
 
   /* ---------- PC 宽屏侧栏：月历 + 时间进度 ---------- */
   var calTitle = document.getElementById('calTitle');
+  /* ---------- 语言相关（要放在 renderCal 之前：下面会用到 MONTH_EN） ---------- */
+  var WEEK_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var MONTH_EN = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+
+  /* 当前语言：translate-kit 切到英文时 current() 返回 'english'。
+     页面自己的文案要按语言拼，不能指望翻译器：
+     tickClock 每秒重写 textContent，翻译结果会被立刻覆盖回中文
+     —— 这就是「英文状态下日期还是中文」的根因。 */
+  function pageLang() {
+    try {
+      var l = String((window.TranslateKit && window.TranslateKit.current()) || '').toLowerCase();
+      if (!l) return 'chinese_simplified';
+      if (l === 'en' || l.indexOf('en-') === 0 || l === 'english') return 'english';
+      return l;
+    } catch (e) { return 'chinese_simplified'; }
+  }
+  function isEnglish() { return pageLang() === 'english'; }
+  function fmtDate(n) {
+    if (isEnglish()) {
+      return MONTH_EN[n.getMonth()] + ' ' + n.getDate() + ', ' + n.getFullYear() + ' ' + WEEK_EN[n.getDay()];
+    }
+    return n.getFullYear() + '年' + pad(n.getMonth() + 1) + '月' + pad(n.getDate()) + '日 ' + WEEK[n.getDay()];
+  }
+
   var calGrid = document.getElementById('calGrid');
   var calY = 0, calM = 0;   // 当前显示的年月（月份 0 基）
   var calDateKey = '';
@@ -1099,7 +1137,10 @@
 
   function renderCal(y, m) {
     calY = y; calM = m;
-    if (calTitle) calTitle.textContent = y + '年' + (m + 1) + '月';
+    if (calTitle) {
+      // 英文下自己拼月份名，别指望翻译器（翻译器要等资源加载，切换瞬间还是中文）
+      calTitle.textContent = isEnglish() ? (MONTH_EN[m] + ' ' + y) : (y + '年' + (m + 1) + '月');
+    }
     if (!calGrid) return;
     // 只清理日期格子，保留周一~周日的表头
     Array.prototype.slice.call(calGrid.querySelectorAll('.cal-d')).forEach(function (el) {
@@ -1134,8 +1175,14 @@
         if (lu) cell.title = term + ' · 农历' + lu.month + luDay;
         if (lu && lu.isFirst) cell.classList.add('first-mark'); // 月初与节气同日：小点提示
       } else if (lu) {
-        sub.textContent = lu.isFirst ? lu.month : luDay; // 初一带月名
-        if (lu.isFirst) sub.classList.add('first');
+        /* 英文下不显示农历日：「十二月初四」译成 "Twelfth-fourth" 又长又没意义，
+           格子窄会被挤爆。只保留农历月（初一显示月名），节气照常显示。 */
+        if (lu.isFirst) {
+          sub.textContent = lu.month;
+          sub.classList.add('first');
+        } else if (!isEnglish()) {
+          sub.textContent = luDay;
+        }
         cell.title = '农历' + lu.month + luDay;
       }
       cell.appendChild(num);
@@ -1219,10 +1266,20 @@
     if (acM) acM.style.transform = 'rotate(' + (m * 6 + s * 0.1) + 'deg)'; /* 分针平滑走 */
     if (acS) acS.style.transform = 'rotate(' + (s * 6) + 'deg)';
   }
+  var lastDateText = '', lastLang = '';
   function tickClock() {
     var n = new Date();
     if (sbClock) sbClock.innerHTML = pad(n.getHours()) + '<span>:</span>' + pad(n.getMinutes());
-    if (sbDate) sbDate.textContent = n.getFullYear() + '年' + pad(n.getMonth() + 1) + '月' + pad(n.getDate()) + '日 ' + WEEK[n.getDay()];
+    /* 日期只在内容真的变了时才写。
+       每秒重写 textContent 会把翻译器的译文覆盖回中文 —— 英文下就永远显示「2026年11月23日 周一」。 */
+    var lang = pageLang();
+    if (lang !== lastLang) {
+      lastLang = lang;
+      lastDateText = '';
+      renderCal(calY, calM);   // 切语言：日历重绘（英文下不再显示农历日）
+    }
+    var dt = fmtDate(n);
+    if (sbDate && dt !== lastDateText) { sbDate.textContent = dt; lastDateText = dt; }
     setHands(n);
     // 侧栏：跨天时刷新月历（手动翻月则保持视图）
     var key = n.getFullYear() + '-' + n.getMonth() + '-' + n.getDate();

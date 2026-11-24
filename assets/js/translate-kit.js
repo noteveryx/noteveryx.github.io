@@ -36,7 +36,12 @@
   var SERVICE = 'client.edge';         /* 首选翻译通道：浏览器直连，不过第三方服务器 */
   var SERVICE_BAK = 'translate.service'; /* 备用翻译通道：官方服务 */
 
-  /* ---------- 语言展示信息（id 与 translate.js 语言表一致） ---------- */
+  /* ---------- 语言展示信息（id 与 translate.js 语言表一致） ----------
+     这张本地表是必须的：上游 translate.js 的 language.json 里有一批名字是坏的
+     —— 后面误加了 "Name"（punjabi → "ਪੰਜਾਬੀName"、indonesian → "IndonesiaName"、
+     telugu / kannada / marathi / nepali / pashto / icelandic / khmer 同病），
+     还有拼错的（tamil → "தாமில்"、persian → "Persian"、thai → "คนไทย"）。
+     面板里显示这些名字就是「选项看不完整」，所以这里维护一份正确的。 */
   var META = {
     chinese_simplified: ['🇨🇳', '简体中文'],
     english: ['🇬🇧', 'English'],
@@ -58,20 +63,26 @@
     arabic: ['🇸🇦', 'العربية'],
     persian: ['🇮🇷', 'فارسی'],
     hindi: ['🇮🇳', 'हिन्दी'],
+    urdu: ['🇵🇰', 'اردو'],
+    haitian_creole: ['🇭🇹', 'Kreyòl Ayisyen'],
     polish: ['🇵🇱', 'Polski'],
     dutch: ['🇳🇱', 'Nederlands'],
     swedish: ['🇸🇪', 'Svenska'],
     norwegian: ['🇳🇴', 'Norsk'],
     finnish: ['🇫🇮', 'Suomi'],
     danish: ['🇩🇰', 'Dansk'],
+    icelandic: ['🇮🇸', 'Íslenska'],
     ukrainian: ['🇺🇦', 'Українська'],
     czech: ['🇨🇿', 'Čeština'],
+    slovak: ['🇸🇰', 'Slovenčina'],
     greek: ['🇬🇷', 'Ελληνικά'],
     hebrew: ['🇮🇱', 'עברית'],
     hungarian: ['🇭🇺', 'Magyar'],
     romanian: ['🇷🇴', 'Română'],
     bulgarian: ['🇧🇬', 'Български'],
     catalan: ['🇪🇸', 'Català'],
+    galician: ['🇪🇸', 'Galego'],
+    basque: ['🇪🇸', 'Euskara'],
     croatian: ['🇭🇷', 'Hrvatski'],
     estonian: ['🇪🇪', 'Eesti'],
     latvian: ['🇱🇻', 'Latviešu'],
@@ -81,19 +92,57 @@
     afrikaans: ['🇿🇦', 'Afrikaans'],
     bengali: ['🇧🇩', 'বাংলা'],
     tamil: ['🇮🇳', 'தமிழ்'],
-    urdu: ['🇵🇰', 'اردو'],
-    kazakh: ['🇰🇿', 'Қазақша'],
+    telugu: ['🇮🇳', 'తెలుగు'],
+    kannada: ['🇮🇳', 'ಕನ್ನಡ'],
+    malayalam: ['🇮🇳', 'മലയാളം'],
+    marathi: ['🇮🇳', 'मराठी'],
+    gujarati: ['🇮🇳', 'ગુજરાતી'],
+    punjabi: ['🇮🇳', 'ਪੰਜਾਬੀ'],
+    oriya: ['🇮🇳', 'ଓଡ଼ିଆ'],
+    assamese: ['🇮🇳', 'অসমীয়া'],
+    nepali: ['🇳🇵', 'नेपाली'],
+    sanskrit: ['🇮🇳', 'संस्कृतम्'],
+    sindhi: ['🇵🇰', 'سنڌي'],
     swahili: ['🇰🇪', 'Kiswahili'],
     amharic: ['🇪🇹', 'አማርኛ'],
     maltese: ['🇲🇹', 'Malti'],
-    maori: ['🇳🇿', 'Māori'],
+    maori: ['🇳🇿', 'Te Reo Māori'],
+    hawaiian: ['🇺🇸', 'ʻŌlelo Hawaiʻi'],
     irish: ['🇮🇪', 'Gaeilge'],
+    welsh: ['🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'Cymraeg'],
+    scottish_gaelic: ['🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Gàidhlig'],
     albanian: ['🇦🇱', 'Shqip'],
     azerbaijani: ['🇦🇿', 'Azərbaycan dili'],
-    bosnian: ['🇧🇦', 'Bosanski'],
     armenian: ['🇦🇲', 'Հայերեն'],
     georgian: ['🇬🇪', 'ქართული'],
-    indonesian2: ['🇮🇩', 'Bahasa Indonesia']
+    bosnian: ['🇧🇦', 'Bosanski'],
+    kazakh: ['🇰🇿', 'Қазақша'],
+    kyrgyz: ['🇰🇬', 'Кыргызча'],
+    uyghur: ['🇨🇳', 'ئۇيغۇرچە'],
+    uzbek: ['🇺🇿', 'Oʻzbekcha'],
+    tajik: ['🇹🇯', 'Тоҷикӣ'],
+    turkmen: ['🇹🇲', 'Türkmençe'],
+    mongolian: ['🇲🇳', 'Монгол'],
+    lao: ['🇱🇦', 'ພາສາລາວ'],
+    khmer: ['🇰🇭', 'ភាសា ខ្មែរ'],
+    burmese: ['🇲🇲', 'မြန်မာဘာသာ'],
+    malagasy: ['🇲🇬', 'Malagasy'],
+    inuktitut: ['🇨🇦', 'ᐃᓄᒃᑎᑐᑦ'],
+    samoan: ['🇼🇸', 'Gagana Sāmoa'],
+    tongan: ['🇹🇴', 'Lea faka Tonga'],
+    hausa: ['🇳🇬', 'Hausa'],
+    yoruba: ['🇳🇬', 'Yorùbá'],
+    igbo: ['🇳🇬', 'Igbo'],
+    somali: ['🇸🇴', 'Soomaali'],
+    oromo: ['🇪🇹', 'Afaan Oromoo'],
+    shona: ['🇿🇼', 'Shona'],
+    zulu: ['🇿🇦', 'isiZulu'],
+    xhosa: ['🇿🇦', 'isiXhosa'],
+    quechua: ['🇵🇪', 'Runasimi'],
+    guarani: ['🇵🇾', 'Guaraní'],
+    kurdish: ['🇮🇶', 'کوردی'],
+    pashto: ['🇦🇫', 'پښتو'],
+    sinhala: ['🇱🇰', 'සිංහල']
   };
 
   /* 面板排序：常用语言在前，其余按字母 */
@@ -105,40 +154,57 @@
     'ukrainian', 'czech', 'greek', 'hebrew', 'hungarian', 'romanian'
   ];
 
+  /* 页面有没有自己的主题变量块（html[data-theme="xxx"]{ --card: ... }）？
+     有 → 按钮和语言列表跟随主题色；没有 → 保持深色玻璃风。
+     判据不能是「html 上有没有 data-theme」—— theme-kit 自己也会写这个属性，
+     那样会恒真；也不能直接 var(--card) —— text-kit.css 在 :root 写过浅色 --card，
+     深色氛围屏加载它之后按钮会变白底。 */
+  function hasThemeVars() {
+    var sheets = document.styleSheets;
+    for (var i = 0; i < sheets.length; i++) {
+      var rules;
+      try { rules = sheets[i].cssRules; } catch (e) { continue; }
+      if (!rules) continue;
+      for (var j = 0; j < rules.length; j++) {
+        var r = rules[j];
+        if (r.selectorText && r.selectorText.indexOf('[data-theme') > -1 && r.style && r.style.length) return true;
+      }
+    }
+    return false;
+  }
+  var HAS_THEME = hasThemeVars();
+
   /* ---------- 样式（自带注入，不额外占页面行数） ---------- */
   var STYLE = [
     '#translate{display:none !important;}',
     '.tk-t{position:relative;display:inline-flex;align-items:center;}',
-    '.tk-t-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px 0 9px;',
-    'border-radius:999px;border:1px solid var(--tk-line,var(--line,rgba(255,255,255,.18)));',
-    'background:var(--tk-bg,var(--card,rgba(14,16,26,.72)));color:var(--tk-fg,var(--text,#fff));',
+    /* 按钮全站统一 44×44 圆形。
+       原来是「页头胶囊钮 109×32（PC）+ 坞里圆钮 44×44（手机）」两套尺寸，
+       同一个按钮在两端大小不一样 —— 现在统一成 44 圆形，
+       和游戏页工具列、坞里的其它钮完全一致。 */
+    '.tk-t-btn{display:inline-flex;align-items:center;justify-content:center;gap:0;',
+    'width:44px;height:44px;padding:0;border-radius:50%;',
+    'border:1px solid var(--tk-line,rgba(255,255,255,.18));',
+    'background:var(--tk-bg,rgba(14,16,26,.72));color:var(--tk-fg,#fff);',
     'font:600 12.5px/1 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;',
     'cursor:pointer;white-space:nowrap;flex:0 0 auto;-webkit-tap-highlight-color:transparent;',
     'box-shadow:0 2px 10px rgba(0,0,0,.16);transition:transform .12s ease,border-color .2s,box-shadow .2s;}',
     '.tk-t-btn:hover{border-color:var(--accent,var(--brand,#635bff));box-shadow:0 4px 16px rgba(0,0,0,.22);}',
     '.tk-t-btn:active{transform:scale(.95);}',
     '.tk-t-btn:focus-visible{outline:2px solid var(--accent,var(--brand,#635bff));outline-offset:2px;}',
-    '.tk-t-ico{font-size:14px;line-height:1;}',
-    '.tk-t-cur{max-width:104px;overflow:hidden;text-overflow:ellipsis;}',
-    '.tk-t-caret{width:7px;height:7px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;',
-    'transform:rotate(45deg) translate(-2px,-2px);opacity:.55;transition:transform .2s;}',
-    '.tk-t-btn[aria-expanded="true"] .tk-t-caret{transform:rotate(-135deg) translate(-3px,-3px);}',
+    '.tk-t-ico{font-size:18px;line-height:1;}',
+    /* 当前语言名改用 title/aria-label 提示，按钮本身只留图标 */
+    '.tk-t-cur,.tk-t-caret{display:none;}',
 
     /* 圆形模式：并入游戏页右上角工具列 */
     '.tk-t-round{display:block;}',
-    '.tk-t-round .tk-t-btn{width:38px;height:38px;padding:0;border-radius:50%;justify-content:center;gap:0;}',
-    '.tk-t-round .tk-t-cur,.tk-t-round .tk-t-caret{display:none;}',
-    '.tk-t-round .tk-t-ico{font-size:17px;}',
 
     /* 悬浮模式：沉浸式画布页
        注意：这里不能用 transform 居中——transform 会成为 fixed 子元素的包含块，
        会让手机端的底部抽屉宽度塌陷。改用 calc 计算垂直位置 */
     '.tk-t-float{position:fixed;z-index:70;left:calc(12px + env(safe-area-inset-left));',
-    'top:calc(50% - 20px);}',
-    '.tk-t-float .tk-t-btn{width:40px;height:40px;padding:0;border-radius:50%;justify-content:center;gap:0;',
-    'box-shadow:0 3px 14px rgba(0,0,0,.3);}',
-    '.tk-t-float .tk-t-cur,.tk-t-float .tk-t-caret{display:none;}',
-    '.tk-t-float .tk-t-ico{font-size:18px;}',
+    'top:calc(50% - 22px);}',
+    '.tk-t-float .tk-t-btn{box-shadow:0 3px 14px rgba(0,0,0,.3);}',
 
     /* 面板 */
     '.tk-t-panel{position:absolute;z-index:9998;top:calc(100% + 8px);right:0;width:216px;',
@@ -159,9 +225,44 @@
     '.tk-t-item.on{background:var(--accent-ghost-bg,rgba(120,140,190,.18));',
     'color:var(--accent,var(--brand,#635bff));}',
     '.tk-t-flag{font-size:15px;line-height:1;flex:0 0 auto;}',
-    '.tk-t-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+    /* 语言名不截断：面板窄，长的名字（ភាសា ខ្មែរ、ᐃᓄᒃᑎᑐᑦ、Te Reo Māori…）
+       省略号截断就是「选项看不完整」。允许换行完整显示。 */
+    '.tk-t-name{flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.25;}',
     '.tk-t-check{font-size:12px;opacity:0;flex:0 0 auto;}',
     '.tk-t-item.on .tk-t-check{opacity:1;}',
+
+    /* ---------- 跟随主题色（页面有主题变量块时由 JS 加 .tk-t-themed） ----------
+       变量兜底顺序：--card（themes.css）→ --panel（tool-standby）→ 兜底。
+       基础样式保持深色：不加这个类时绝不能读 var(--card) ——
+       text-kit.css 在 :root 写过浅色 --card，深色氛围屏会变成白底白字。
+
+       ⚠️ 面板是挂在 body 下的（手机端要变底部抽屉、游戏页要脱离工具列），
+       所以它**不在 .tk-t wrap 里面** —— 「.tk-t-themed .tk-t-panel」这种后代选择器
+       根本匹配不到它。后果是：面板背景用基础样式里的深色兜底值，
+       而面板里的文字走 var(--text) 跟着主题变 ——
+       浅色主题下就变成「深底 + 深字」，整块看不清。
+       所以下面除了后代写法，还要给「面板自身带 .tk-t-themed」的写法
+       （theme-kit 的 .tk-panel.tk-themed 就是这么干的）。 */
+    '.tk-t-themed .tk-t-btn{border-color:var(--tk-line,var(--line,rgba(0,0,0,.1)));',
+    'background:var(--tk-bg,var(--card,var(--panel,#fff)));color:var(--tk-fg,var(--text,#1e1a2e));',
+    'box-shadow:var(--shadow,0 2px 10px rgba(0,0,0,.12));}',
+    '.tk-t-themed .tk-t-panel{background:var(--tk-panel-bg,var(--card,var(--panel,#fff)));',
+    'border-color:var(--tk-line,var(--line,rgba(0,0,0,.1)));',
+    'box-shadow:var(--shadow,0 20px 50px -20px rgba(0,0,0,.35));}',
+    '.tk-t-themed .tk-t-title{color:var(--muted,#98a0b0);}',
+    '.tk-t-themed .tk-t-item{color:var(--tk-fg,var(--text,#1e1a2e));}',
+    '.tk-t-themed .tk-t-item:hover{background:var(--ghost-active,var(--brand-soft,rgba(0,0,0,.05)));}',
+    '.tk-t-themed .tk-t-item.on{background:var(--ghost-active,var(--brand-soft,rgba(0,0,0,.05)));',
+    'color:var(--accent,var(--brand,#1e7a4c));}',
+    /* 面板自身带主题类（面板挂在 body 下，没有 .tk-t-themed 祖先） */
+    '.tk-t-panel.tk-themed{background:var(--tk-panel-bg,var(--card,var(--panel,#fff)));',
+    'border-color:var(--tk-line,var(--line,rgba(0,0,0,.1)));',
+    'box-shadow:var(--shadow,0 20px 50px -20px rgba(0,0,0,.35));}',
+    '.tk-t-panel.tk-themed .tk-t-title{color:var(--muted,#98a0b0);}',
+    '.tk-t-panel.tk-themed .tk-t-item{color:var(--tk-fg,var(--text,#1e1a2e));}',
+    '.tk-t-panel.tk-themed .tk-t-item:hover{background:var(--ghost-active,var(--brand-soft,rgba(0,0,0,.05)));}',
+    '.tk-t-panel.tk-themed .tk-t-item.on{background:var(--ghost-active,var(--brand-soft,rgba(0,0,0,.05)));',
+    'color:var(--accent,var(--brand,#1e7a4c));}',
 
     /* 悬浮模式：面板向右展开 */
     '.tk-t-float .tk-t-panel{left:calc(100% + 10px);right:auto;top:50%;transform:translateY(-50%);}',
@@ -210,7 +311,15 @@
     if (id === 'german') return META.deutsch;
     return null;
   }
-  function langName(id) { var m = metaOf(id); return m ? m[1] : id; }
+  /* 上游 translate.js 的 language.json 里有一批语言名后面误加了 "Name"
+     （"ਪੰਜਾਬੀName"、"IndonesiaName"、"ÍslandName"…）。
+     META 兜住的用本地表，兜不住的在这里把尾巴去掉，别直接甩给用户看。 */
+  function cleanName(n) {
+    var raw = String(n == null ? '' : n);
+    var s = raw.replace(/\s*Name\s*$/, '');
+    return s || raw;
+  }
+  function langName(id) { var m = metaOf(id); return m ? m[1] : cleanName(id); }
 
   /* ---------------- 加载远程组件 ----------------
      串行换源：先试第一个，SOURCE_TIMEOUT 内没成功（报错 / 超时）再试下一个。
@@ -301,7 +410,8 @@
 
     var host = pickHost();
     wrap = doc.createElement('div');
-    wrap.className = 'tk-t ignore' + (host.mode === 'round' ? ' tk-t-round' : '') +
+    wrap.className = 'tk-t ignore' + (HAS_THEME ? ' tk-t-themed' : '') +
+      (host.mode === 'round' ? ' tk-t-round' : '') +
       (host.mode === 'float' ? ' tk-t-float' : '');
     wrap.setAttribute('data-translate-kit', '1');
 
@@ -320,7 +430,8 @@
     });
 
     panel = doc.createElement('div');
-    panel.className = 'tk-t-panel';
+    /* 面板挂 body 下，没有 .tk-t-themed 祖先 → 主题类要加在它自己身上 */
+    panel.className = 'tk-t-panel' + (HAS_THEME ? ' tk-themed' : '');
     panel.hidden = true;
     panel.setAttribute('role', 'menu');
     panel.setAttribute('aria-label', '选择页面语言');
@@ -374,7 +485,7 @@
       if (!id || seen[id]) return;
       seen[id] = 1;
       var m = metaOf(id);
-      langs.push({ id: id, flag: m ? m[0] : '🌐', name: m ? m[1] : (it.name || id) });
+      langs.push({ id: id, flag: m ? m[0] : '🌐', name: m ? m[1] : cleanName(it.name || id) });
     });
 
     /* 「简体中文」永远排第一（原文语种） */
@@ -431,7 +542,7 @@
     if (cur === 'german') cur = 'deutsch';
     var m = metaOf(cur);
     var curEl = btn.querySelector('.tk-t-cur');
-    if (curEl) curEl.textContent = m ? m[1] : cur;
+    if (curEl) curEl.textContent = m ? m[1] : cleanName(cur);
     btn.setAttribute('title', '当前语言：' + (m ? m[1] : cur) + '（点击切换）');
     var items = listEl ? listEl.querySelectorAll('.tk-t-item') : [];
     for (var i = 0; i < items.length; i++) {
@@ -449,23 +560,82 @@
   }
   function openPanel() {
     if (!panel) return;
-    /* 手机端把面板挂到 body 上：脱离按钮所在的局部容器。
-       像 x.html 顶栏这种带 backdrop-filter 的祖先会成为 fixed 子元素的
-       包含块，面板若留在容器里会被定位进顶栏内部而完全不可见 */
-    if (win.matchMedia && win.matchMedia('(max-width:600px)').matches) {
-      if (panel.parentNode !== doc.body) doc.body.appendChild(panel);
-    } else if (panel.parentNode !== wrap) {
-      wrap.appendChild(panel);
+    var mobile = win.matchMedia && win.matchMedia('(max-width:600px)').matches;
+    /* 面板一律挂到 body：
+       - 手机端是底部抽屉，本来就要脱离局部容器；
+       - 游戏页（round 模式）必须脱离 —— 工具列 .gk-tools 是 position:fixed + z-index，
+         会形成一个层叠上下文，面板留在列里就压不过同层的开始/暂停遮罩 .gk-overlay，
+         点翻译钮看着像「没反应」，列表其实被整个盖住了。
+       挂到 body 后用 fixed + 按钮的实际坐标定位，位置也跟着按钮走。 */
+    if (panel.parentNode !== doc.body) doc.body.appendChild(panel);
+    panel.hidden = false;   /* 先显示，后面才量得到真实高度 */
+    if (mobile) {
+      /* 手机端交给 CSS 的底部抽屉规则（左 10 / 右 10 / 底 10），
+         之前用 inline 写死的桌面坐标必须清掉 */
+      panel.style.top = '';
+      panel.style.right = '';
+      panel.style.left = '';
+      panel.style.bottom = '';
+    } else if (btn) {
+      var r = btn.getBoundingClientRect();
+      var vh = win.innerHeight, vw = win.innerWidth;
+      var ph = panel.offsetHeight || 440;
+      /* 垂直定位必须夹在视口内：
+         悬浮钮在屏幕左侧垂直居中（top≈50%），按「按钮下方」排的话
+         面板会从视口中间一直伸到屏幕外，底部的语言根本够不着 ——
+         这就是那些页面「列表看不完整」的原因。 */
+      var top;
+      if (wrap && wrap.classList.contains('tk-t-float') && r.left < vw / 2) {
+        /* 悬浮钮在屏幕左侧 → 面板与按钮垂直居中（否则 440 高的面板会伸出屏幕） */
+        top = r.top + r.height / 2 - ph / 2;
+      } else {
+        top = r.bottom + 8;                    /* 其余（含右上角成对）：按钮正下方 */
+      }
+      if (top + ph > vh - 8) top = vh - ph - 8;
+      if (top < 8) top = 8;
+      panel.style.position = 'fixed';
+      panel.style.top = Math.round(top) + 'px';
+      panel.style.bottom = '';
+      /* 往按钮空旷的一侧展开：
+         按钮在页头右侧（inline）→ 面板向左展开，贴着按钮右边缘；
+         按钮在屏幕左侧（float 悬浮）→ 面板向右展开。
+         方向选错面板就会跑到屏幕外，列表根本看不到。 */
+      var spaceLeft = r.left, spaceRight = vw - r.right;
+      if (spaceLeft < spaceRight) {
+        panel.style.left = Math.round(r.right + 10) + 'px';
+        panel.style.right = '';
+      } else {
+        panel.style.right = Math.max(8, Math.round(vw - r.right)) + 'px';
+        panel.style.left = '';
+      }
     }
-    panel.hidden = false;
     if (btn) btn.setAttribute('aria-expanded', 'true');
+    revealCurrent();
     notifyPanelOpen();
+  }
+  /* 列表有 70+ 项，当前语言往往在中间，
+     打开面板却看不到自己现在用的哪个语言 —— 不在可视区时把它滚到中间。 */
+  function revealCurrent() {
+    if (!panel || !listEl) return;
+    var on = listEl.querySelector('.tk-t-item.on');
+    if (!on) return;
+    var pr = panel.getBoundingClientRect();
+    var ir = on.getBoundingClientRect();
+    if (ir.top >= pr.top && ir.bottom <= pr.bottom) return;   // 已经看得见就不动
+    panel.scrollTop += (ir.top - pr.top) - (pr.height - ir.height) / 2;
   }
   function closePanel() {
     if (!panel) return;
     panel.hidden = true;
     if (btn) btn.setAttribute('aria-expanded', 'false');
   }
+  /* 面板是 fixed + inline 坐标，窗口变了要跟着按钮重算 */
+  var rzTimer = null;
+  win.addEventListener('resize', function () {
+    if (!panel || panel.hidden) return;
+    clearTimeout(rzTimer);
+    rzTimer = setTimeout(function () { if (panel && !panel.hidden) openPanel(); }, 120);
+  });
 
   /* ---------- 面板互斥 ----------
      翻译按钮自己 stopPropagation，主题面板 / 调色盘面板也各自 stopPropagation，

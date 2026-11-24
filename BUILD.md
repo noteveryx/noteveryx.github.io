@@ -480,6 +480,24 @@ buildPanel(panel, {
 > 浅色四套的强调色够深，白字没问题；深色三套（夜航蓝 / 墨玉青 / 石墨灰）的强调色是亮色，
 > 白字压在亮蓝上只有 2.5:1，会糊成一片 —— `--on-accent` 给这三套发深色字，才是「亮底 + 深字」。
 
+**套件按钮跟随主题色**（`theme-kit` / `translate-kit` / `fs-kit`）：
+
+三个套件的按钮和面板默认是「自包含深色玻璃风」，浅色主题页面上会显得很突兀。
+现在改成：**页面自己有主题变量块时**才跟随主题色，由 JS 判断后加类
+（`theme-kit` 加 `.tk-themed`，`translate-kit` 加 `.tk-t-themed`，`fs-kit` 早就有 `.fsk-themed`）。
+
+- **判据**：遍历 `document.styleSheets`，找有没有 `selectorText` 含 `[data-theme` 且带变量的规则。
+  三个套件里各有一份 `hasThemeVars()`。
+- **不能只看 `html[data-theme]` 属性在不在**：`theme-kit` 自己切主题时也会写这个属性，
+  无主题变量的页面照样有 → 判据恒真，所有页面都会去读 `var(--card)`。
+- **不能无条件 `var(--card, 兜底)`**：`text-kit.css` 在 `:root` 里写过一套浅色
+  `--card:#fff / --text:#16192b`，深色氛围屏（`visual-particle-text` / `visual-poster` /
+  `visual-text-warp`）加载它之后按钮会变成白底白字。
+- **变量名不统一，兜底要串起来**：卡片色 `--card`（`themes.css`）→ `--panel`（`tool-standby`）→ 兜底；
+  文字 `--text`；边框 `--line`；主色 `--accent` → `--brand`；
+  悬停底 `--ghost-active` → `--brand-soft`。`fs-kit` 的 `.fsk-themed` 也要补 `--panel` 兜底。
+- 页面也可以自己接管：`--tk-bg` / `--tk-fg` / `--tk-line` / `--tk-panel-bg` 优先于主题变量。
+
 #### 7.7.6 新增一个页面的标准流程
 
 1. **复制最接近的页面**：工具页抄 `tool-textbox.html`，视觉页抄 `visual-noise.html`，游戏页抄 `game-snake.html`。
@@ -655,10 +673,194 @@ PanelKit.announce('ptext-type');            // 我打开时告诉别人收起
 - 页面**自己**要实现翻译交互时（如 `tool-translate.html`），在引入脚本前设 `window.__TK_NO_PAGE_UI__ = true`，再用 `TranslateKit.ready(function (t) { ... })` 拿实例 —— 此时不会注入页面翻译按钮。
 - 只翻某个元素：`t.to = 目标语种; t.execute([节点])`；连续翻同一节点前先 `t.node.delete(节点)`，否则会被判定「内容没变」而不发请求。
 - 译入中文（本地语种）需要额外设 `t.language.translateLocal = true`。
+- **页面自己的动态文案要自己拼，别指望翻译器**：`tool-standby.html` 的时钟日期每秒 `textContent` 重写一次，
+  翻译器翻完下一 tick 就被覆盖回中文 —— 英文下永远显示「2026年11月23日 周一」。
+  正确做法：读 `TranslateKit.current()` 判断语种，由页面自己按语种拼文本；
+  并且**只在文本真的变了时才写**（跨天或切语言才重写），否则译文会被反复冲掉。
+  日历标题、月份名同理（翻译器要等远程资源加载，切换瞬间还是中文）。
 
 **踩过的坑**：
 
+- **固定宽度 + `white-space: nowrap` 在英文下必炸**：日历格子里的农历/节气小字
+  （"Beginning of Winter"、"Twelfth-fourth"）一行放不下，nowrap 会溢出格子、盖住相邻日期的数字，
+  表现就是「日期没展示全」。要允许换行（`white-space: normal` + `overflow-wrap: anywhere`）；
+  另外英文下没必要显示农历日（"十二月初四" → "Twelfth-fourth" 又长又没意义），只在初一显示农历月名。
 - **手机端面板必须挂到 `body`**：`x.html` 顶栏有 `backdrop-filter`，会成为 `position: fixed` 子元素的包含块 —— 面板留在顶栏里时被定位进顶栏内部，**完全看不到、点不了**。现在手机端打开面板时把它 `appendChild` 到 `body`，桌面端再放回按钮容器。
+- **桌面端也必须挂到 `body`**（不只是手机端）：游戏页的语言钮并入 `.gk-tools`，
+  而 `.gk-tools` 是 `position: fixed` + `z-index` → **它是一个层叠上下文**，
+  面板留在列里就压不过同层的开始/暂停遮罩 `.gk-overlay`，
+  表现是「点翻译钮没反应、列表不见了」（`elementFromPoint` 命中的是 `.gk-overlay`）。
+  挂到 `body` 后用 `fixed` + 按钮的实际坐标定位，层级和位置都对了。
+- **面板要往按钮空旷的一侧展开**：按钮在页头右边（inline 模式）→ 面板向左展开；
+  按钮在屏幕左边（float 悬浮模式）→ 面板向右展开。方向选反面板就跑到屏幕外，列表仍然看不到。
+  判据用 `r.left` 与 `innerWidth - r.right` 比大小，窗口变化时重算（`resize` 监听）。
+- **统一尺寸的规则要作用在按钮上，不能作用在容器上**：`.tk-t-round` 是容器（包着按钮和面板），
+  把它固定成 44px 会让 38px 的按钮在容器里不居中；正确写法是 `.tk-t-round .tk-t-btn`。
+- **面板的垂直位置必须夹在视口内**：悬浮钮在屏幕左侧垂直居中（`top: 50%`），
+  面板若按「按钮下方」排（`top = 按钮底 + 8`），440 高的面板会从屏幕中间一直伸到屏幕外，
+  底部的语言根本够不着 —— 表现就是「列表看不完整」（22 个页面同时中招）。
+  正确做法：**悬浮模式的面板与按钮垂直居中**（`top = 按钮中线 - 面板高/2`），
+  再统一 `clamp` 到视口内（`top + 面板高 ≤ 视口高 - 8`，`top ≥ 8`）。
+  量高度前要先 `panel.hidden = false`，否则 `offsetHeight` 是 0。
+- **语言钮全站统一 44×44 圆形**：原来 PC 的页头是 109×32 胶囊、手机坞里是 44 圆钮，
+  同一个按钮两端尺寸不一样。现在 `.tk-t-btn` 基础样式就是 44×44 圆形，
+  语言名改用 `title` / `aria-label` 提示，`.tk-t-cur` / `.tk-t-caret` 一律隐藏。
+- **一个容器里有多个控件时，不能整个收进工具坞**：画板页的 `.ui.side` 里是
+  「近期颜色 + 调色球」两个控件，整体收进坞就叠成 44×86，
+  高度和旁边 44×44 的圆钮不一致、左边缘还外凸 —— 竖列歪了。
+  正确做法：`splitUnits()` 把容器拆成一个个控件单元，一个控件占一个格子。
+  拆开后原来的 `.ui.tools > .btn` 这类子选择器就失效了（不再是容器的子元素），
+  要靠拆分时打的 `.dk-ico` 标记类把尺寸钉回 44。
+- **复位规则的选择器必须带上下文前缀**：`.dk-item{right:auto!important}` 和
+  `.ui.tools{right:18px!important}` 特异性相同（都是 0,1,0），**写在前面会输** ——
+  元素带着 `right:18px` / `left:-18px` 进坞，整列横向错开 18px。
+  写成 `.dk .dk-item`（0,2,0）才稳。
+  ⚠️ 游戏页是**原地折叠**（没有 `.dk`，工具列是 `.gk-tools`），
+  复位规则还得再带一个 `.gk-tools` 前缀，否则全屏钮进了列却仍是 `position:fixed`，
+  脱离竖列停在屏幕底部。
+- **文字按钮不能压成 44×44 方块**：待机页顶部的「全屏 / 编辑」是文字按钮，
+  塞进 44 方形会把字挤没。这种裸 `.tools` 工具条**不进坞**，留在原位；
+  拆分时用「含中文标签 → 算文字按钮」来区分，只给图标钮打 `.dk-ico`。
+- **dock-kit 可能比其它 kit 先执行**：那时主题/语言/全屏都还没挂上，`collect()` 返回空，
+  于是走「没有别的东西可收」的兜底分支，把裸 `.tools` 收进坞。
+  所以兜底分支必须按控件类型判断，不能无条件收。
+- **宽屏下「悬浮件要贴内容右缘」**：PC 端页面内容常常是居中的一窄栏
+  （工具箱页 `.tb-wrap` max-width 1080、句子收藏 `.wrap` 760），
+  而主题钮 / 全屏钮按「视口右边缘」定位 → 悬在屏幕最右上角，
+  离内容区空出好几百像素，看着就是「自己单独飘在右上角」。
+  做法：右侧悬浮件的 `right` 改成走变量 `--kb-float-right`，
+  JS 量出内容容器右缘后写进 `:root`，按钮和面板一起挪。
+  - 找内容右缘：遍历 body 子树，**排除宽度 ≥ 视口宽 90% 的元素**
+    （满宽壳 `#tbRoot`、画布页的 canvas），剩下的取**最大右边缘**。
+    ⚠️ 排除只是「不计入」，**不能中断递归** —— 一旦 `continue` 掉递归，
+      `.tb-wrap` 永远访问不到，工具箱页的主题钮就贴不上去。
+    ⚠️ 别用「右边缘出现次数最多的众数」：句子收藏是左右两栏，
+      众数会落在内层卡片列上，按钮就跑到两栏中间的缝里。
+  - 位置：按钮左边缘 = 内容右缘 + 12（按钮 44 宽）。
+    算出的间距比默认 18px 还小 → 保持贴屏幕边（沉浸式画布页就是这样）。
+  - ⚠️ **dock-kit 的 `setup()` 只在窄屏执行**（`if (MQ.matches)`，宽屏不建坞），
+    这条对齐逻辑恰恰是宽屏才用得上的 —— 必须放在**无条件路径**上（IIFE 末尾），
+    塞进 `setup()` 等于没写。
+  - ⚠️ 写 `documentElement.style` 会触发 MutationObserver → 必须去重
+    （值没变就不写），否则「改 → 观察 → 改」无限循环。
+- **PC 端三个全局钮必须归位到页头右侧一行**：原来主题钮固定在内容区外侧右上角、
+  语言钮在页头里（工具箱页）或浮在屏幕左侧（其它页）、全屏钮固定在右下角 ——
+  一个在天上一个在地下，PC 下看着很乱。
+  统一规则：**页面有页头（`.tb-head` / `.topbar-inner` / `header`）时，
+  主题 → 语言 → 全屏 三个钮一起进页头右侧**，一行、同一直线、44×44；
+  没有页头的沉浸式页（画布、游戏）保持角上悬浮。
+  - 实现：`dock-kit` 里建一个 `.hd-tools` 容器（`position:absolute;right:0;top:0;bottom:0;
+    display:flex;align-items:center;gap:8px`）插到页头末尾，按钮搬进去，
+    用 `.hd-tools .tk-btn{position:static!important}` 取消各自的固定定位。
+    页头要加 `position:relative` 当定位上下文。
+  - ⚠️ 顺序不能靠「谁先 append」碰运气：每次按 主题→语言→全屏 重排，
+    但**重排前先比对，顺序没变就别动 DOM** —— 动了会触发 MutationObserver，
+    观察器再回调进来就是死循环。
+  - ⚠️ 游戏页有 `.gk-tools`（自己的右上工具列），要排除，不要去动它。
+  - ⚠️ 窄屏要把按钮**搬回 body**，让窄屏的工具坞接管（记录 `data-hd-moved` 标记）。
+  - **主题面板要跟着按钮走**：面板原来靠 CSS 固定（`top:58/right:12`），
+    按钮进页头后面板还钉在屏幕右上就和按钮分家了 →
+    `theme-kit` 里改成 JS 定位（面板顶边 = 按钮底边 + 8，右缘对齐按钮右缘）。
+    ⚠️ **`theme-kit.js` 里没有 `doc` 别名**（它用的是 `document`），
+    写 `doc.documentElement` 会直接抛 `doc is not defined`。
+  - ⚠️ **面板不能放进 dock-kit 的 `!important` 规则里**：
+    那条规则用 `right:calc(var(--kb-float-right)...)` 且带 `!important`，
+    会压过 theme-kit 设的 inline style，面板又跑到内容右缘外侧去了。
+    面板定位只能由 theme-kit 的 inline style 说话。
+- **页面自带的 fixed 工具条要让位，不能写死像素**：
+  待机页的 `.tools`（「全屏 / 编辑」）原来写的是 `right:60px`（"给主题按钮让位"），
+  但主题钮的右边距是跟着内容右缘动态算的（`--kb-float-right`），
+  一旦它挪动，写死的 60px 就会把「编辑」压住 —— 实测重叠 2×32。
+  正确写法：`right:calc(var(--kb-float-right, 18px) + 104px)`
+  （104 = 语言钮 44 + 间距 8 + 主题钮 44 + 间距 8）。
+  顺带：工具条要 `height:44px; align-items:center`，
+  文字胶囊钮才会和 44 圆钮落在**同一条水平中线**上。
+- **沉浸式页的语言钮要跟主题钮成对**：
+  语言钮原本浮在**屏幕左侧中部**、主题钮在右上角，一个在左一个在右。
+  现在 `alignLangFloat()` 把 float 模式语言钮排到主题钮**左边**，
+  两个圆钮在右上角并排，和有页头的页面观感一致。
+  ⚠️ 没主题钮的页面（画布页）保持左侧中部不动 —— 画布工具放左边本来就合理。
+  ⚠️ 写 inline style 定位要去重（`lastLang`），
+  否则「写 style → MutationObserver → 再写」死循环。
+- **翻译面板的定位要分两种情况**：悬浮钮在屏幕左侧 → 面板与按钮垂直居中
+  （440 高的面板从屏幕中间往下排会伸出屏幕）；在右上角 → 面板在按钮下方。
+- **翻译面板挂在 body 下，跟随主题的规则要用「自身匹配」**：
+  面板为了做手机端底部抽屉、脱离游戏工具列，一直是 `document.body.appendChild` ——
+  它**不在** `.tk-t`（按钮的 wrap）里面。
+  于是 `.tk-t-themed .tk-t-panel` 这种后代选择器根本匹配不到它：
+  面板背景用基础样式里的深色兜底值 `rgba(16,20,28,.97)`，
+  而面板里的文字走 `var(--text)` 跟着主题变 ——
+  **浅色主题下就成了「深底 + 深字」，整块看不清**（待机页 emerald 实测）。
+  修法跟 theme-kit 一样（`.tk-panel.tk-themed` 就是这么写的）：
+  给面板自身加 `.tk-themed` 类，并补一组 `.tk-t-panel.tk-themed …` 规则。
+  ⚠️ 只加类不补规则没用 —— 后代选择器不认自身。
+- **页头钮组（.hd-tools）用 absolute，必须自己避让**：
+  absolute 不占位，页头行里本来靠右的控件（游戏中心的调色盘按钮 `.pk`）
+  不会给它让位 → 全屏钮直接盖在调色盘上。
+  做法：`pickRow()` 找出页头里那层 flex 行（页头根自己是 flex 就是它；
+  页头根是 block、里面另有 flex 行就找那一行），
+  再量出该行里**贴着右缘**的控件（标题块那种撑不到右缘的不算），
+  把钮组的 `right` 改成「控件左边缘 − 8」。
+  ⚠️ **不能把 .hd-tools 改成 static 参与排版**：
+  它的插入点是页头根（`header`），而有些页面的页头根是 block
+  （句子收藏页 `header > .brand` 才是 flex 行）——
+  static 的块级容器会直接把页头撑高、并触发 MutationObserver 死循环
+  （表现是 `DOMContentLoaded` 永远不来）。
+  ⚠️ 避让量必须用**实测坐标**，不能推盒模型（各页 padding/border 不同）。
+- **钮组的垂直位置要对齐页头内容行**：
+  `.hd-tools` 原本 `top:0;bottom:0`（占满整个 header），
+  而 header 的 `padding-bottom` 会让「整个 header 的中心」比内容行中心低小半格 ——
+  返回键 38 高、圆钮 44 高，两个中心不在一条线上，看着就是没对齐。
+  改成 `top` 由 JS 按内容行中心算（`headerFit()`），高度固定 44。
+  ⚠️ **算中心必须用「内容区」**：页头本身就是那一行时，
+    `getBoundingClientRect()` 含 padding → 中心被拉低。
+    要按 `(top + borderTop + paddingTop + bottom - borderBottom - paddingBottom) / 2` 算。
+  ⚠️ 有些页面的 header 里有多块内容（标题行 + 副标题 + 联系块），
+    按整个 header 算中心会落到中间那块上 —— 要按 `pickRow()` 找到的**那一行**算。
+- **游戏页也要有主题按钮**：13 个游戏页（游戏中心 + 12 个小游戏）原本只加载
+  nav/fs/translate/dock 四个 kit，**没有 theme-kit**，所以右上角没有 🎨。
+  做法：
+  - 新建 `assets/css/game-theme.css`：7 套主题的**深色变体**（id 沿用 theme-kit 的
+    emerald/midnight/sunset/ink/violet/stone/crimson，这样同一个 localStorage 键
+    `tk_theme` 全站通用）。⚠️ 只能全用深色：游戏页是沉浸式画布，
+    浅色主题会把整块画布刷白。
+    这套变量里同时给 `--card/--text/--line/--accent`，
+    theme-kit 检测到页面有 `[data-theme]` 规则就会给按钮加 `.tk-themed` 用上它们。
+  - 每个游戏页加：`theme-kit.css` + `game-theme.css` 的 link、
+    防闪脚本（默认 `midnight`）、`theme-kit.js`。
+    ⚠️ 防闪脚本要在**所有样式表之后**、正文渲染之前。
+  - `game-kit.css` 的 body 背景改成 `var(--gk-bg, #05070e)`。
+- **游戏页的全局钮并进右上角那列工具**：`.gk-tools` 竖列里排
+  返回 → 主题 → 语言 → 全屏 → 游戏自己的控件（调色球 / 暂停）。
+  ⚠️ **插入锚点必须一次定死**：曾经用「第一个非折叠钮」当锚点，
+  一插进去锚点自己就变了 —— 返回键插到前面后它成了第一个，
+  主题又被插到它前面，返回键又被插回去……
+  两边来回搬同一个元素，MutationObserver 一直触发，**页面直接卡死**
+  （表现为 `DOMContentLoaded` 永远不来，Playwright goto 超时 30 秒）。
+  正确做法：先算出目标序列，再找「序列之外」的元素当锚点，锚点不再随插入变化。
+  ⚠️ 死循环排查小技巧：CDP `Profiler` 采样显示主线程 **idle** 时，
+    不是 CPU 死循环，而是事件循环里的 MutationObserver 反复触发。
+- **游戏页的返回键要钉成 44**：游戏页自己的 `.gk-back` 是 38 宽，
+  收进列后比旁边的钮窄 → 居中后左边缘差几像素，看着就是「竖列没对齐」。
+- **测 translate-kit 不能等真 CDN**：`translate-kit` 的按钮是 translate.js 回调
+  `selectLanguageTag.customUI` 时才建的，本地没网就永远挂不上，看起来像「按钮没了」。
+  测的时候用 `page.route()` 把远程 translate.js 换成一个 stub（要有 `version`、
+  `language.getCurrent/setLocal`、`changeLanguage`、`execute`、`reset`、`service.use`），
+  再由 stub 主动调一次 `customUI([...])` 就能把按钮和面板逼出来。
+  ⚠️ route 的匹配串别写成 `**/*translate*.js*` —— 会把 `translate-kit.js` 自己也换掉。
+- **上游 translate.js 的语言表本身是坏的**：`language.json` 里有一批语言名后面误加了 `Name`
+  （`punjabi → "ਪੰਜਾਬੀName"`、`indonesian → "IndonesiaName"`、`telugu / kannada / marathi /
+  nepali / pashto / icelandic / khmer` 同病），还有拼错的（`tamil → "தாமில்"`、
+  `persian → "Persian"`、`thai → "คนไทย"`）。直接用它显示，列表里就是「ਪੰਜਾਬੀName」这种。
+  对策：**本地维护 `META` 表**（id → [国旗, 正确语言名]，覆盖上游全部语言），
+  再加一层 `cleanName()` 兜底把结尾的 `Name` 去掉。
+  ⚠️ 上游语言表会变（换 id、加语言），改 `META` 时要对着
+  `translate.min.js` 里的 `language:{json:[...]}` 核对一遍。
+- **语言名不要用 `nowrap` + `text-overflow: ellipsis`**：面板只有 216px 宽，
+  `ភាសា ខ្មែរ`、`ᐃᓄᒃᑎᑐᑦ`、`Te Reo Māori` 这类名字会被省略号截断 —— 那就是「选项看不完整」。
+  要允许换行（`white-space: normal` + `overflow-wrap: anywhere`）。
+- **列表有 70 多项，当前语言往往在中间**：打开面板看不见自己现在用哪个语言。
+  `openPanel()` 里加 `revealCurrent()`：当前项不在可视区时把它滚到中间（已经看得见就不动）。
 - 语言列表通过 `selectLanguageTag.customUI` 注入；`changeLanguage` 会触发重新渲染，所以 `customUI` 里**必须判断 UI 是否已存在**，只更新状态、不要重建，否则面板会重复。
 - 面板根节点带 `ignore` 类，否则页面翻译时连语言名一起被翻掉。
 - 切换语言**不要**手写 `localStorage['to']`，那是 translate.js 的内部键，会和页面翻译记忆打架。
@@ -724,6 +926,19 @@ PanelKit.announce('ptext-type');            // 我打开时告诉别人收起
 - 默认收起；点坞外按钮或按 Esc 收起；点坞内按钮不收起（方便连着用）。
 - 其他组件可注册：`DockKit.add(node)`（`translate-kit` 已调用）。
 - 有些节点是别的脚本异步生成的（主题按钮、工具箱页头、语言钮），首帧可能还没出来 → 启动后再扫几轮补进坞。
+- **右侧悬浮件统一竖线**：全站右侧那些竖排的悬浮件，右边缘必须落在**同一条竖线上**，
+  不然看着就是「按钮没对齐」。原来各家各写各的右距：
+  全屏钮 `fsk-kit` 18px、调色球 `palette-kit` 14px、主题钮 `theme-kit` 12px（面板也是 12px）、
+  游戏工具列 `game-kit` 14px、页面自带的 `.ui.tools/.ui.side/.ui.palette` 又是 10~14px 不等。
+  现在由 `dock-kit.js` 统一成 `calc(18px + env(safe-area-inset-right))`，
+  覆盖 `.fsk-btn / .tk-btn / .tk-panel / .pk-float / .gk-tools / .gk-dpad / .ui.tools / .ui.side / .ui.palette / .ui.clock`，
+  与工具坞 `.dk`（18px）、悬浮目录钮一致。
+  **这条规则桌面端也必须生效** —— 桌面端不建坞，但右侧浮层照样要对齐，
+  所以 `injectStyle()` 改成**无条件注入**（模块加载即注入，`setup()` 里再调一次是幂等的）。
+- **右侧悬浮圆钮统一 44px**：右边缘齐了还不够，**尺寸也得一样**，否则圆心差 3px，一样看着没对齐。
+  原来各 kit 各订各的：全屏 44、主题 38、调色球 38（手机 42）、保存/下载 38、游戏工具钮 38、
+  页面自己写的 `.btn` / `.tool-btn` 也是 38。44 是全站标准（全屏钮、导航页目录钮、工具坞圆钮都是 44），
+  统一后同一列的圆钮才真的齐。
 
 **踩过的坑**：
 
@@ -740,6 +955,21 @@ PanelKit.announce('ptext-type');            // 我打开时告诉别人收起
 - **返回键要跟着 `nav-kit` 的 `no-back` 走**：直接打开页面（referrer 不同源）时 nav-kit 会给 `<html>` 加
   `no-back` 隐藏返回键；坞里克隆的按钮不受那条 CSS 管，得自己判断，否则直接进页面也会冒出个退不掉的返回。
 - 语言按钮 inline 模式带 `margin-left: auto`，进坞后会被推到边上，进坞要复位。
+- **统一 `right` 之后坞内反而错开了**：`.dk-item` 把进坞的节点改成 `position: relative`，
+  而 `relative + right: 18px` 等于「相对原位置右移 18px」，整列按钮横向错开 18px。
+  复位要写成 `.dk-item { right: auto !important; }` —— 不能只写 `.dk .xxx`：
+  **游戏页的工具列是 `.gk-tools`（不是 `.dk`）**，全屏钮被收进它以后同样带着 `.dk-item`，
+  漏掉的话游戏页手机上那一列会整体偏 18px。
+  这条复位规则还必须**排在统一 `right` 规则之后** —— 同等特异性下后写的赢。
+  主题 / 语言面板是底部抽屉，`right` 保持 10px（写在复位之后）。
+- **HTML 内联 style 压得住 CSS 规则**：`visual-constellation` 的 burstBtn 把尺寸写在
+  `style="width:38px;height:38px"` 上，内联 style 优先级高于普通 CSS 规则，
+  统一尺寸的规则写多少遍都不生效 —— 要么给规则加 `!important`，要么直接改源头的内联 style。
+- **各 kit 的样式注入有先后**：`translate-kit` 是后注入的，同等优先级会被它的 38px 顶回去，
+  语言钮 `.tk-t-round` 必须用 `!important` 才压得住。
+- **页面自己的特例会被全局规则压掉**：`tool-handwriting.html` 让全屏钮右移 64px 避开拖拽把手，
+  它和全局规则都是 `!important`、选择器同级 → 按加载顺序全局规则会赢，让位失效。
+  把特例的选择器写成 `body .fsk-btn`（多一级、特异性更高）才保得住。
 
 #### 7.8.3 素材库与 m3u8 播放 `tool-materials.html`
 

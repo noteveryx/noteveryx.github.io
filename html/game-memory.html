@@ -9,6 +9,10 @@
 <title>记忆翻牌</title>
   <meta name="description" content="记忆翻牌：浏览器里直接玩的益智小游戏，支持键盘操作与手机触屏，无需下载。">
 <link rel="stylesheet" href="../assets/css/palette-kit.css">
+  <link rel="stylesheet" href="../assets/css/theme-kit.css">
+  <link rel="stylesheet" href="../assets/css/game-theme.css">
+  <!-- 防闪：先落主题再渲染，避免切主题时闪一下默认色 -->
+  <script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','ink','violet','stone','crimson'].indexOf(t)>-1?t:'midnight')}catch(e){}</script>
 <link rel="stylesheet" href="../assets/css/game-kit.css">
 <style>
   .tip{
@@ -37,6 +41,7 @@
   }
   #lv button.on{background:var(--gk-accent,#635bff);color:#fff;}
 </style>
+  <script src="../assets/js/theme-kit.js" defer></script>
   <script src="../assets/js/nav-kit.js" defer></script>
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>

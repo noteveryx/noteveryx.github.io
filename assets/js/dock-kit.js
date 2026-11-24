@@ -75,8 +75,11 @@
     '.dk-items > *{flex:0 0 auto;}',
     '@keyframes dkIn{from{opacity:0;transform:translateY(6px) scale(.96);}to{opacity:1;transform:none;}}',
     /* 被收纳的节点统一解除各自 fixed 定位，跟随坞排列（样式本身保留）。
-       用 relative 而不是 static：主题/语言的面板是绝对定位的，需要相对按钮展开。 */
-    '.dk-item{position:relative !important;left:auto !important;right:auto !important;',
+       用 relative 而不是 static：主题/语言的面板是绝对定位的，需要相对按钮展开。
+       ⚠️ 选择器必须是 .dk .dk-item（两个类）而不是 .dk-item：
+       下面「右侧悬浮件统一竖线」那条 .ui.tools{right:18px!important} 特异性相同，
+       写在前面的话会赢 —— 元素就带着 right:18px / left:-18px 进坞，整列横向错开 18px。 */
+    '.dk .dk-item,.gk-tools .dk-item{position:relative !important;left:auto !important;right:auto !important;',
     'top:auto !important;bottom:auto !important;transform:none !important;margin:0 !important;}',
     '.dk-collapsed .dk-items{display:none;}',
     /* 游戏页：gk-tools 原地折叠 */
@@ -130,8 +133,10 @@
     '.dk .tk-t .tk-t-btn,.dk .pk-trigger,.dk .tools .btn,.dk .tools .svk-btn,.dk .palette .btn{',
     'width:44px;height:44px;}',
     '.dk.dk-themed .pk-trigger{background:var(--card,#fff);border:1px solid var(--line,rgba(0,0,0,.08));}',
-    /* 近期颜色是「一叠色块」不是按钮，只把宽度拉齐，圆角保留 */
-    '.dk .recent{width:44px;box-sizing:border-box;}',
+    /* 近期颜色是「一叠色块」不是按钮，只把外框拉成 44×44 的方格，
+       里面的色块居中 —— 和旁边 44×44 的圆钮同一个尺寸、同一竖线。 */
+    '.dk .recent{width:44px;min-height:44px;box-sizing:border-box;',
+    'justify-content:center;align-items:center;}',
     /* 主题面板：手机上改成底部抽屉，跟语言面板一致 */
     '.dk .tk-panel{position:fixed !important;left:10px !important;right:10px !important;',
     'top:auto !important;bottom:10px !important;width:auto !important;max-width:none !important;',
@@ -142,7 +147,94 @@
        收进坞后宽度被压到坞那一列里，只能露出一截，示例/描红/撤销/保存全被挤到屏幕外，
        看着像「按钮不可用」。让它留在原位，坞改成避让它（见 place()）。 */
     /* 页面里给全屏钮让位的偏移，进坞后复位 */
-    '.dk .fsk-btn{right:auto !important;}',
+    '.dk .fsk-btn,.gk-tools .fsk-btn{right:auto !important;}',
+    /* 进了游戏工具列的按钮要复位成「列内的一格」：
+       原来的 position:fixed 会让它脱离竖列停在屏幕角上，
+       高度也会和列里其它按钮对不上。 */
+    '.gk-tools .tk-btn,.gk-tools .fsk-btn{position:relative !important;',
+    'left:auto !important;right:auto !important;top:auto !important;bottom:auto !important;',
+    'width:44px !important;height:44px !important;}',
+    /* 列里的返回键也要 44：游戏页的返回键本来是 38 宽，
+       比旁边的钮窄 → 居中后左边缘差几像素，看着就是「竖列没对齐」。 */
+    '.gk-tools .gk-back,.gk-tools .dk-back{width:44px !important;height:44px !important;}',
+    /* ---------- 右侧悬浮件统一竖线 ----------
+       全站右侧的悬浮件（竖排的那些）右边缘必须落在同一条竖线上，
+       不然看着就是「按钮没对齐」。原来各家各写各的：
+         全屏钮 fsk-kit     right:18px
+         调色球 palette-kit right:14px
+         主题钮 theme-kit  right:12px（面板也是 12px）
+         游戏工具列 game-kit right:14px
+         页面自带 .ui.tools/.ui.side/.ui.palette 又是 10~14px 不等
+       这里统一成 18px + 安全区，跟工具坞（.dk）和悬浮目录钮一致。
+       桌面端不建坞，但这条规则照样要生效，所以样式无条件注入。 */
+    /* 主题面板（.tk-panel）不在这条规则里：
+       它要用 theme-kit 自己的 JS 跟着按钮走（面板在按钮正下方、右缘对齐）。
+       放进来会被 !important 压过 inline style，面板就和按钮分家了。 */
+    '.fsk-btn,.tk-btn,.pk-float,.gk-tools,.gk-dpad,',
+    '.ui.tools,.ui.side,.ui.palette,.ui.clock{',
+    'right:calc(var(--kb-float-right, 18px) + env(safe-area-inset-right)) !important;}',
+
+    /* ---------------- PC 端：全局按钮归位到页头右侧 ----------------
+       原来三个全局钮各在各的位置：主题钮固定在内容区外侧的右上角、
+       语言钮在页头里（toolbox 页）或浮在屏幕左侧（其它页）、
+       全屏钮固定在右下角 —— 一个在天上、一个在地下，PC 下看着很乱。
+       统一规则：**页面有页头时，三个钮一起进页头右侧**，
+       一行、同一直线、顺序 主题 → 语言 → 全屏（和手机端坞里的顺序一致）；
+       没有页头的沉浸式页（画布、游戏）保持角上悬浮。 */
+    '.tb-head,.topbar-inner,header{position:relative;}',
+    /* 钮组用 absolute 贴页头右缘（不占位，页头高度不受影响）。
+       ⚠️ absolute 不占位 → 页头行里本来靠右的控件（游戏中心的调色盘按钮）
+       不会给它让位，会被全屏钮直接盖住。
+       避让由 JS 实测后写 right 处理（见 headerAvoid）。 */
+    '.hd-tools{position:absolute;right:0;top:0;bottom:auto;height:44px;',
+    'display:flex;align-items:center;gap:8px;z-index:6;}',
+    /* 进了页头的按钮取消各自的固定定位，改由页头排版 */
+    '.hd-tools .tk-btn,.hd-tools .tk-t,.hd-tools .fsk-btn{',
+    'position:static !important;left:auto !important;right:auto !important;',
+    'top:auto !important;bottom:auto !important;transform:none !important;}',
+    /* 页头里的返回键别被按钮压住 */
+    '.hd-tools .tk-t-btn,.hd-tools .tk-btn,.hd-tools .fsk-btn{',
+    'flex:0 0 auto;width:44px !important;height:44px !important;}',
+    /* 进了坞 / 进了游戏工具列的浮层要复位。
+       .dk-item 把它们改成了 position:relative，而 relative + right:18px
+       等于「相对原位置右移 18px」——整列按钮就横向错开了。
+       凡是带 .dk-item 的节点，right 一律复位。 */
+    '.dk .dk-item{right:auto !important;}',
+    /* 主题 / 语言面板在手机上是底部抽屉，right 保持 10px（要排在 .dk-item 之后） */
+    '.dk .tk-panel{right:10px !important;}',
+    /* ---------- 悬浮圆钮统一 44px ----------
+       原来各 kit 各订各的尺寸：全屏 44、主题 38、调色球 38（手机 42）、
+       保存/下载 38、游戏工具钮 38。同一列里大小不一，圆心自然就对不齐，
+       看着就是「按钮没对齐」（右边缘齐了，但一个 44 一个 38，中心差 3px）。
+       44 是全站标准：全屏钮、导航页目录钮、工具坞圆钮都是 44。
+       这条要放在最后 —— dock-kit 的样式是最后注入的，压得住各 kit 自己的 38px。 */
+    '.fsk-btn,.tk-btn,.pk-trigger,.svk-btn,.gk-btn,.gk-tools .dk-toggle{',
+    'width:44px;height:44px;}',
+    /* 页面自己写的圆形工具钮（如 visual-snow 的 burstBtn）也是 38px。
+       只限工具组里的直接子元素 —— tool-standby 的 .tool-btn 是文字按钮，
+       不能一刀切改尺寸。
+       用 !important：有些页面把尺寸写在 HTML 内联 style 上（如 visual-constellation
+       的 burstBtn），内联 style 优先级高于普通规则，不加 important 压不住。 */
+    '.ui.tools > .tool-btn,.ui.side > .tool-btn{width:44px !important;height:44px !important;}',
+    /* 拆进坞的按钮：原来的选择器是「.ui.xxx > .btn」，拆开后它不再是容器的子元素，
+       那条规则就失效了，按钮会掉回页面自己写的 38px。坞内统一再钉一次 44。
+       只钉图标型（.dk-ico / .btn）；文字按钮（待机页的「全屏 / 编辑」）不能压。 */
+    '.dk .dk-ico,.dk .btn{width:44px !important;height:44px !important;}',
+    '.ui.tools > .tool-btn svg,.ui.side > .tool-btn svg{width:21px;height:21px;}',
+    /* 页面自己写的 .btn（暂停 / 速度 / 类型…）也是 38px，一并拉齐。
+       只限工具组里的直接子元素，别去动页面正文里的 .btn。 */
+    '.ui.tools > .btn,.ui.side > .btn,.ui.palette > .btn{width:44px !important;height:44px !important;}',
+    /* 语言钮（translate-kit 的圆形模式）：要作用在**按钮**上，不能作用在容器上。
+       .tk-t-round 是容器（包着按钮和面板），把它固定成 44px 会让 38px 的按钮
+       在容器里不居中；translate-kit 的样式又是后注入的，
+       同等优先级会顶回 38px，所以必须用 !important。 */
+    '.tk-t-round .tk-t-btn{width:44px !important;height:44px !important;}',
+    /* float 模式（沉浸式画布页左侧悬浮的圆钮）原本是 40px，一并拉到 44 */
+    '.tk-t-float .tk-t-btn{width:44px !important;height:44px !important;}',
+    /* 调色球放大后，中心色块的比例要跟着收（原来 38px 钮里 inset:8px） */
+    '.pk-trigger i{inset:10px;}',
+    /* 游戏按钮的图标随按钮放大 */
+    '.gk-btn svg{width:18px;height:18px;}',
     /* 游戏页返回键挪进工具列后要解除固定定位 */
     '.gk-tools .gk-back{position:static !important;left:auto !important;top:auto !important;'
   ].join('');
@@ -240,6 +332,8 @@
         if (t === dock) continue;                 /* 坞自己改 style / class */
         if (dock && dock.contains(t)) continue;   /* 坞内部的变化 */
         schedulePlace(120);
+        scheduleFloat(200);
+        alignHeaderTools();
         return;
       }
     });
@@ -431,6 +525,35 @@
   function inDock(n) { return !!(dock && dock.contains(n)); }
   function rank(node, r) { node.__dkRank = r; return node; }
 
+  /* 容器里的「控件单元」：直接子元素（带触发器的壳 .pk 整壳算一个）。
+     尺寸过小的（分隔线、装饰）跳过。
+     图标型按钮打上 .dk-ico：它离开原容器后，「.ui.xxx > .btn」那类
+     尺寸规则就失效了，靠这个类把尺寸钉回 44。
+     文字按钮（中文标签）不打标 —— 压成 44×44 方块会把文字挤没。 */
+  function splitUnits(box) {
+    var out = [];
+    var kids = box.children;
+    for (var i = 0; i < kids.length; i++) {
+      var k = kids[i];
+      if (!k || k.nodeType !== 1) continue;
+      if (k.classList.contains('dk-item')) continue;
+      var r = k.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) continue;
+      if (isIconBtn(k)) k.classList.add('dk-ico');
+      out.push(k);
+    }
+    return out;
+  }
+  /* 图标钮 = 内含 svg，或没有文字，或只有一两个符号；
+     带中文标签的（待机页的「全屏 / 编辑」）算文字按钮，不动它的尺寸。 */
+  function isIconBtn(el) {
+    if (el.querySelector('svg')) return true;
+    var t = (el.textContent || '').trim();
+    if (!t) return true;
+    if (/[\u4e00-\u9fff]/.test(t)) return false;
+    return t.length <= 3;
+  }
+
   function collect() {
     var list = [];
 
@@ -462,9 +585,20 @@
        用户点不到就以为「按钮坏了」。留在原位，坞避让它即可。 */
     /* ⑥ 散落在右上角 / 右侧的小工具：
        .ui.tools（视觉页的调色盘组）、.ui.side（画板右侧的近期颜色 + 调色盘）、
-       .ui.palette（曼陀罗的调色盘）—— 都属于「一堆小按钮」，收进坞最整齐 */
+       .ui.palette（曼陀罗的调色盘）—— 都属于「一堆小按钮」，收进坞最整齐。
+       ⚠️ 容器里往往不止一个控件（画板页是「近期颜色 + 调色球」两个）。
+       整个容器当一件收进坞，两个控件会叠成 44×86：高度和旁边 44×44 的圆钮不一致，
+       左边缘还会外凸 —— 竖列就歪了（用户反馈：按钮没排在同一竖线上）。
+       所以这里拆开收：一个控件一个格子，竖列才对得齐。 */
     var tools = doc.querySelector('.ui.tools, .ui.side, .ui.palette');
-    if (tools && isFixed(tools) && !inDock(tools)) list.push(rank(tools, 5));
+    if (tools && isFixed(tools) && !inDock(tools)) {
+      var units = splitUnits(tools);
+      if (units.length > 1) {
+        for (var ti = 0; ti < units.length; ti++) list.push(rank(units[ti], 5 + (ti + 1) * 0.1));
+      } else {
+        list.push(rank(tools, 5));
+      }
+    }
     /* ⑥b 只装一个调色盘的 .ui.panel（手写板就是这种结构） */
     if (!tools) {
       var upanel = doc.querySelector('.ui.panel');
@@ -475,13 +609,10 @@
       var pkf = doc.querySelector('.pk.pk-float');
       if (pkf && isFixed(pkf) && !inDock(pkf)) list.push(rank(pkf, 5));
     }
-    /* ⑧ 待机页等自带固定 .tools 工具条 */
-    if (!list.length) {
-      var plains = doc.querySelectorAll('.tools');
-      for (var i = 0; i < plains.length; i++) {
-        if (isFixed(plains[i]) && !inDock(plains[i])) { list.push(rank(plains[i], 5)); break; }
-      }
-    }
+    /* ⑧ 裸 .tools（待机页顶部那条「全屏 / 编辑」文字工具条）**不收**：
+       它是文字按钮，压成 44×44 方块会把字挤没；
+       而且它是页头的一部分，留在原位才说得通。
+       真正的浮动工具组都是 .ui.tools / .ui.side / .ui.palette，⑥ 已经收了。 */
     return list;
   }
 
@@ -496,6 +627,304 @@
       if ((kids[i].__dkRank || 9) > r) { ref = kids[i]; break; }
     }
     box.insertBefore(node, ref);
+  }
+
+  /* ---------------- 悬浮件贴内容右缘 ----------------
+     PC 宽屏下，页面内容常常是居中的一窄栏（工具箱页 .tb-wrap 1080、
+     句子收藏 .wrap 760），而主题钮 / 全屏钮按「视口右边缘」定位 ——
+     悬在屏幕最右上角，离内容区空出好几百像素，看着就是「自己单独飘在右上角」。
+     这里量出内容区的右边缘，把右侧悬浮件挪到内容旁边（间距 12px）；
+     内容占满整屏的画布页 / 待机页不受影响（右侧空隙不够就不动）。 */
+  function contentRight() {
+    var vw = win.innerWidth;
+    var best = 0;
+    /* 取「排除满宽壳之后最外层内容容器的右边缘」。
+       - 排除宽度 ≥ 视口宽 90% 的元素：#tbRoot、body 内的满宽装饰、
+         沉浸式画布页的 canvas 都属于这一类，它们会把右边缘拉到屏幕边上，
+         排除后画布页自然保持「悬浮件在屏幕右上角」。
+       - 取最大 r（最外层容器）而不是众数：句子收藏是左右两栏，
+         众数会落在内层卡片列上，按钮就跑到两栏中间的缝里去了。 */
+    var walk = function (el, depth) {
+      if (depth > 5) return;
+      var kids = el.children;
+      for (var i = 0; i < kids.length; i++) {
+        var c = kids[i], s = getComputedStyle(c);
+        if (s.position === 'fixed' || s.position === 'absolute' || s.display === 'none') continue;
+        var r = c.getBoundingClientRect();
+        /* 只有「不计入」不能「不递归」：
+           #tbRoot 这类满宽壳要被排除，但它里面的 .tb-wrap 才是真正的内容容器 ——
+           一旦连递归一起跳过，内容永远找不到（工具箱页的主题钮就贴不上去）。 */
+        if (r.width >= vw * 0.15 && r.width < vw * 0.9 && r.height >= 8 &&
+            r.right > 0 && r.left >= -1) {
+          if (r.right > best) best = Math.round(r.right);
+        }
+        if (c.children.length) walk(c, depth + 1);
+      }
+    };
+    walk(doc.body, 0);
+    return best;
+  }
+  function alignFloat() {
+    var vw = win.innerWidth;
+    var gap = 18;
+    if (vw >= 900) {
+      var r = contentRight();
+      /* 算出来的间距比默认值还小 → 内容本来就快占满整屏，
+         留在屏幕边上更自然（画布页就是这种情况）。 */
+      if (r) {
+        var right = Math.round(vw - (r + 12 + 44));
+        if (right > gap) gap = right;
+      }
+    }
+    var v = gap + 'px';
+    /* 值没变就别写 —— 写 documentElement 的 style 会触发 MutationObserver，
+       不去重就会「改 → 观察 → 改」无限循环 */
+    if (v === lastFloat) { alignLangFloat(); return; }
+    lastFloat = v;
+    doc.documentElement.style.setProperty('--kb-float-right', v);
+    alignLangFloat();
+  }
+
+  /* 沉浸式页（画布 / 待机 / 游戏）没有页头，语言钮原本浮在**屏幕左侧中部**，
+     主题钮却在右上角 —— 一个在左一个在右，各站一边。
+     统一成：语言钮排到主题钮**左边**，两个圆钮在右上角成一对，
+     和有页头的页面（同一行 主题→语言）保持一致的观感。 */
+  var lastLang = '';
+  function alignLangFloat() {
+    var lang = doc.querySelector('.tk-t-float');
+    if (!lang) { lastLang = ''; return; }
+    var theme = doc.querySelector('.tk-btn');
+    var vw = win.innerWidth;
+    var val = '';
+    if (theme && vw >= 900) {
+      var tr = theme.getBoundingClientRect();
+      var cs = getComputedStyle(theme);
+      /* 主题钮已经归位进页头（static）→ 语言钮也会被一起搬进页头，不用管 */
+      if (tr.width && cs.position === 'fixed') {
+        val = 'auto|' + Math.max(8, Math.round(vw - (tr.left - 8))) + 'px|' + Math.round(tr.top) + 'px';
+      }
+    }
+    /* 去重：写 inline style 会触发 MutationObserver，不去重就成死循环 */
+    if (val === lastLang) return;
+    lastLang = val;
+    if (!val) {
+      lang.style.left = ''; lang.style.right = ''; lang.style.top = '';
+      return;
+    }
+    var p = val.split('|');
+    lang.style.left = p[0];
+    lang.style.right = p[1];
+    lang.style.top = p[2];
+  }
+  var lastFloat = '';
+  var floatTimer = null;
+  function scheduleFloat(delay) {
+    if (floatTimer) clearTimeout(floatTimer);
+    floatTimer = setTimeout(function () { floatTimer = null; alignFloat(); }, delay || 150);
+  }
+
+  /* ---------------- PC 端：全局按钮归位到页头右侧 ---------------- */
+  var hdMoved = [];
+
+  /* 游戏页：把主题钮、全屏钮并进右上角那列工具，
+     顺序 返回 → 主题 → 语言 → 全屏，统一排在「游戏自己的控件」
+     （调色球 / 暂停 / 重开）之前。
+
+     ⚠️ 这里不能用「第一个非折叠钮」当插入锚点：
+     一插进去锚点自己就变了（返回键插到前面后它成了第一个，
+     主题又被插到它前面，返回键又被插回去……）——
+     两边来回搬同一个元素，MutationObserver 一直触发，页面直接卡死。
+     正确做法：**先算出目标序列，再找「序列之外」的元素当锚点**，
+     锚点一旦定死就不随插入变化。 */
+  function alignGameTools(gk) {
+    var th = doc.querySelector('.tk-btn');
+    var lang = gk.querySelector('.tk-t');
+    var fs = doc.querySelector('.fsk-btn');
+    var back = gk.querySelector('.dk-back, .gk-back');
+    if (!th && !fs) return;
+    /* 目标序列（按 rank：返回 0 → 主题 1 → 语言 2 → 全屏 3） */
+    var seq = [];
+    if (back) seq.push(back);
+    if (th) seq.push(th);
+    if (lang) seq.push(lang);
+    if (fs) seq.push(fs);
+    if (!seq.length) return;
+    var kids = Array.prototype.slice.call(gk.children);
+    /* 锚点 = 第一个「不在序列里」的、且不是折叠钮的元素 */
+    var anchor = null;
+    for (var i = 0; i < kids.length; i++) {
+      var k = kids[i];
+      if (k.classList.contains('dk-toggle')) continue;
+      if (seq.indexOf(k) === -1) { anchor = k; break; }
+    }
+    /* 现状是否已经正确：序列按下标严格递增，且全部排在锚点之前 */
+    var ok = true, last = -1;
+    for (var j = 0; j < seq.length; j++) {
+      var at = kids.indexOf(seq[j]);
+      if (at < 0 || at < last) { ok = false; break; }
+      last = at;
+    }
+    if (ok && anchor) {
+      var ai = kids.indexOf(anchor);
+      if (last >= ai) ok = false;
+    }
+    if (ok) return;
+    /* 重排：按 seq 顺序逐个插到锚点之前 */
+    for (var m = 0; m < seq.length; m++) {
+      gk.insertBefore(seq[m], anchor || null);
+    }
+    try { win.dispatchEvent(new CustomEvent('kb:tools-moved')); } catch (e) {}
+  }
+  function pickHead() {
+    /* 游戏页右上角有自己的工具列（.gk-tools），别去动它 */
+    if (doc.querySelector('.gk-tools')) return null;
+    return doc.querySelector('.tb-head, .topbar-inner, header');
+  }
+  /* 页头里那层「横向排布的行」：
+     钮组跟它对齐，也只有这一行里靠右的控件需要避让。
+     页头根自己是 flex → 就是它；页头根是 block、里面另有 flex 行
+     （句子收藏页的 header > .brand）→ 找那一行。 */
+  function pickRow(head) {
+    if (getComputedStyle(head).display.indexOf('flex') !== -1) return head;
+    var kids = head.children;
+    for (var i = 0; i < kids.length; i++) {
+      var k = kids[i];
+      if (k.classList.contains('hd-tools')) continue;
+      if (getComputedStyle(k).display.indexOf('flex') !== -1) return k;
+    }
+    return null;
+  }
+  /* 钮组是 absolute，不占位 → 页头行里靠右的控件（游戏中心的调色盘按钮）
+     不会给它让位，会被全屏钮直接盖住。
+     这里量出「最贴行右缘的那个控件」，把钮组挪到它左边。
+     ⚠️ 用实测坐标算，不推盒模型（各页的 padding / border 不一样）。
+     ⚠️ 只避让右对齐的控件：标题块那种撑不到右缘的不算，
+        否则整组按钮会被推到页面中间。 */
+  var lastAvoid = '';
+  function headerAvoid(box, head, row) {
+    var val = '0px';
+    if (row) {
+      var rc = getComputedStyle(row);
+      var rr = row.getBoundingClientRect();
+      var contentRight = rr.right - (parseFloat(rc.paddingRight) || 0);
+      var minLeft = Infinity;
+      var kids = row.children;
+      for (var i = 0; i < kids.length; i++) {
+        var e = kids[i];
+        if (e === box || box.contains(e)) continue;
+        var r = e.getBoundingClientRect();
+        if (r.width < 4 || r.height < 4) continue;
+        var s = getComputedStyle(e);
+        if (s.position === 'absolute' || s.position === 'fixed') continue;
+        if (contentRight - r.right > 8) continue;   /* 没贴右缘，不算 */
+        if (r.left < minLeft) minLeft = r.left;
+      }
+      if (minLeft !== Infinity) {
+        var cs = getComputedStyle(head);
+        var hr = head.getBoundingClientRect();
+        /* absolute 的包含块是页头的 padding box */
+        var padBoxRight = hr.right - (parseFloat(cs.borderRightWidth) || 0) - (parseFloat(cs.paddingRight) || 0);
+        val = Math.max(0, Math.round(padBoxRight - (minLeft - 8))) + 'px';
+      }
+    }
+    /* 值没变就别写 —— 写 style 会触发 MutationObserver，不去重就成死循环 */
+    if (val === lastAvoid) return;
+    lastAvoid = val;
+    box.style.right = val;
+  }
+  /* 垂直方向：钮组的中心要跟页头内容行对齐。
+     .hd-tools 原本是 top:0;bottom:0（占满整个 header），
+     而 header 的 padding-bottom 会把「整个 header 的中心」压得比内容行低小半格
+     —— 返回键 38 高、圆钮 44 高，两个中心不在一条线上，看着就是没对齐。
+     ⚠️ 要按「那一行」算，不是按整个 header：
+       有些页面的 header 里有多块内容（标题行 + 副标题 + 联系块），
+       按整个 header 算中心会落到中间那块上。 */
+  var lastFit = '';
+  function headerFit(box, head, row) {
+    var hr = head.getBoundingClientRect();
+    var cs = getComputedStyle(head);
+    var bt = parseFloat(cs.borderTopWidth) || 0;
+    var bb = parseFloat(cs.borderBottomWidth) || 0;
+    var pt = parseFloat(cs.paddingTop) || 0;
+    var pb = parseFloat(cs.paddingBottom) || 0;
+    var mid;
+    if (row && row !== head) {
+      var rr = row.getBoundingClientRect();
+      mid = rr.top + rr.height / 2;
+    } else {
+      /* 页头本身就是那一行 → 用内容区（去掉 padding / border）算中心，
+         否则 header 的 padding-bottom 会把中心拉低小半格。 */
+      mid = (hr.top + bt + pt + hr.bottom - bb - pb) / 2;
+    }
+    /* absolute 的 top 相对页头的 padding box 顶缘 */
+    var val = Math.round(mid - 22) - Math.round(hr.top + bt);
+    if (val === lastFit) return;
+    lastFit = val;
+    box.style.top = val + 'px';
+  }
+  function alignHeaderTools() {
+    /* 游戏页没有页头，但右上角有一列工具（.gk-tools）——
+       主题钮、全屏钮都并进那一列，顺序 主题 → 语言 → 全屏，
+       和工具箱页页头里的顺序一致。 */
+    var gk = doc.querySelector('.gk-tools');
+    if (gk) { alignGameTools(gk); return; }
+    var head = win.innerWidth >= 900 ? pickHead() : null;
+    if (!head) { restoreHeaderTools(); return; }
+    var theme = doc.querySelector('.tk-btn');
+    var lang = doc.querySelector('.tk-t');
+    var full = doc.querySelector('.fsk-btn');
+    var want = [theme, lang, full].filter(function (x) { return !!x; });
+    if (!want.length) return;
+    var box = head.querySelector('.hd-tools');
+    if (!box) {
+      box = doc.createElement('div');
+      box.className = 'hd-tools';
+      head.appendChild(box);
+      /* 新建的容器没有 inline style，去重记录要清掉，
+         否则下面的「值没变就不写」会跳过第一次定位 */
+      lastAvoid = ''; lastFit = '';
+    }
+    /* 顺序必须是 主题 → 语言 → 全屏。
+       appendChild 会把已存在的元素移到末尾，所以每次按 want 顺序重排即可；
+       但要先比一下，顺序没变就别动 DOM —— 动了会触发 MutationObserver，
+       观察器再回调进来就成死循环了。 */
+    var kids = box.children;
+    var same = kids.length === want.length;
+    if (same) {
+      for (var i = 0; i < want.length; i++) if (kids[i] !== want[i]) { same = false; break; }
+    }
+    if (!same) {
+      for (var j = 0; j < want.length; j++) {
+        var el = want[j];
+        if (!el.getAttribute('data-hd-moved')) {
+          el.setAttribute('data-hd-moved', '1');
+          hdMoved.push(el);
+        }
+        box.appendChild(el);
+      }
+      /* 按钮挪了位置，主题面板得跟着重算 */
+      try { win.dispatchEvent(new CustomEvent('kb:tools-moved')); } catch (e) {}
+    }
+    /* 给行里靠右的控件让位，并跟那一行对齐 */
+    var row = pickRow(head);
+    headerAvoid(box, head, row);
+    headerFit(box, head, row);
+  }
+  function restoreHeaderTools() {
+    if (hdMoved.length) {
+      for (var i = 0; i < hdMoved.length; i++) {
+        var el = hdMoved[i];
+        el.removeAttribute('data-hd-moved');
+        if (el.parentNode) el.parentNode.removeChild(el);
+        (doc.body || doc.documentElement).appendChild(el);
+      }
+      hdMoved = [];
+    }
+    var box = doc.querySelector('.hd-tools');
+    if (box && box.parentNode) box.parentNode.removeChild(box);
+    /* 窄屏要把语言钮的手工定位也清掉，交回 CSS 的默认位置 */
+    alignLangFloat();
+    try { win.dispatchEvent(new CustomEvent('kb:tools-moved')); } catch (e) {}
   }
 
   /* ---------------- 启动 ---------------- */
@@ -518,9 +947,16 @@
     if (!resizeBound) {
       resizeBound = true;
       win.addEventListener('resize', function () {
+        alignFloat();
+        alignHeaderTools();
         if (dock) { place(); schedulePlace(80); }
       }, { passive: true });
     }
+
+    /* 悬浮件贴内容右缘：先按当前布局算一次，
+       再等页面 JS 渲染完（工具箱页是 JS 生成的）补算一次 */
+    alignFloat();
+    setTimeout(alignFloat, 400);
 
     /* 页面布局一变就重算坞的避让位置 */
     watchLayout();
@@ -606,6 +1042,22 @@
   }
   if (MQ.addEventListener) MQ.addEventListener('change', onMQ);
   else if (MQ.addListener) MQ.addListener(onMQ);
+
+  /* 样式无条件注入。
+     桌面端（MQ 不匹配）不会建坞，但「右侧悬浮件统一竖线」那条规则照样要生效，
+     否则桌面端全屏钮(18px) / 主题钮(12px) / 调色球(14px) 又各偏各的。
+     injectStyle 内部有幂等判断，setup() 里再调一次不会重复注入。 */
+  injectStyle();
+
+  /* 宽屏也要算「悬浮件贴内容右缘」：
+     setup() 只在窄屏跑（宽屏不建坞），但这条规则恰恰是宽屏才用得上的 ——
+     窄屏按钮都进坞了，压根没有「飘在右上角」的问题。
+     所以对齐放在无条件路径上，并补算一次（工具箱页是 JS 渲染的，首帧还没布局）。 */
+  alignFloat();
+  setTimeout(alignFloat, 400);
+  alignHeaderTools();
+  setTimeout(alignHeaderTools, 400);
+  watchLayout();   /* 内容变了（比如句子条展开）重新算一次 */
 
   function start() {
     if (MQ.matches) setup();

@@ -67,12 +67,13 @@
        深色氛围屏加载它之后按钮会变成白底白字。 */
     '.fsk-btn.fsk-themed{',
     'border-color:var(--line,rgba(0,0,0,.08));',
-    'background:var(--card,#fff);',
-    'color:var(--text-2,var(--muted,#3d5049));',
+    /* 卡片色兜底要带 --panel：tool-standby 用的是 --panel，不是 --card */
+    'background:var(--card,var(--panel,#fff));',
+    'color:var(--text-2,var(--text,var(--muted,#3d5049)));',
     'box-shadow:var(--shadow,0 2px 10px rgba(0,0,0,.12));',
     '}',
     '.fsk-btn.fsk-themed svg{filter:none;}',
-    '.fsk-btn.fsk-themed:hover{background:var(--card,#fff);color:var(--accent,var(--brand,#1e7a4c));border-color:var(--accent-ghost-line,rgba(0,0,0,.16));}',
+    '.fsk-btn.fsk-themed:hover{background:var(--card,var(--panel,#fff));color:var(--accent,var(--brand,#1e7a4c));border-color:var(--accent-ghost-line,rgba(0,0,0,.16));}',
     '.fsk-btn.fsk-themed:focus-visible{outline:2px solid var(--accent,#1e7a4c);}',
     '.fsk-toast{',
     'position:fixed;left:50%;transform:translateX(-50%);',

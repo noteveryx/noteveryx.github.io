@@ -11,7 +11,7 @@ body.gk-page {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
-  background: #05070e;
+  background: var(--gk-bg, #05070e);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
                "Microsoft YaHei", system-ui, sans-serif;
   color: #fff;

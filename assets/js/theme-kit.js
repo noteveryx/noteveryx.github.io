@@ -37,6 +37,30 @@
   ];
   var KEY = 'tk_theme';
 
+  /* 页面有没有自己的主题变量块（html[data-theme="xxx"]{ --card: ... }）？
+     有 → 按钮和面板跟随主题色；没有 → 保持深色玻璃风。
+
+     不能只看 html 上有没有 data-theme 属性：
+     theme-kit 自己切主题时也会写这个属性（无主题变量的页面也照样写），
+     那样判据就恒真，等于所有页面都去读 var(--card)。
+     而 text-kit.css 在 :root 里写过一套浅色 --card 兜底值，
+     深色氛围屏加载它之后按钮会变成白底 —— 所以必须确认
+     「页面确实按 data-theme 定义了变量块」。 */
+  function hasThemeVars() {
+    var sheets = document.styleSheets;
+    for (var i = 0; i < sheets.length; i++) {
+      var rules;
+      try { rules = sheets[i].cssRules; } catch (e) { continue; }   // 跨域样式读不了，跳过
+      if (!rules) continue;
+      for (var j = 0; j < rules.length; j++) {
+        var r = rules[j];
+        if (r.selectorText && r.selectorText.indexOf('[data-theme') > -1 && r.style && r.style.length) return true;
+      }
+    }
+    return false;
+  }
+  var HAS_THEME = hasThemeVars();
+
   function current() {
     try {
       var t = localStorage.getItem(KEY);
@@ -73,7 +97,7 @@
 
   /* ---------- UI ---------- */
   var btn = document.createElement('button');
-  btn.className = 'tk-btn';
+  btn.className = 'tk-btn' + (HAS_THEME ? ' tk-themed' : '');
   btn.type = 'button';
   btn.setAttribute('aria-label', '切换主题');
   btn.title = '切换主题';
@@ -83,7 +107,7 @@
     '<path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16c3.3 0 6-2.7 6-6 0-4.4-4.4-7.6-10-7.6z"/></svg>';
 
   var panel = document.createElement('div');
-  panel.className = 'tk-panel';
+  panel.className = 'tk-panel' + (HAS_THEME ? ' tk-themed' : '');
   panel.setAttribute('role', 'menu');
   var html = '';
   for (var i = 0; i < THEMES.length; i++) {
@@ -97,8 +121,42 @@
     var open = typeof force === 'boolean' ? force : !panel.classList.contains('open');
     panel.classList.toggle('open', open);
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open) notifyPanelOpen();
+    if (open) { placePanelSoon(); notifyPanelOpen(); }
   }
+
+  /* ---------- 面板跟随按钮 ----------
+     面板原来靠 CSS 固定（top:58 / right:12），那是在「按钮永远在屏幕右上角」的前提下。
+     现在 PC 端主题钮会归位到页头右侧（dock-kit 干的），
+     面板还钉在屏幕右上就和按钮分家了 —— 所以改成跟着按钮算位置：
+     面板顶边 = 按钮底边 + 8，右边缘对齐按钮右边缘。
+     窄屏是底部抽屉，交给 CSS，这里不动。 */
+  function placePanel() {
+    if (!panel.classList.contains('open')) return;
+    var vw = document.documentElement.clientWidth || window.innerWidth;
+    if (vw < 900) { panel.style.top = ''; panel.style.right = ''; panel.style.left = ''; return; }
+    var r = btn.getBoundingClientRect();
+    if (!r.width) return;
+    var vh = document.documentElement.clientHeight || window.innerHeight;
+    var ph = panel.offsetHeight || 320;
+    var top = r.bottom + 8;
+    /* 面板不能伸出屏幕底：按钮在游戏工具列（右上角）时，
+       面板从按钮下方展开很容易顶到屏幕外。 */
+    if (top + ph > vh - 8) top = Math.max(8, vh - ph - 8);
+    panel.style.position = 'fixed';
+    panel.style.left = 'auto';
+    panel.style.top = Math.round(top) + 'px';
+    panel.style.right = Math.max(8, Math.round(vw - r.right)) + 'px';
+  }
+  /* 按钮归位（dock-kit 挪进页头）或页头排版变化都会让按钮挪窝，
+     打开面板那一刻算的位置到下一帧可能就偏了 —— 之后再补算一次 */
+  function placePanelSoon() {
+    placePanel();
+    requestAnimationFrame(function () { placePanel(); });
+    setTimeout(placePanel, 150);
+  }
+  window.addEventListener('resize', placePanel);
+  /* dock-kit 把按钮挪进页头后，位置变了，面板要跟着重算 */
+  window.addEventListener('kb:tools-moved', placePanel);
 
   /* ---------- 面板互斥 ----------
      主题面板、翻译面板、调色盘面板三个都会 stopPropagation，

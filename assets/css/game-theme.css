@@ -1,0 +1,201 @@
+/* ============================================================
+   游戏页主题（游戏中心 game-hub + 12 个小游戏共用）
+   ============================================================
+
+   主题 id 沿用 theme-kit 的统一 7 套（emerald / midnight / sunset /
+   ink / violet / stone / crimson），这样同一个 localStorage 键
+   tk_theme 在全站通用 —— 在工具页换了主题，进游戏页也是同一套。
+
+   ⚠ 但这里 7 套**全是深色变体**：游戏页是沉浸式画布，
+   浅色主题会把整块画布刷白、观感全毁。
+   所以只跟着 id 走，不跟着明暗走。
+
+   变量分三组：
+   - --gk-*     游戏页 UI（背景 / 强调色）
+   - --hub-*    游戏中心的卡片与文字
+   - --card / --text / --line / --accent ...
+                theme-kit 的按钮与面板（JS 检测到 [data-theme] 规则
+                就会给按钮加 .tk-themed，从而用上这组变量）
+   ============================================================ */
+
+/* ---------- 夜航蓝（默认） ---------- */
+html[data-theme="midnight"] {
+  --gk-bg: #080a11;
+  --gk-accent: #635bff;
+  --gk-accent2: #4a3fd8;
+  --hub-accent: #635bff;
+  --hub-bg: #080a11;
+  --hub-card: rgba(255, 255, 255, .045);
+  --hub-line: rgba(255, 255, 255, .09);
+  --hub-ink: rgba(255, 255, 255, .92);
+  --hub-ink2: rgba(255, 255, 255, .55);
+  --hub-ink3: rgba(255, 255, 255, .32);
+  --card: #141827;
+  --panel: #141827;
+  --text: #f0f2ff;
+  --text-2: #c6cbec;
+  --muted: #878cb4;
+  --line: rgba(255, 255, 255, .14);
+  --accent: #635bff;
+  --brand: #635bff;
+  --brand-soft: rgba(99, 91, 255, .16);
+  --ghost-active: rgba(99, 91, 255, .16);
+  --accent-ghost-line: rgba(99, 91, 255, .5);
+  --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+
+/* ---------- 墨玉青 ---------- */
+html[data-theme="ink"] {
+  --gk-bg: #050d0d;
+  --gk-accent: #2aa79b;
+  --gk-accent2: #1d7f76;
+  --hub-accent: #2aa79b;
+  --hub-bg: #050d0d;
+  --hub-card: rgba(255, 255, 255, .045);
+  --hub-line: rgba(255, 255, 255, .09);
+  --hub-ink: rgba(255, 255, 255, .92);
+  --hub-ink2: rgba(255, 255, 255, .55);
+  --hub-ink3: rgba(255, 255, 255, .32);
+  --card: #101d1d;
+  --panel: #101d1d;
+  --text: #e8fbf7;
+  --text-2: #b8dcd6;
+  --muted: #7ba39e;
+  --line: rgba(255, 255, 255, .14);
+  --accent: #2aa79b;
+  --brand: #2aa79b;
+  --brand-soft: rgba(42, 167, 155, .16);
+  --ghost-active: rgba(42, 167, 155, .16);
+  --accent-ghost-line: rgba(42, 167, 155, .5);
+  --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+
+/* ---------- 青瓷绿 ---------- */
+html[data-theme="emerald"] {
+  --gk-bg: #06110d;
+  --gk-accent: #1e7a4c;
+  --gk-accent2: #3fa06a;
+  --hub-accent: #3fa06a;
+  --hub-bg: #06110d;
+  --hub-card: rgba(255, 255, 255, .045);
+  --hub-line: rgba(255, 255, 255, .09);
+  --hub-ink: rgba(255, 255, 255, .92);
+  --hub-ink2: rgba(255, 255, 255, .55);
+  --hub-ink3: rgba(255, 255, 255, .32);
+  --card: #101d16;
+  --panel: #101d16;
+  --text: #eafaf0;
+  --text-2: #b9d9c6;
+  --muted: #7ba38c;
+  --line: rgba(255, 255, 255, .14);
+  --accent: #3fa06a;
+  --brand: #3fa06a;
+  --brand-soft: rgba(63, 160, 106, .16);
+  --ghost-active: rgba(63, 160, 106, .16);
+  --accent-ghost-line: rgba(63, 160, 106, .5);
+  --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+
+/* ---------- 琥珀橙 ---------- */
+html[data-theme="sunset"] {
+  --gk-bg: #120904;
+  --gk-accent: #bf5b1b;
+  --gk-accent2: #e99342;
+  --hub-accent: #e99342;
+  --hub-bg: #120904;
+  --hub-card: rgba(255, 255, 255, .045);
+  --hub-line: rgba(255, 255, 255, .09);
+  --hub-ink: rgba(255, 255, 255, .92);
+  --hub-ink2: rgba(255, 255, 255, .55);
+  --hub-ink3: rgba(255, 255, 255, .32);
+  --card: #21140c;
+  --panel: #21140c;
+  --text: #fff3e8;
+  --text-2: #e7cbb2;
+  --muted: #b08f74;
+  --line: rgba(255, 255, 255, .14);
+  --accent: #e99342;
+  --brand: #e99342;
+  --brand-soft: rgba(233, 147, 66, .16);
+  --ghost-active: rgba(233, 147, 66, .16);
+  --accent-ghost-line: rgba(233, 147, 66, .5);
+  --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+
+/* ---------- 藕荷紫 ---------- */
+html[data-theme="violet"] {
+  --gk-bg: #0c0818;
+  --gk-accent: #6e56cf;
+  --gk-accent2: #9b7ede;
+  --hub-accent: #9b7ede;
+  --hub-bg: #0c0818;
+  --hub-card: rgba(255, 255, 255, .045);
+  --hub-line: rgba(255, 255, 255, .09);
+  --hub-ink: rgba(255, 255, 255, .92);
+  --hub-ink2: rgba(255, 255, 255, .55);
+  --hub-ink3: rgba(255, 255, 255, .32);
+  --card: #191330;
+  --panel: #191330;
+  --text: #f2edff;
+  --text-2: #cdc2ea;
+  --muted: #9086b8;
+  --line: rgba(255, 255, 255, .14);
+  --accent: #9b7ede;
+  --brand: #9b7ede;
+  --brand-soft: rgba(155, 126, 222, .16);
+  --ghost-active: rgba(155, 126, 222, .16);
+  --accent-ghost-line: rgba(155, 126, 222, .5);
+  --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+
+/* ---------- 石墨灰 ---------- */
+html[data-theme="stone"] {
+  --gk-bg: #0b0b0d;
+  --gk-accent: #8b8b93;
+  --gk-accent2: #b4b4bc;
+  --hub-accent: #b4b4bc;
+  --hub-bg: #0b0b0d;
+  --hub-card: rgba(255, 255, 255, .045);
+  --hub-line: rgba(255, 255, 255, .09);
+  --hub-ink: rgba(255, 255, 255, .92);
+  --hub-ink2: rgba(255, 255, 255, .55);
+  --hub-ink3: rgba(255, 255, 255, .32);
+  --card: #17171a;
+  --panel: #17171a;
+  --text: #f0f0f2;
+  --text-2: #c6c6cc;
+  --muted: #8e8e96;
+  --line: rgba(255, 255, 255, .14);
+  --accent: #b4b4bc;
+  --brand: #b4b4bc;
+  --brand-soft: rgba(180, 180, 188, .16);
+  --ghost-active: rgba(180, 180, 188, .16);
+  --accent-ghost-line: rgba(180, 180, 188, .5);
+  --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+
+/* ---------- 胭脂红 ---------- */
+html[data-theme="crimson"] {
+  --gk-bg: #11060a;
+  --gk-accent: #b8324a;
+  --gk-accent2: #e05a72;
+  --hub-accent: #e05a72;
+  --hub-bg: #11060a;
+  --hub-card: rgba(255, 255, 255, .045);
+  --hub-line: rgba(255, 255, 255, .09);
+  --hub-ink: rgba(255, 255, 255, .92);
+  --hub-ink2: rgba(255, 255, 255, .55);
+  --hub-ink3: rgba(255, 255, 255, .32);
+  --card: #221016;
+  --panel: #221016;
+  --text: #ffeef1;
+  --text-2: #e9bfc7;
+  --muted: #b3858e;
+  --line: rgba(255, 255, 255, .14);
+  --accent: #e05a72;
+  --brand: #e05a72;
+  --brand-soft: rgba(224, 90, 114, .16);
+  --ghost-active: rgba(224, 90, 114, .16);
+  --accent-ghost-line: rgba(224, 90, 114, .5);
+  --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
