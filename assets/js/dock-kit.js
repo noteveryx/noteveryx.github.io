@@ -188,8 +188,27 @@
        避让由 JS 实测后写 right 处理（见 headerAvoid）。 */
     '.hd-tools{position:absolute;right:0;top:0;bottom:auto;height:44px;',
     'display:flex;align-items:center;gap:8px;z-index:6;}',
-    /* 进了页头的按钮取消各自的固定定位，改由页头排版 */
-    '.hd-tools .tk-btn,.hd-tools .tk-t,.hd-tools .fsk-btn{',
+    /* ---------- PC 端「没有页头」的沉浸式页面：右上角统一竖列 ----------
+       主题 / 语言 / 全屏 / 调色盘 四个全局钮原本各自为政：
+       主题钮浮右上、语言钮浮右上、全屏钮浮**右下**、调色盘球浮右下 ——
+       四个钮散在屏幕四角，还互相压。
+       现在统一成一列竖排在右上角，顺序 主题→语言→全屏→调色盘→页面自己的工具，
+       和有页头的页面（同一行 主题→语言→全屏→调色盘）是同一套顺序。 */
+    '.kb-col{position:fixed;right:16px;top:14px;z-index:60;',
+    'display:flex;flex-direction:column;align-items:center;gap:8px;',
+    'pointer-events:none;}',
+    '.kb-col>*{pointer-events:auto;}',
+    /* 列里的成员一律回到「列内的一格」：
+       它们原来都是 fixed 各自定位，直接塞进列里会各飞各的。 */
+    '.kb-col>*{position:static !important;left:auto !important;right:auto !important;',
+    'top:auto !important;bottom:auto !important;}',
+    /* 调色盘钮被搬走后，原来的壳（.pk）空了 → 隐藏，别留个空壳占位。
+       页面自己的工具组（.ui.tools / .ui.side / .ui.palette）搬空后同理。 */
+    '.pk.kb-empty,.ui.tools.kb-empty,.ui.side.kb-empty,.ui.palette.kb-empty{display:none !important;}',
+    /* 进了页头的按钮取消各自的固定定位，改由页头排版。
+       调色盘钮（.pk-trigger）也要带上 —— 它原来靠 .pk 壳定位，
+       漏掉它的话会带着旧坐标漂在别处，正好压在内容上挡点击。 */
+    '.hd-tools .tk-btn,.hd-tools .tk-t,.hd-tools .fsk-btn,.hd-tools .pk-trigger{',
     'position:static !important;left:auto !important;right:auto !important;',
     'top:auto !important;bottom:auto !important;transform:none !important;}',
     /* 页头里的返回键别被按钮压住 */
@@ -236,7 +255,25 @@
     /* 游戏按钮的图标随按钮放大 */
     '.gk-btn svg{width:18px;height:18px;}',
     /* 游戏页返回键挪进工具列后要解除固定定位 */
-    '.gk-tools .gk-back{position:static !important;left:auto !important;top:auto !important;'
+    '.gk-tools .gk-back{position:static !important;left:auto !important;top:auto !important;}',
+    /* 统一竖列（.kb-col）里的按钮也要 44：
+       它们搬出 .ui.tools / .ui.side 后，「.ui.xxx > .btn」那条尺寸规则
+       就不再匹配了（不是容器的子元素了）→ 会掉回页面自己写的 38px。
+       ⚠️ 只钉图标型（.dk-ico / .btn / .tool-btn）——
+          画板的「近期颜色」条（.recent，多个色块叠起来）不能压成 44 方块。 */
+    '.kb-col>.dk-ico,.kb-col>.btn,.kb-col>.tool-btn{width:44px !important;height:44px !important;}',
+    /* 主题钮会被包进 .dk-theme（按钮 + 面板），成了列里的「孙元素」，
+       `.kb-col>*` 那条只治直接子元素 —— 漏掉它的话主题钮还停在
+       fixed 的右上角，正好压在语言钮上（语言钮就点不动了）。
+       所以这里对四个全局钮都用后代选择器再解一次定位。 */
+    '.kb-col .tk-btn,.kb-col .tk-t,.kb-col .fsk-btn,.kb-col .pk-trigger{',
+    'position:static !important;left:auto !important;right:auto !important;',
+    'top:auto !important;bottom:auto !important;transform:none !important;}',
+    '.kb-col>.dk-theme{width:44px;height:44px;display:flex;align-items:center;justify-content:center;}',
+    '.kb-col .tk-t-btn{width:44px !important;height:44px !important;}',
+    '.kb-col .pk-trigger{width:44px !important;height:44px !important;}',
+    '.kb-col .fsk-btn{width:44px !important;height:44px !important;}',
+    '.kb-col .tk-btn{width:44px !important;height:44px !important;}',
   ].join('');
 
   function injectStyle() {
@@ -333,7 +370,14 @@
         if (dock && dock.contains(t)) continue;   /* 坞内部的变化 */
         schedulePlace(120);
         scheduleFloat(200);
-        alignHeaderTools();
+        /* ⚠️ 这里千万不能直接调 alignGlobalTools()：
+           它内部要 querySelector + getBoundingClientRect（强制重排），
+           而这个观察器盯的是整个 body 的 class/style ——
+           有动画或状态切换的页面几乎每帧都会触发，
+           等于每帧做两三次强制同步布局，主线程被占满，
+           页面卡到按钮都点不动。
+           改成防抖：一轮变更只排一次，且跑的时候只跑一次。 */
+        scheduleAlignGlobal(150);
         return;
       }
     });
@@ -448,6 +492,7 @@
     }
     dock.appendChild(box);
     (doc.body || doc.documentElement).appendChild(dock);
+    sortItems();
     setCollapsed(true);
     place();
   }
@@ -539,7 +584,9 @@
       if (k.classList.contains('dk-item')) continue;
       var r = k.getBoundingClientRect();
       if (r.width < 4 || r.height < 4) continue;
-      if (isIconBtn(k)) k.classList.add('dk-ico');
+      /* ⚠️ 已经有这个类就别再写：classList.add 每次都会写 DOM 属性，
+         写属性会触发 MutationObserver → 观察器回调再进来 → 死循环。 */
+      if (isIconBtn(k) && !k.classList.contains('dk-ico')) k.classList.add('dk-ico');
       out.push(k);
     }
     return out;
@@ -571,15 +618,26 @@
       return list;
     }
 
-    /* ② 主题（连面板一起） */
-    var tbtn = doc.querySelector('.tk-btn');
-    if (tbtn && !inDock(tbtn)) list.push(rank(themeWrap(tbtn), 1));
-    /* ③ 语言（float 悬浮钮、inline 页头钮都收） */
-    var tk = doc.querySelector('.tk-t');
-    if (tk && !inDock(tk)) list.push(rank(tk, 2));
-    /* ④ 全屏 */
-    var fs2 = doc.getElementById('fsKitBtn');
-    if (fs2 && !inDock(fs2)) list.push(rank(fs2, 3));
+    /* PC 端不收任何东西：
+       全局钮（主题/语言/全屏/调色盘）由 alignGlobalTools 编排，
+       页面自己的工具组（视觉页的调色盘、形态钮）要一直留在页面上。
+       收进坞只发生在窄屏。 */
+    if (win.innerWidth >= 900) return list;
+
+    /* ② 主题（连面板一起）③ 语言 ④ 全屏 —— 只在窄屏收。
+       PC 端这几个由 alignGlobalTools 统一编排（页头横排 / 右上竖列），
+       ⚠️ 两边都收会来回搬：坞每 300ms 收一次，布局器再搬一次，
+          最后落在谁手里全看时序 —— 这正是「按钮位置乱」的根源。 */
+    if (win.innerWidth < 900) {
+      var tbtn = doc.querySelector('.tk-btn');
+      if (tbtn && !inDock(tbtn)) list.push(rank(themeWrap(tbtn), 1));
+      /* 语言（float 悬浮钮、inline 页头钮都收） */
+      var tk = doc.querySelector('.tk-t');
+      if (tk && !inDock(tk)) list.push(rank(tk, 2));
+      /* 全屏 */
+      var fs2 = doc.getElementById('fsKitBtn');
+      if (fs2 && !inDock(fs2)) list.push(rank(fs2, 3));
+    }
     /* ⑤ 底部工具条（.ui.bar）**故意不收**：它本身就是「贴底通栏 + 横向滚动」，
        收进坞后被压成坞里的一行，示例/描红/撤销/保存会被挤到屏幕外，
        用户点不到就以为「按钮坏了」。留在原位，坞避让它即可。 */
@@ -594,25 +652,65 @@
     if (tools && isFixed(tools) && !inDock(tools)) {
       var units = splitUnits(tools);
       if (units.length > 1) {
-        for (var ti = 0; ti < units.length; ti++) list.push(rank(units[ti], 5 + (ti + 1) * 0.1));
-      } else {
-        list.push(rank(tools, 5));
+        for (var ti = 0; ti < units.length; ti++) {
+          var u = units[ti];
+          /* 调色盘不论在容器里排第几，一律落到坞的最下面 ——
+             桌面端是「主题 → 语言 → 全屏 → 调色盘」，窄屏跟着一致；
+             而且最后一格正好是拇指最容易够到的位置。
+             （极光/星野这类页面把 .pk 写在 .ui.tools 的第一位，
+               不特判的话窄屏顺序和桌面端正好相反。） */
+          var isPk = u.classList.contains('pk') || !!u.querySelector('.pk-trigger');
+          list.push(rank(u, isPk ? 6 : 5 + (ti + 1) * 0.1));
+        }
+      } else if (units.length === 1) {
+        var only = units[0];
+        list.push(rank(tools, (only.classList.contains('pk') || only.querySelector('.pk-trigger')) ? 6 : 5));
       }
+      /* units.length === 0：容器已经被搬空了（按钮早一步进了坞）。
+         这时**不能**把空容器当一件收进去 —— 坞里会多出一个 0×0 的格子，
+         多占 8px 间距，看着就是「按钮之间莫名其妙空了一格」。 */
     }
-    /* ⑥b 只装一个调色盘的 .ui.panel（手写板就是这种结构） */
+    /* ⑥b 只装一个调色盘的 .ui.panel（手写板就是这种结构）。
+       容器已经被搬空时不能再收：坞里会多一个 0×0 的格子（8px 空格）。 */
     if (!tools) {
       var upanel = doc.querySelector('.ui.panel');
-      if (upanel && isFixed(upanel) && !inDock(upanel)) list.push(rank(upanel, 5));
+      if (upanel && isFixed(upanel) && !inDock(upanel) && splitUnits(upanel).length) {
+        list.push(rank(upanel, 5));
+      }
     }
     /* ⑦ 生成器页的 pk-float 调色球 */
     if (!tools) {
       var pkf = doc.querySelector('.pk.pk-float');
       if (pkf && isFixed(pkf) && !inDock(pkf)) list.push(rank(pkf, 5));
     }
+    /* ⑦b 裸 .pk 壳（游戏中心等把调色球直接放在页头/角落）：
+       整壳收进坞，和主题/语言/全屏排同一列。
+       .pk 只是 relative + inline-flex 的壳，调色面板本身挂在 body 上
+       （palette-kit 里 panel 是 body.appendChild），所以搬壳不会把面板带走。
+       rank 6 = 排在页面工具组之后、和桌面端「主题→语言→全屏→调色盘」一致。 */
+    if (!tools) {
+      var pkShell = doc.querySelector('.pk');
+      if (pkShell && !pkShell.classList.contains('pk-float') && !inDock(pkShell) &&
+          pkShell.querySelector('.pk-trigger')) {
+        list.push(rank(pkShell, 6));
+      }
+    }
     /* ⑧ 裸 .tools（待机页顶部那条「全屏 / 编辑」文字工具条）**不收**：
        它是文字按钮，压成 44×44 方块会把字挤没；
        而且它是页头的一部分，留在原位才说得通。
        真正的浮动工具组都是 .ui.tools / .ui.side / .ui.palette，⑥ 已经收了。 */
+
+    /* 去重：容器和它里面的子项可能在同一轮被分别收进来
+       （手写板：⑥b 整收 .ui.panel，⑦b 又单独收了里面的调色球 .pk），
+       一起搬会把子项从容器里拽出来，坞里多一格 0×0 的空位。
+       子项的祖先已经在列表里 → 丢掉子项，让它跟着容器走。 */
+    for (var di = list.length - 1; di >= 0; di--) {
+      var anc = list[di].parentNode;
+      while (anc && anc !== doc.body && anc !== doc.documentElement) {
+        if (list.indexOf(anc) !== -1) { list.splice(di, 1); break; }
+        anc = anc.parentNode;
+      }
+    }
     return list;
   }
 
@@ -627,6 +725,29 @@
       if ((kids[i].__dkRank || 9) > r) { ref = kids[i]; break; }
     }
     box.insertBefore(node, ref);
+  }
+
+  /* 按 rank 把整列重排一次。
+     为什么要单独排：坞里的先后原来只取决于「谁先被收进来」——
+     语言钮由 translate-kit 主动注册（DockKit.add，最先到），
+     主题钮 / 全屏钮 / 页面工具组要等 collect() 下一轮才补，
+     于是顺序变成「语言 → 返回 → 主题 → 全屏」，和约定的
+     「返回 → 主题 → 语言 → 全屏 → 调色盘」正好错位。
+     insertByRank 只能保证新来的插对位置，管不了已经错位的老项，
+     所以建坞之后 / 每轮补收之后整体再排一遍（稳定排序，rank 相同保持原顺序）。 */
+  function sortItems() {
+    var box = itemsBox || (dock && dock.querySelector('.dk-items'));
+    if (!box) return;
+    var kids = Array.prototype.slice.call(box.children);
+    var rk = function (n) { return n.__dkRank == null ? 9 : n.__dkRank; };
+    var want = kids.slice().sort(function (a, b) { return rk(a) - rk(b); });
+    var dirty = false;
+    for (var i = 0; i < want.length; i++) if (want[i] !== kids[i]) { dirty = true; break; }
+    if (!dirty) return;
+    /* 逐个归位：insertBefore 搬动已有节点不会丢监听，比重新 append 安全 */
+    for (var j = 0; j < want.length; j++) {
+      if (box.children[j] !== want[j]) box.insertBefore(want[j], box.children[j] || null);
+    }
   }
 
   /* ---------------- 悬浮件贴内容右缘 ----------------
@@ -741,13 +862,15 @@
     var lang = gk.querySelector('.tk-t');
     var fs = doc.querySelector('.fsk-btn');
     var back = gk.querySelector('.dk-back, .gk-back');
+    var pk = doc.querySelector('.pk-trigger');
     if (!th && !fs) return;
-    /* 目标序列（按 rank：返回 0 → 主题 1 → 语言 2 → 全屏 3） */
+    /* 目标序列（按 rank：返回 0 → 主题 1 → 语言 2 → 全屏 3 → 调色盘 4） */
     var seq = [];
     if (back) seq.push(back);
     if (th) seq.push(th);
     if (lang) seq.push(lang);
     if (fs) seq.push(fs);
+    if (pk) seq.push(pk);
     if (!seq.length) return;
     var kids = Array.prototype.slice.call(gk.children);
     /* 锚点 = 第一个「不在序列里」的、且不是折叠钮的元素 */
@@ -769,10 +892,13 @@
       if (last >= ai) ok = false;
     }
     if (ok) return;
-    /* 重排：按 seq 顺序逐个插到锚点之前 */
+    /* 重排：按 seq 顺序逐个插到锚点之前。
+       kbHome 记录原位 —— 窄屏时这些按钮要回坞，恢复要放回原来的坑。 */
     for (var m = 0; m < seq.length; m++) {
+      kbHome(seq[m]);
       gk.insertBefore(seq[m], anchor || null);
     }
+    pkHideEmpty();
     try { win.dispatchEvent(new CustomEvent('kb:tools-moved')); } catch (e) {}
   }
   function pickHead() {
@@ -816,6 +942,11 @@
         if (r.width < 4 || r.height < 4) continue;
         var s = getComputedStyle(e);
         if (s.position === 'absolute' || s.position === 'fixed') continue;
+        /* 只避让「真正的控件」：
+           标题块（.htitle 之类）会 flex:1 撑满，右缘正好贴着行右缘，
+           把它当成右对齐控件 → 钮组被推到页面中间去。 */
+        if (!e.matches('button,a,[role=button],.pk,.pk-trigger') &&
+            !e.querySelector('button,.pk-trigger')) continue;
         if (contentRight - r.right > 8) continue;   /* 没贴右缘，不算 */
         if (r.left < minLeft) minLeft = r.left;
       }
@@ -862,18 +993,186 @@
     lastFit = val;
     box.style.top = val + 'px';
   }
-  function alignHeaderTools() {
-    /* 游戏页没有页头，但右上角有一列工具（.gk-tools）——
-       主题钮、全屏钮都并进那一列，顺序 主题 → 语言 → 全屏，
-       和工具箱页页头里的顺序一致。 */
-    var gk = doc.querySelector('.gk-tools');
-    if (gk) { alignGameTools(gk); return; }
-    var head = win.innerWidth >= 900 ? pickHead() : null;
-    if (!head) { restoreHeaderTools(); return; }
+  /* ---------------- 全局按钮的统一编排 ----------------
+     全站只有四个「全局钮」：主题 / 语言 / 全屏 / 调色盘。
+     它们的落点全站只有三种，顺序永远一样：
+       ① 游戏页的右上竖列（.gk-tools）
+       ② 有页头页面的页头横排（.hd-tools）
+       ③ 没有页头的沉浸式页面 → 右上竖列（.kb-col，本模块建）
+     ⚠️ 以前 collect()（收进坞）和 alignHeaderTools()（搬回页头）
+        两边都在抢同一批按钮：坞每 300ms 收一次，布局器再搬一次，
+        位置来回跳，最后落在谁手里全看时序 —— 按钮位置乱的根源就在这。
+        现在 PC 端只由 alignGlobalTools() 编排，collect 不再收这四个。 */
+
+  /* 搬动记录：窄屏（按钮要回坞）时按原位放回去 */
+  function kbHome(el) {
+    if (!el.__kbHome) el.__kbHome = { parent: el.parentNode, next: el.nextSibling };
+    return el.__kbHome;
+  }
+  function moveIn(el, box) {
+    if (!el || el.parentNode === box) return;
+    kbHome(el);
+    box.appendChild(el);
+  }
+  function moveOut(el) {
+    var h = el && el.__kbHome;
+    if (!h || !h.parent) return;
+    if (el.parentNode) el.parentNode.removeChild(el);
+    if (h.next && h.next.parentNode === h.parent) h.parent.insertBefore(el, h.next);
+    else h.parent.appendChild(el);
+    if (h.parent.classList && h.parent.classList.contains('kb-empty')) h.parent.classList.remove('kb-empty');
+    try { delete el.__kbHome; } catch (e) { el.__kbHome = null; }
+  }
+  /* 调色盘钮被搬走后，原来的壳（.pk）空了 → 隐藏，别留个空壳占位 */
+  function pkHideEmpty() {
+    var p = doc.querySelector('.pk-trigger');
+    if (!p || !p.__kbHome) return;
+    var par = p.__kbHome.parent;
+    if (!par || !par.classList) return;
+    var vis = false;
+    for (var i = 0; i < par.children.length; i++) {
+      var c = par.children[i];
+      if (c === p) continue;
+      var r = c.getBoundingClientRect();
+      if (r.width > 4 && r.height > 4) { vis = true; break; }
+    }
+    /* ⚠️ 只有状态真的变了才改 class：
+       classList.toggle 每次都会写 DOM 属性（哪怕值没变），
+       而写属性会触发 MutationObserver → 观察器回调再进来 → 死循环。 */
+    var empty = !vis;
+    if (empty !== par.classList.contains('kb-empty')) par.classList.toggle('kb-empty', empty);
+  }
+  /* 四个全局钮（固定顺序） */
+  function globalSeq() {
+    var seq = [];
+    var t = doc.querySelector('.tk-btn');
+    if (t) seq.push(themeWrap(t));
+    var l = doc.querySelector('.tk-t');
+    if (l) seq.push(l);
+    var f = doc.getElementById('fsKitBtn') || doc.querySelector('.fsk-btn');
+    if (f) seq.push(f);
+    var p = doc.querySelector('.pk-trigger');
+    if (p) seq.push(p);
+    return seq;
+  }
+  /* 把成员按顺序塞进容器。
+     ⚠️ 顺序没变就别动 DOM —— appendChild 会触发 MutationObserver，
+        观察器回调再进来就成死循环了。 */
+  function fillSeq(box, seq) {
+    var kids = box.children;
+    var same = kids.length === seq.length;
+    if (same) {
+      for (var i = 0; i < seq.length; i++) if (kids[i] !== seq[i]) { same = false; break; }
+    }
+    if (!same) {
+      for (var j = 0; j < seq.length; j++) box.appendChild(seq[j]);
+    }
+  }
+  /* ③ 没有页头的沉浸式页面：右上角一条竖列 */
+  function alignFloatCol(force) {
+    var col = doc.querySelector('.kb-col');
+    if (!col) {
+      col = doc.createElement('div');
+      col.className = 'kb-col';
+      (doc.body || doc.documentElement).appendChild(col);
+      alignSig = '';
+    }
+    var seq = globalSeq();
+    /* 页面自己的工具组（视觉页的 .ui.tools、画板的 .ui.side、
+       曼陀罗的 .ui.palette）也并进这一列 ——
+       否则页面上会有两条并排的竖列，上下两个钮对不齐
+       （用户反馈：右侧上下两个按钮不在一条竖线上）。 */
+    var tools = doc.querySelector('.ui.tools, .ui.side, .ui.palette');
+    if (tools) {
+      var units = splitUnits(tools);
+      for (var i = 0; i < units.length; i++) {
+        if (units[i].classList.contains('pk-trigger')) continue;
+        seq.push(units[i]);
+      }
+      /* 搬空后把容器隐藏，别留一个空壳在那儿占位 */
+      if (!tools.classList.contains('kb-empty')) tools.classList.add('kb-empty');
+    }
+    /* 结果没变就别再量、再写（强制重排是这里最贵的一步） */
+    var sig = toolsSig(col, seq, 0);
+    if (!force && sig === alignSig) return;
+    alignSig = sig;
+    for (var j = 0; j < seq.length; j++) moveIn(seq[j], col);
+    fillSeq(col, seq);
+    pkHideEmpty();
+  }
+  function restoreCol() {
+    var col = doc.querySelector('.kb-col');
+    if (!col) return;
+    var kids = Array.prototype.slice.call(col.children);
+    for (var i = 0; i < kids.length; i++) moveOut(kids[i]);
+    if (col.parentNode) col.parentNode.removeChild(col);
+    /* 页面自己的工具组要重新显示出来（窄屏时它们会被收进坞） */
+    var tools = doc.querySelector('.ui.tools, .ui.side, .ui.palette');
+    if (tools && tools.classList.contains('kb-empty')) tools.classList.remove('kb-empty');
+  }
+  /* ---------------- 编排入口 ----------------
+     三种落点只走一条路：游戏竖列 / 页头横排 / 右上竖列。
+     ⚠️ 这个函数很贵（多次 querySelector + 强制重排），
+        所以对外只暴露防抖版 scheduleAlignGlobal()：
+        DOM 观察器、resize、异步补算一律走它，
+        同一轮变更里最多真正跑一次。 */
+  var alignTimer = null;
+  var aligning = false;
+  function scheduleAlignGlobal(delay) {
+    if (alignTimer) return;
+    alignTimer = setTimeout(function () {
+      alignTimer = null;
+      alignGlobalTools();
+    }, delay || 120);
+  }
+  /* 编排「结果没变就别重复干活」：
+     位置写一次就够，反复量 + 反复写只会让浏览器不停重排。
+     签名 = 容器 + 四个钮各自的父节点 + 视口宽 + 页头宽；全一样就直接跳过。 */
+  var alignSig = '', alignAt = 0;
+  function toolsSig(box, nodes, extra) {
+    var s = (box ? (box.className || '') : '-') + ':' + win.innerWidth + ':' + (extra || 0);
+    for (var i = 0; i < nodes.length; i++) {
+      s += '|' + (nodes[i] ? (nodes[i].parentNode === box ? '1' : '0') : '-');
+    }
+    return s;
+  }
+  var lastWide = null;   /* 上一次编排时是不是宽屏布局 */
+  function alignGlobalTools(force) {
+    if (aligning) return;          /* 防重入：跑的过程中又被叫进来，直接丢掉 */
+    aligning = true;
+    try {
+      var gk = doc.querySelector('.gk-tools');
+      if (gk) { alignGameTools(gk); lastWide = true; return; }
+      if (win.innerWidth < 900) {
+        /* 窄屏：按钮要收进坞。
+           ⚠️ 只有刚从宽屏切过来时才需要「放回原位」——
+              按钮在页头/竖列里，不放回去 collect 收不进坞；
+              而已经在坞里的按钮放回去反而会被拽出来（每次编排都拽一次会抖）。 */
+        if (lastWide) { restoreHeaderTools(); restoreCol(); }
+        lastWide = false;
+        return;
+      }
+      lastWide = true;
+      var head = pickHead();
+      if (head) { restoreCol(); alignHeaderTools(force); return; }
+      restoreHeaderTools();
+      alignFloatCol(force);
+    } finally {
+      aligning = false;
+    }
+  }
+  function alignHeaderTools(force) {
+    /* 落点已经由 alignGlobalTools 决定，这里只管「往页头横排里塞」。
+       ⚠️ 不要在这里再判断游戏页 / 窄屏 —— 那是编排层的职责，
+          两处各判一次就会出现「有的页面走这条、有的走那条」的分裂。 */
+    var head = pickHead();
+    if (!head) return;
     var theme = doc.querySelector('.tk-btn');
     var lang = doc.querySelector('.tk-t');
-    var full = doc.querySelector('.fsk-btn');
-    var want = [theme, lang, full].filter(function (x) { return !!x; });
+    var full = doc.getElementById('fsKitBtn') || doc.querySelector('.fsk-btn');
+    var pk = doc.querySelector('.pk-trigger');
+    /* 顺序必须是 主题 → 语言 → 全屏 → 调色盘 */
+    var want = [theme, lang, full, pk].filter(function (x) { return !!x; });
     if (!want.length) return;
     var box = head.querySelector('.hd-tools');
     if (!box) {
@@ -882,46 +1181,49 @@
       head.appendChild(box);
       /* 新建的容器没有 inline style，去重记录要清掉，
          否则下面的「值没变就不写」会跳过第一次定位 */
-      lastAvoid = ''; lastFit = '';
+      lastAvoid = ''; lastFit = ''; alignSig = '';
     }
-    /* 顺序必须是 主题 → 语言 → 全屏。
-       appendChild 会把已存在的元素移到末尾，所以每次按 want 顺序重排即可；
-       但要先比一下，顺序没变就别动 DOM —— 动了会触发 MutationObserver，
-       观察器再回调进来就成死循环了。 */
+    /* 结果没变就别再量、再写 —— 强制重排是这里最贵的一步 */
+    var sig = toolsSig(box, want, head.offsetWidth + ',' + head.offsetHeight);
+    if (!force && sig === alignSig) return;
+    alignSig = sig;
+    /* 先确保成员都在容器里，再按 want 顺序排。
+       ⚠️ 顺序没变就别动 DOM —— 动了会触发 MutationObserver，
+          观察器再回调进来就成死循环了。 */
+    for (var j = 0; j < want.length; j++) moveIn(want[j], box);
     var kids = box.children;
     var same = kids.length === want.length;
     if (same) {
       for (var i = 0; i < want.length; i++) if (kids[i] !== want[i]) { same = false; break; }
     }
     if (!same) {
-      for (var j = 0; j < want.length; j++) {
-        var el = want[j];
-        if (!el.getAttribute('data-hd-moved')) {
-          el.setAttribute('data-hd-moved', '1');
-          hdMoved.push(el);
-        }
-        box.appendChild(el);
-      }
+      for (var k = 0; k < want.length; k++) box.appendChild(want[k]);
       /* 按钮挪了位置，主题面板得跟着重算 */
       try { win.dispatchEvent(new CustomEvent('kb:tools-moved')); } catch (e) {}
     }
+    pkHideEmpty();
     /* 给行里靠右的控件让位，并跟那一行对齐 */
     var row = pickRow(head);
     headerAvoid(box, head, row);
     headerFit(box, head, row);
   }
   function restoreHeaderTools() {
+    /* 页头横排里的成员放回原位（窄屏时它们要回坞） */
+    var box = doc.querySelector('.hd-tools');
+    if (box) {
+      var kids = Array.prototype.slice.call(box.children);
+      for (var i = 0; i < kids.length; i++) moveOut(kids[i]);
+      if (box.parentNode) box.parentNode.removeChild(box);
+    }
     if (hdMoved.length) {
-      for (var i = 0; i < hdMoved.length; i++) {
-        var el = hdMoved[i];
+      for (var j = 0; j < hdMoved.length; j++) {
+        var el = hdMoved[j];
         el.removeAttribute('data-hd-moved');
         if (el.parentNode) el.parentNode.removeChild(el);
         (doc.body || doc.documentElement).appendChild(el);
       }
       hdMoved = [];
     }
-    var box = doc.querySelector('.hd-tools');
-    if (box && box.parentNode) box.parentNode.removeChild(box);
     /* 窄屏要把语言钮的手工定位也清掉，交回 CSS 的默认位置 */
     alignLangFloat();
     try { win.dispatchEvent(new CustomEvent('kb:tools-moved')); } catch (e) {}
@@ -948,7 +1250,7 @@
       resizeBound = true;
       win.addEventListener('resize', function () {
         alignFloat();
-        alignHeaderTools();
+        alignGlobalTools(true);   /* 尺寸变了，签名里的视口宽也会变，强制重算一遍 */
         if (dock) { place(); schedulePlace(80); }
       }, { passive: true });
     }
@@ -960,6 +1262,11 @@
 
     /* 页面布局一变就重算坞的避让位置 */
     watchLayout();
+
+    /* 全局按钮统一编排（页头横排 / 右上竖列）——
+       必须在建坞之后：坞里收着的按钮要先搬回该在的位置。 */
+    alignGlobalTools();
+    scheduleAlignGlobal(400);
 
     /* 点坞外自动收起（点坞内按钮不收起，方便连着用） */
     doc.addEventListener('click', function (e) {
@@ -978,6 +1285,10 @@
     var tries = 0;
     var timer = setInterval(function () {
       tries++;
+      /* 已经回到宽屏（或 setup 已被 teardown 撤销）就别再补收了。
+         不拦的话：teardown 拆掉坞之后，这里又因为「有返回键」把坞建回来，
+         宽屏右下角会残留一个孤零零的折叠钮（点开只有一个返回键）。 */
+      if (!MQ.matches || !active) { clearInterval(timer); return; }
       syncThemed();
       if (gk) {
         var gb = doc.querySelector('a.gk-back');
@@ -992,6 +1303,7 @@
               remember(add[i]);
               insertByRank(add[i]);
             }
+            sortItems();
             place();
           }
           /* 返回键跟着 nav-kit 的判断走 */
@@ -1006,7 +1318,11 @@
           }
         }
       }
-      if (tries >= 10) clearInterval(timer);
+      /* 主题钮、语言钮、调色盘钮可能是别的脚本异步生成的
+         （theme-kit / translate-kit / palette-kit 都在 defer 里初始化），
+         首帧可能还没出来 → 补几次编排 */
+      if (win.innerWidth >= 900) scheduleAlignGlobal(0);
+      if (tries >= 8) clearInterval(timer);
     }, 300);
   }
 
@@ -1020,6 +1336,7 @@
         if (node.parentNode !== dock && !dock.contains(node)) {
           remember(node);
           insertByRank(node);
+          sortItems();
           place();
         }
         return;
@@ -1027,7 +1344,7 @@
       /* 还没有坞：直接建，把这个节点收进去（返回键会由 buildDock 补在最前） */
       var list = [];
       var fs = doc.getElementById('fsKitBtn');
-      if (fs && fs !== node) list.push(fs);
+      if (fs && fs !== node) list.push(rank(fs, 3));
       list.push(node);
       buildDock(list);
     },
@@ -1055,8 +1372,19 @@
      所以对齐放在无条件路径上，并补算一次（工具箱页是 JS 渲染的，首帧还没布局）。 */
   alignFloat();
   setTimeout(alignFloat, 400);
-  alignHeaderTools();
-  setTimeout(alignHeaderTools, 400);
+  /* 全局按钮统一编排（页头横排 / 右上竖列）。
+     ⚠️ setup() 只在窄屏跑，宽屏走的是这条无条件路径 ——
+        统一编排必须在这里也调，否则宽屏的按钮永远没人管。
+        ⚠️ 还要多补几次：主题钮/语言钮/调色盘钮都是别的脚本
+           （theme-kit / translate-kit / palette-kit）异步生成的，
+           首帧往往还没有 → 只跑一次会漏。 */
+  alignGlobalTools();
+  /* 其它 kit 的按钮是异步生成的，补几次就够了 ——
+     不要用短周期 setInterval：那是拿性能和正确性换来的，
+     真正的补充靠下面的 MutationObserver（防抖后几乎不花钱）。 */
+  scheduleAlignGlobal(400);
+  scheduleAlignGlobal(1000);
+  scheduleAlignGlobal(2200);
   watchLayout();   /* 内容变了（比如句子条展开）重新算一次 */
 
   function start() {

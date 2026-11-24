@@ -243,6 +243,9 @@
       var dw = ow * k, dh = oh * k;
       cctx.drawImage(oldCv, 0, 0, ow, oh, (W - dw) / 2, (H - dh) / 2, dw, dh);
     }
+    /* 显示层重设尺寸后会被重置成不透明黑（ctx 用了 alpha:false），
+       这里立刻铺一次纸色 —— 不铺的话画板一打开就是一整块黑。 */
+    render();
   }
 
   /* ---------------- 画布尺寸 ----------------

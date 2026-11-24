@@ -167,9 +167,12 @@ body.gk-page > canvas {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(4, 6, 12, .62);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  /* ⚠️ 这里不能加 backdrop-filter：
+     这一层是**整屏**的（inset:0），全屏毛玻璃每帧都要重新采样整块画面，
+     实测把页面从 60fps 直接压到 12fps（83ms/帧），
+     而且开始/暂停面板一出现就卡住，看着像「按钮点不动」。
+     要「背景变暗」直接用更实的黑叠上去就行，代价几乎为零。 */
+  background: rgba(4, 6, 12, .86);
 }
 .gk-overlay[hidden] { display: none; }
 .gk-overlay.in .gk-card { animation: gkCardIn .26s cubic-bezier(.2, .9, .3, 1); }

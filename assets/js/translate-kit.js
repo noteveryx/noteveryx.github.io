@@ -263,6 +263,18 @@
     '.tk-t-panel.tk-themed .tk-t-item:hover{background:var(--ghost-active,var(--brand-soft,rgba(0,0,0,.05)));}',
     '.tk-t-panel.tk-themed .tk-t-item.on{background:var(--ghost-active,var(--brand-soft,rgba(0,0,0,.05)));',
     'color:var(--accent,var(--brand,#1e7a4c));}',
+    /* 浅色页面（没有主题系统，靠 detectLight 判定）：
+       面板跟随页面底色，不再是一块突兀的黑。 */
+    '.tk-t-light .tk-t-btn{border-color:rgba(20,30,40,.14);',
+    'background:rgba(255,255,255,.92);color:#1f2937;',
+    'box-shadow:0 2px 10px rgba(20,30,40,.12);}',
+    '.tk-t-panel.tk-t-light{background:rgba(255,255,255,.97);',
+    'border-color:rgba(20,30,40,.14);',
+    'box-shadow:0 20px 50px -20px rgba(20,30,40,.3);}',
+    '.tk-t-panel.tk-t-light .tk-t-title{color:#6b7280;}',
+    '.tk-t-panel.tk-t-light .tk-t-item{color:#1f2937;}',
+    '.tk-t-panel.tk-t-light .tk-t-item:hover{background:rgba(20,30,40,.06);}',
+    '.tk-t-panel.tk-t-light .tk-t-item.on{background:rgba(20,30,40,.07);color:#1e7a4c;}',
 
     /* 悬浮模式：面板向右展开 */
     '.tk-t-float .tk-t-panel{left:calc(100% + 10px);right:auto;top:50%;transform:translateY(-50%);}',
@@ -403,14 +415,40 @@
     return { mode: 'float', el: null };
   }
 
+  /* 页面底色是浅色时，语言面板也要用浅色 ——
+     不然浅色页面上一块黑面板，跟页面完全是两个世界（用户反馈：下拉列表背景色不对）。
+     判定跟 palette-kit 一致：先看主题 id，再看实际背景色。
+     ⚠️ 视觉类页面（visual-*）没有主题系统，只能靠背景色判断；
+        背景是渐变时 backgroundColor 是透明 → 往上找有底色的祖先。 */
+  function detectLight() {
+    var t = doc.documentElement.getAttribute('data-theme');
+    /* 深色三套：夜航蓝 / 墨玉青 / 石墨灰 */
+    if (t === 'midnight' || t === 'ink' || t === 'stone') return false;
+    if (t) return true;
+    var n = doc.body;
+    while (n && n !== doc.documentElement) {
+      var bg = getComputedStyle(n).backgroundColor;
+      var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/.exec(bg || '');
+      if (m && (m[4] === undefined || parseFloat(m[4]) > 0.5)) {
+        var l = parseInt(m[1], 10) * 0.299 + parseInt(m[2], 10) * 0.587 + parseInt(m[3], 10) * 0.114;
+        return l > 140;
+      }
+      n = n.parentElement;
+    }
+    return false;
+  }
+
   /* ---------------- 构建 UI ---------------- */
   function build(list) {
     injectStyle();
     if (wrap) { fillList(list); return; }
 
     var host = pickHost();
+    /* 有主题系统 → 跟随页面变量（.tk-t-themed）；
+       没有 → 看页面底色，浅色页面用浅色面板（.tk-t-light）。 */
+    var light = !HAS_THEME && detectLight();
     wrap = doc.createElement('div');
-    wrap.className = 'tk-t ignore' + (HAS_THEME ? ' tk-t-themed' : '') +
+    wrap.className = 'tk-t ignore' + (HAS_THEME ? ' tk-t-themed' : (light ? ' tk-t-light' : '')) +
       (host.mode === 'round' ? ' tk-t-round' : '') +
       (host.mode === 'float' ? ' tk-t-float' : '');
     wrap.setAttribute('data-translate-kit', '1');
@@ -431,7 +469,7 @@
 
     panel = doc.createElement('div');
     /* 面板挂 body 下，没有 .tk-t-themed 祖先 → 主题类要加在它自己身上 */
-    panel.className = 'tk-t-panel' + (HAS_THEME ? ' tk-themed' : '');
+    panel.className = 'tk-t-panel' + (HAS_THEME ? ' tk-themed' : (light ? ' tk-t-light' : ''));
     panel.hidden = true;
     panel.setAttribute('role', 'menu');
     panel.setAttribute('aria-label', '选择页面语言');

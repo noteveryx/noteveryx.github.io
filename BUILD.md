@@ -817,6 +817,76 @@ PanelKit.announce('ptext-type');            // 我打开时告诉别人收起
     要按 `(top + borderTop + paddingTop + bottom - borderBottom - paddingBottom) / 2` 算。
   ⚠️ 有些页面的 header 里有多块内容（标题行 + 副标题 + 联系块），
     按整个 header 算中心会落到中间那块上 —— 要按 `pickRow()` 找到的**那一行**算。
+  ⚠️ 避让时**只避让真正的控件**（button / a / .pk）：
+    标题块（`.htitle`）会 `flex:1` 撑满，右缘正好贴着行右缘，
+    把它当成「右对齐控件」→ 钮组被推到页面中间。
+
+## 全站按钮的统一规则（2026-11-24）
+
+**四个全局钮**：主题 🎨 / 语言 🌐 / 全屏 ⛶ / 调色盘 🎨。
+顺序全站永远一样：**主题 → 语言 → 全屏 → 调色盘**，尺寸一律 44×44。
+
+| 页面类型 | 落点 | 容器 |
+| --- | --- | --- |
+| 游戏页 | 右上角竖列 | `.gk-tools` |
+| 有页头的页面 | 页头右侧横排 | `.hd-tools` |
+| 无页头的沉浸式页（视觉页/画板/待机） | 右上角竖列 | `.kb-col`（dock-kit 建） |
+| 窄屏（< 900px） | 全部收进右下角程序坞 | `.dk-items` |
+
+- **只有一处能编排这四个钮**：`alignGlobalTools()`。
+  ⚠️ 以前 `collect()`（收进坞）和 `alignHeaderTools()`（搬回页头）**两边都在抢**：
+  坞每 300ms 收一次、布局器再搬一次，最后落在谁手里全看时序 ——
+  这才是「按钮位置乱」的根因。现在 PC 端 `collect()` 直接返回空列表。
+- ⚠️ **`setup()` 只在窄屏跑**（`MQ` 是 `max-width:900px`），宽屏走的是
+  IIFE 末尾那条无条件路径。把编排只写在 `setup()` 里 → 宽屏永远没人管。
+  编排必须挂在**无条件路径**上。
+- ⚠️ **其它 kit 的按钮是异步生成的**：theme-kit / translate-kit / palette-kit
+  都在自己的 defer 里初始化，首帧往往还没有这些按钮。
+  只编排一次会漏 → 宽屏要补几次（`setTimeout` + 短周期 `setInterval`）。
+- ⚠️ **写 class / style 前先比值**：`classList.toggle()` 每次都会写 DOM 属性
+  （哪怕值没变），写属性会触发 MutationObserver → 观察器回调再进来 →
+  死循环（表现是页面 `DOMContentLoaded` 永远不来）。
+  `classList.add` / `toggle` / `remove` 都要先 `contains()` 判断。
+- **页面自己的工具组也要并进同一列**（`.ui.tools` / `.ui.side` / `.ui.palette`），
+  否则页面上会有两条并排的竖列，上下两个钮对不齐。
+  搬空后给容器加 `.kb-empty` 隐藏。
+- **调色盘钮**：palette-kit 把触发器放在页面给的 `.pk` 壳里，
+  壳的位置是各页面自己定的 → 散落在屏幕各处。
+  统一做法：搬 `.pk-trigger` 本身，壳空了加 `.kb-empty` 隐藏。
+- **语言面板的配色**：面板挂在 body 下（手机端要变底部抽屉），
+  没有 `.tk-t-themed` 祖先 → 后代选择器匹配不到 →
+  背景用深色兜底、文字却跟着主题变 → 浅色主题下「深底深字」。
+  修法两条：① 给面板自身加 `.tk-themed` 并补 `.tk-t-panel.tk-themed …` 规则；
+  ② 页面**没有主题系统**时（视觉页）用 `detectLight()` 判页面底色，
+  浅色就加 `.tk-t-light` 用浅色面板。
+- **画板初始黑屏**：`getContext('2d', { alpha: false })` 的 canvas
+  初始像素是**不透明黑**，改尺寸会重置成黑。
+  `resize()` 末尾必须补一次 `render()` 铺纸色，否则画板一打开就是一整块黑。
+
+## 性能：别在小地方花大钱（2026-11-24）
+
+- **全屏 `backdrop-filter: blur()` 是性能杀手**：
+  游戏页的开始/暂停遮罩（`.gk-overlay`）是 `inset: 0` 的整屏层，
+  带 `blur(8px)` 时**每帧都要重新采样整块画面** ——
+  实测把 60fps 直接压到 12fps（83ms/帧），而且遮罩一出现整页就「卡住」，
+  看着像按钮点不动。去掉 blur、把背景加深到 `rgba(4,6,12,.86)` 后立刻回到 60fps。
+  ⚠️ 小面积（44px 的按钮、面板）用毛玻璃没问题，**整屏层不要用**。
+- **DOM 观察器里不能直接跑重活**：
+  `watchLayout()` 盯的是整个 body 的 `class/style/hidden`，
+  回调里若同步调 `alignGlobalTools()`（内部多次 `querySelector` + `getBoundingClientRect`，
+  每次都是强制重排），有动画的页面几乎每帧触发 → 主线程占满 → 页面卡死。
+  正确做法：`scheduleAlignGlobal(150)` 防抖 + 函数内防重入 + 结果签名短路
+  （容器和四个钮的父节点没变就直接返回，不量不写）。
+- **别用短周期 `setInterval` 兜底**：原来每 300ms 跑 8~10 次编排，
+  纯属拿性能换正确性。异步生成的按钮交给防抖后的观察器补即可，
+  顶多再 `setTimeout` 补两三次。
+- **写 style/class 前先比重**：属性写入会触发 MutationObserver，
+  值没变也写就会绕成死循环（页面 `DOMContentLoaded` 永不触发）。
+- **拼 CSS 字符串时括号要数清**：dock-kit 的样式是一个大字符串 `join('')`，
+  少一个 `}` 会把**后面所有规则**吞进上一个 `@`/选择器里静默失效 ——
+  表现是「某些规则看起来完全没生效」（这次是 `.kb-col` 那一整段全废，
+  导致主题钮还停在 fixed 位置压住语言钮、按钮点不动）。
+  改完这类字符串后，建议直接打印 `style[data-dock-kit]` 的 `textContent` 核对一遍。
 - **游戏页也要有主题按钮**：13 个游戏页（游戏中心 + 12 个小游戏）原本只加载
   nav/fs/translate/dock 四个 kit，**没有 theme-kit**，所以右上角没有 🎨。
   做法：
