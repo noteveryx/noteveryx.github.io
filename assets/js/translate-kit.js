@@ -406,6 +406,10 @@
   /* ---------------- 挂载位置 ----------------
      优先并入页面已有的头部/工具列，找不到才悬浮 */
   function pickHost() {
+    /* 静态工具槽优先（[data-kb-tools]）：挂进去以后由 CSS order 定序，
+       位置天生就对，不需要 dock-kit 事后再搬 —— 也就没有「先跳一下」。 */
+    var slot = doc.querySelector('[data-kb-tools]');
+    if (slot) return { mode: 'inline', el: slot, slot: true };
     var tb = doc.querySelector('.tb-head');
     if (tb) return { mode: 'inline', el: tb };
     var top = doc.querySelector('.topbar-inner');
@@ -485,7 +489,11 @@
     wrap.appendChild(panel);
 
     if (host.el) {
-      if (host.mode === 'inline') {
+      if (host.slot) {
+        /* 工具槽里：靠 CSS order 排到主题钮后面，不要 margin-left:auto 去顶 */
+        wrap.setAttribute('data-kb-slot', 'lang');
+        host.el.appendChild(wrap);
+      } else if (host.mode === 'inline') {
         wrap.style.marginLeft = 'auto';
         var right = host.el.querySelector('.topbar-right');
         if (right) host.el.insertBefore(wrap, right);
@@ -768,6 +776,14 @@
   }
 
   function boot() {
+    /* 先把按钮外壳挂上（列表留空），不要等远端 translate.js。
+       它是把 window.load 当起点的：CDN 正常时也要几百毫秒，慢起来能拖到 2.5s。
+       等它到了才建按钮，按钮就比别人晚插一格，会把屏幕上已经排好的
+       主题 / 全屏 / 调色盘整体挤动 52px —— 这正是「加载完按钮挪一下」的主因。
+       外壳先就位，位置交给 CSS；列表晚点到了只填内容，不动布局。 */
+    if (!NO_UI && !wrap) {
+      try { build([]); } catch (e) { }
+    }
     deferLoad(function (ok) {
       if (!ok || !T) {
         if (win.console && console.warn) console.warn('[translate-kit] 组件加载失败，页面翻译不可用');

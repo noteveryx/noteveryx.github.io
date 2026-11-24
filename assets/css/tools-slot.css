@@ -1,0 +1,141 @@
+/* ==========================================================
+   静态工具槽（tools slot）
+   ----------------------------------------------------------
+   页面 HTML 里直接写好容器 <div class="kb-tools" data-kb-tools>，
+   主题 / 语言 / 全屏 / 调色盘四个全局钮由各自的 kit 直接挂进去。
+   位置和先后全部由这里的 CSS 决定（flex + order），
+   JS 不再搬 DOM —— 浏览器首帧画出来就是终态，没有「先跳到正确位置」。
+
+   ⚠️ 这个文件必须用 <link> 静态引入（放在 <head> 里），
+      不能像 dock-kit 那样运行时注入 <style>：
+      注入晚于各 kit 创建按钮，那一瞬间按钮已经按自己的
+      fixed 默认坐标画过一帧了 —— 跳动就是这么来的。
+
+   两种形态：
+     .kb-tools        页头里的一行（横排，靠右）
+     .kb-tools-float  沉浸式页面右上角的一列（竖排）
+   ========================================================== */
+
+/* ---------- 容器 ---------- */
+.kb-tools{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  margin-left:auto;      /* 页头是 flex 时：自动靠右 */
+  z-index:6;
+}
+
+/* 页头里的槽：贴页头右缘、垂直居中、不占位。
+   页头可能是 flex（句子海报）也可能是 block（句子收藏），
+   block 页头里如果让它留在文档流，会在标题下面多出一整行按钮。
+   旧实现（.hd-tools）就是 absolute 贴右缘，这里保持同样的观感。 */
+header,.tb-head,.topbar-inner{position:relative;}
+header > .kb-tools,
+.tb-head > .kb-tools,
+.topbar-inner > .kb-tools{
+  position:absolute;
+  right:0;
+  top:0;
+  bottom:0;
+  margin:0;
+  z-index:6;
+}
+
+/* 沉浸式页面：右上角竖列。
+   页面自己给 .ui.tools 写过 right/bottom（极光在右下角），
+   这里用 !important 把定位钉死，槽才不会被页面样式拽回原来的角落。 */
+.kb-tools-float{
+  position:fixed !important;
+  flex-direction:column;
+  align-items:center;
+  right:calc(16px + env(safe-area-inset-right)) !important;
+  top:calc(14px + env(safe-area-inset-top)) !important;
+  bottom:auto !important;
+  left:auto !important;
+  margin:0 !important;
+  z-index:60;
+}
+
+/* ---------- 槽内成员 ----------
+   四个钮各自带着 fixed 坐标（主题右上 / 全屏右下 / 语言左中 / 调色球右上），
+   不清掉就会各飞各的。用 relative 而不是 static：语言面板是相对按钮做绝对定位的。
+
+   ⚠️ 选择器写成 .kb-tools[data-kb-tools]（双类 + 属性，特异性 0,2,0）：
+      dock-kit 运行时会注入一条「右侧悬浮件统一竖线」的 !important 规则
+      （.fsk-btn,.tk-btn,.pk-float…{right:calc(var(--kb-float-right,18px)…)!important}），
+      它和 .kb-tools>* 特异性相同、但注入更晚 → 会赢，把槽里的按钮整体左移
+      var(--kb-float-right) 那么多（实测页面加载后按钮横跳 174px 就是这个）。
+      提高特异性才能压住它。 */
+.kb-tools[data-kb-tools] > *{
+  position:relative !important;
+  left:auto !important;
+  right:auto !important;
+  top:auto !important;
+  bottom:auto !important;
+  transform:none !important;
+  margin:0 !important;
+  flex:0 0 auto;
+  order:4;               /* 页面自带的工具钮默认垫在语言之后、调色盘之前 */
+}
+
+/* 固定顺序：主题 → 语言 → 全屏 → 页面工具 → 调色盘。
+   顺序与「谁先挂进来」无关，所以 kit 的初始化先后不再影响布局。 */
+.kb-tools > [data-kb-slot="theme"]{order:1;}
+.kb-tools > [data-kb-slot="lang"]{order:2;}
+.kb-tools > [data-kb-slot="fs"]{order:3;}
+.kb-tools > [data-kb-slot="palette"]{order:5;}
+
+/* 语言钮在槽里是圆形图标钮（和主题 / 全屏一致），不显示当前语种文字。
+   用 !important：translate-kit 的样式是运行时注入的，会晚于本文件生效。 */
+.kb-tools .tk-t-btn{
+  width:44px !important;
+  height:44px !important;
+  border-radius:50% !important;
+  padding:0 !important;
+  justify-content:center !important;
+  gap:0 !important;
+}
+.kb-tools .tk-t-btn .tk-t-cur,
+.kb-tools .tk-t-btn .tk-t-caret{display:none !important;}
+.kb-tools .tk-t-btn .tk-t-ico{font-size:17px;}
+
+/* 槽里的按钮统一 44px（主题 38 / 调色球 38 是各 kit 自己的默认值） */
+.kb-tools .tk-btn,
+.kb-tools .fsk-btn,
+.kb-tools .pk-trigger{
+  width:44px !important;
+  height:44px !important;
+}
+
+/* ---------- 游戏页的右上工具列（.gk-tools 本身就是槽） ----------
+   游戏按钮（音效 / 暂停 / 调色球）由 game-kit 建好，全局钮由各 kit 追加。
+   只定序、不改列本身的定位。 */
+.gk-tools[data-kb-tools] > *{order:4;}
+.gk-tools[data-kb-tools] > [data-kb-slot="theme"]{order:1;}
+.gk-tools[data-kb-tools] > [data-kb-slot="lang"]{order:2;}
+.gk-tools[data-kb-tools] > [data-kb-slot="fs"]{order:3;}
+/* 全局钮原来各带 fixed 坐标，进列后要回到「列内的一格」 */
+.gk-tools[data-kb-tools] > [data-kb-slot]{
+  position:relative !important;
+  left:auto !important;
+  right:auto !important;
+  top:auto !important;
+  bottom:auto !important;
+  transform:none !important;
+  margin:0 !important;
+  width:44px !important;
+  height:44px !important;
+}
+/* 只藏「后来才挂进来的全局钮」，游戏自己的按钮保持可见 */
+.gk-tools[data-kb-tools]:not(.kb-ready) > [data-kb-slot]{visibility:hidden;}
+
+/* ---------- 挂载完成前先不显示 ----------
+   四个钮由四个 kit 分别在 DOMContentLoaded / load 前后挂进来（保存钮还要等 canvas 就绪），
+   晚到的一格会把已经画出来的按钮挤开 —— 那就是「加载后按钮挪一下」的来源。
+   槽在 .kb-ready 之前不显示，等页面加载完（或 1.2s 兜底）由 dock-kit 一次性显示：
+   用户看到的是「按钮出现时就已经在正确位置」。 */
+.kb-tools[data-kb-tools]:not(.kb-ready){visibility:hidden;}
+
+/* 槽被搬空（窄屏按钮都进了工具坞）时别留个空壳占位 */
+.kb-tools.kb-empty{display:none !important;}

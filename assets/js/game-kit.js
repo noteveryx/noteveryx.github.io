@@ -294,6 +294,10 @@
     }
 
     var body = document.body;
+    /* 右上工具列同时是「静态工具槽」：主题 / 语言 / 全屏由各自的 kit
+       直接挂进来（见 tools-slot.css）。这样按钮一出现就在这一列里，
+       不用 dock-kit 事后再把它们从屏幕角上搬过来 —— 也就没有加载后的跳动。 */
+    tools.setAttribute('data-kb-tools', '');
     body.appendChild(back);
     body.appendChild(label);
     body.appendChild(tools);

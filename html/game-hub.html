@@ -146,6 +146,7 @@
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>
+  <link rel="stylesheet" href="../assets/css/tools-slot.css">
 </head>
 <body>
 <div class="wrap">
@@ -155,7 +156,10 @@
       <h1>游戏中心</h1>
       <p id="sum">—</p>
     </div>
-    <div class="pk" data-pk="game" data-placement="left"></div>
+    <!-- 静态工具槽：主题 / 语言 / 全屏 / 调色盘直接挂这里，首帧即在正确位置 -->
+    <div class="kb-tools" data-kb-tools>
+      <div class="pk" data-pk="game" data-placement="left" data-kb-slot="palette"></div>
+    </div>
   </header>
 
   <nav class="tabs" id="tabs"></nav>

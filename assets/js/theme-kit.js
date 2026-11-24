@@ -190,7 +190,18 @@
   });
 
   function boot() {
-    document.body.appendChild(btn);
+    /* 页面上有静态工具槽（[data-kb-tools]）就直接挂进去：
+       位置和先后由 dock-kit 的 CSS（flex + order）决定，
+       浏览器首帧画出来就是终态，不用 JS 再把它搬一次。
+       没有槽的页面沿用老路子：挂 body，交给 dock-kit 编排。 */
+    var slot = document.querySelector('[data-kb-tools]');
+    if (slot) {
+      btn.setAttribute('data-kb-slot', 'theme');
+      slot.appendChild(btn);
+    } else {
+      document.body.appendChild(btn);
+    }
+    /* 面板始终挂 body：它 fixed 定位、靠按钮坐标算位置，进槽里会被裁切 */
     document.body.appendChild(panel);
     apply(current(), false);
   }

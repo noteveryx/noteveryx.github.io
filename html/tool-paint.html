@@ -127,6 +127,7 @@
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>
+  <link rel="stylesheet" href="../assets/css/tools-slot.css">
 </head>
 <body>
 <div class="canvas-wrap" id="wrap">
@@ -139,9 +140,9 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
 </a>
 
-<div class="ui side">
+<div class="ui side kb-tools kb-tools-float" data-kb-tools>
   <div class="recent" id="recent"></div>
-  <div class="pk" id="pk" data-pk="paint" data-placement="left"></div>
+  <div class="pk" id="pk" data-pk="paint" data-placement="left" data-kb-slot="palette"></div>
 </div>
 
 <div class="ui bar">

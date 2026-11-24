@@ -75,6 +75,7 @@
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>
+  <link rel="stylesheet" href="../assets/css/tools-slot.css">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -83,8 +84,8 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
 </a>
 
-<div class="ui tools">
-  <div class="pk" id="pk" data-pk="starfield" data-placement="left"></div>
+<div class="ui tools kb-tools kb-tools-float" data-kb-tools>
+  <div class="pk" data-kb-slot="palette" id="pk" data-pk="starfield" data-placement="left"></div>
   <button class="btn" id="pauseBtn" type="button" title="暂停 / 播放（空格）" aria-label="暂停或播放"></button>
   <button class="btn" id="speedBtn" type="button" title="切换速度（S）" aria-label="切换速度">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 17l6-10M9 19.5l7.5-12.5"/><path d="M17.5 13.5L21 7.5"/></svg>

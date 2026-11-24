@@ -82,6 +82,7 @@
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>
+  <link rel="stylesheet" href="../assets/css/tools-slot.css">
 </head>
 <body>
 <div class="wrap">
@@ -93,6 +94,9 @@
       <h1>渐变配色</h1>
       <p class="sub">点一下换一组渐变，点色块复制 HEX 与 CSS</p>
     </div>
+    <div class="kb-tools" data-kb-tools>
+    <div class="pk" id="pk" data-pk="gradient" data-placement="bottom" data-kb-slot="palette"></div>
+  </div>
   </header>
 
   <div class="stage"><canvas id="grad"></canvas></div>
@@ -108,7 +112,6 @@
   <p class="hint" id="hint">渐变类型：线性 / 角度 / 径向（点画布切换）</p>
 </div>
 
-<div class="pk pk-float" id="pk" data-pk="gradient" data-placement="bottom"></div>
 
 <script src="../assets/js/theme-kit.js"></script>
 <script src="../assets/js/palette-kit.js"></script>

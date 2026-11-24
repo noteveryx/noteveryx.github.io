@@ -129,6 +129,7 @@
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>
+  <link rel="stylesheet" href="../assets/css/tools-slot.css">
 </head>
 <body class="tk-light">
 <div class="wrap">
@@ -139,6 +140,11 @@
     <div>
       <h1>句子海报</h1>
       <p class="sub">选一句喜欢的句子，生成 1080×1440 竖版图片，可直接保存分享</p>
+    </div>
+    <!-- 静态工具槽：主题 / 语言 / 全屏 / 调色盘直接挂这里，
+         位置和顺序由 CSS（flex + order）决定 → 首帧就在正确位置 -->
+    <div class="kb-tools" data-kb-tools>
+      <div class="pk" id="pk" data-pk="poster" data-placement="bottom" data-kb-slot="palette"></div>
     </div>
   </header>
 
@@ -188,8 +194,6 @@
     </div>
   </div>
 </div>
-
-<div class="pk pk-float" id="pk" data-pk="poster" data-placement="bottom"></div>
 
 <script src="../assets/js/theme-kit.js"></script>
 <script src="../assets/js/palette-kit.js"></script>

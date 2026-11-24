@@ -188,6 +188,9 @@
        避让由 JS 实测后写 right 处理（见 headerAvoid）。 */
     '.hd-tools{position:absolute;right:0;top:0;bottom:auto;height:44px;',
     'display:flex;align-items:center;gap:8px;z-index:6;}',
+    /* 静态工具槽（.kb-tools / [data-kb-tools]）的样式在
+       assets/css/tools-slot.css 里静态引入 —— 必须走 <link> 而不是这里注入：
+       注入晚于各 kit 创建按钮，按钮已经按自己的 fixed 默认坐标画过一帧了。 */
     /* ---------- PC 端「没有页头」的沉浸式页面：右上角统一竖列 ----------
        主题 / 语言 / 全屏 / 调色盘 四个全局钮原本各自为政：
        主题钮浮右上、语言钮浮右上、全屏钮浮**右下**、调色盘球浮右下 ——
@@ -651,6 +654,9 @@
     var tools = doc.querySelector('.ui.tools, .ui.side, .ui.palette');
     if (tools && isFixed(tools) && !inDock(tools)) {
       var units = splitUnits(tools);
+      /* 静态工具槽里已经装了主题 / 语言 / 全屏钮（方案 2）：这几个 ②③④ 已经收过了，
+         这里必须跳过，不然同一节点被收两次，rank 会被 5.x 覆盖 → 顺序错、还可能重复。 */
+      units = units.filter(function (n) { return list.indexOf(n) === -1; });
       if (units.length > 1) {
         for (var ti = 0; ti < units.length; ti++) {
           var u = units[ti];
@@ -674,7 +680,8 @@
        容器已经被搬空时不能再收：坞里会多一个 0×0 的格子（8px 空格）。 */
     if (!tools) {
       var upanel = doc.querySelector('.ui.panel');
-      if (upanel && isFixed(upanel) && !inDock(upanel) && splitUnits(upanel).length) {
+      if (upanel && isFixed(upanel) && !inDock(upanel) &&
+          splitUnits(upanel).filter(function (n) { return list.indexOf(n) === -1; }).length) {
         list.push(rank(upanel, 5));
       }
     }
@@ -1137,22 +1144,38 @@
     return s;
   }
   var lastWide = null;   /* 上一次编排时是不是宽屏布局 */
+  /* 静态工具槽：页面 HTML 里带了 [data-kb-tools]。
+     这时四个全局钮由各自的 kit 直接挂进容器，位置和先后全由 CSS 决定，
+     浏览器首帧画出来就是终态 —— 编排层只要「别去动它」。 */
+  function toolsSlot() {
+    return doc.querySelector('[data-kb-tools]');
+  }
   function alignGlobalTools(force) {
     if (aligning) return;          /* 防重入：跑的过程中又被叫进来，直接丢掉 */
     aligning = true;
     try {
       var gk = doc.querySelector('.gk-tools');
-      if (gk) { alignGameTools(gk); lastWide = true; return; }
+      if (gk) {
+        /* 游戏页的工具列如果已经是静态槽（game-kit 打的 data-kb-tools），
+           全局钮由各 kit 直接挂进去了 → 这里不能再搬，否则又是加载后跳动。 */
+        if (!gk.hasAttribute('data-kb-tools')) alignGameTools(gk);
+        lastWide = true;
+        return;
+      }
       if (win.innerWidth < 900) {
         /* 窄屏：按钮要收进坞。
            ⚠️ 只有刚从宽屏切过来时才需要「放回原位」——
               按钮在页头/竖列里，不放回去 collect 收不进坞；
-              而已经在坞里的按钮放回去反而会被拽出来（每次编排都拽一次会抖）。 */
-        if (lastWide) { restoreHeaderTools(); restoreCol(); }
+              而已经在坞里的按钮放回去反而会被拽出来（每次编排都拽一次会抖）。
+              静态槽页不用放：按钮一直待在自己的槽里，坞直接过来收即可。 */
+        if (lastWide && !toolsSlot()) { restoreHeaderTools(); restoreCol(); }
         lastWide = false;
         return;
       }
       lastWide = true;
+      /* 有静态槽：桌面端什么都不用做（按钮已经在槽里、顺序由 order 定）。
+         这里绝不能再去建 .hd-tools / .kb-col，否则又把按钮搬一次 → 又是跳动。 */
+      if (toolsSlot()) { restoreHeaderTools(); restoreCol(); return; }
       var head = pickHead();
       if (head) { restoreCol(); alignHeaderTools(force); return; }
       restoreHeaderTools();
@@ -1386,6 +1409,25 @@
   scheduleAlignGlobal(1000);
   scheduleAlignGlobal(2200);
   watchLayout();   /* 内容变了（比如句子条展开）重新算一次 */
+
+  /* ---------------- 显示静态工具槽 ----------------
+     槽在 CSS 里默认 visibility:hidden（.kb-ready 之前不显示）。
+     四个钮是四个 kit 陆续挂进来的：主题/全屏在 DOMContentLoaded、
+     语言钮也提前挂了壳、保存钮要等 canvas 就绪 —— 晚到的一格会把
+     已经画出来的按钮挤开，用户看到的就是「加载完按钮挪一下」。
+     等页面 load 完（这时候该挂的都已经挂完了）再一次性显示，
+     用户看到的就是「按钮出现即在正确位置」。
+     1.2s 兜底：个别页面 load 被远端脚本拖住时也不能一直空着。 */
+  function revealSlots() {
+    var slots = doc.querySelectorAll('[data-kb-tools]:not(.kb-ready)');
+    for (var i = 0; i < slots.length; i++) slots[i].classList.add('kb-ready');
+  }
+  win.addEventListener('load', function () {
+    requestAnimationFrame(revealSlots);
+    setTimeout(revealSlots, 60);   /* load 后又补挂的（如保存钮）稍等一下 */
+  }, { once: true });
+  setTimeout(revealSlots, 1200);
+  if (doc.readyState === 'complete') requestAnimationFrame(revealSlots);
 
   function start() {
     if (MQ.matches) setup();

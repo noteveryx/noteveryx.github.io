@@ -89,6 +89,7 @@
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>
+  <link rel="stylesheet" href="../assets/css/tools-slot.css">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -101,7 +102,9 @@
   <i aria-hidden="true"></i><span id="modeText">点阵</span>
 </button>
 
-<div class="pk" id="pk" data-pk="wave" data-placement="bottom"></div>
+<div class="kb-tools kb-tools-float" data-kb-tools>
+  <div class="pk" id="pk" data-pk="wave" data-placement="bottom" data-kb-slot="palette"></div>
+</div>
 
 <div class="ui hint" id="hint">移动手指激起波纹 · 点击加重 · 双击切换线框</div>
 

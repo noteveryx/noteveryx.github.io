@@ -156,9 +156,17 @@
       e.stopPropagation();
       toggle();
     });
-    (doc.body || root).appendChild(btn);
+    /* 静态工具槽（[data-kb-tools]）优先：直接挂进去，位置交给 CSS，
+       首帧即终态。没有槽的页面沿用老路子（挂 body，由 dock-kit 编排）。 */
+    var slot = doc.querySelector('[data-kb-tools]');
+    if (slot) {
+      btn.setAttribute('data-kb-slot', 'fs');
+      slot.appendChild(btn);
+    } else {
+      (doc.body || root).appendChild(btn);
+    }
     syncIcon();
-    place();
+    if (!slot) place();   /* 槽内是流内布局，不需要再为了避让去改 bottom */
     // 游戏页常驻（跟 D-pad 一致），视觉页跟随闲置淡出
     if (!doc.body || !doc.body.classList.contains('gk-page')) enableIdleFade();
   }
