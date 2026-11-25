@@ -689,8 +689,25 @@
     }
     .nav-group.hidden, .nav-link.hidden { display: none !important; }
 
+    /* ---------- 工具搜索：过滤下方所有板块的小工具卡片 ---------- */
+    /* 输入框直接复用 .nav-search 的样式，这里只调间距 */
+    .tool-search { margin: 20px 0 2px; }
+    .sp-section.hidden, .sp-card.hidden { display: none !important; }
+    .tool-empty {
+      display: none;
+      margin: 14px 0 0;
+      padding: 26px 18px;
+      text-align: center;
+      font-size: .86rem;
+      color: var(--muted);
+      background: var(--card);
+      border: 1px dashed var(--line);
+      border-radius: 14px;
+    }
+    .tool-empty.on { display: block; }
+
     /* ==========================================================
-       顶部信息区：日期时钟 + 双城天气 + 每日一句
+      顶部信息区：日期时钟 + 双城天气 + 每日一句
        ========================================================== */
     .top-widgets { display: grid; gap: 14px; margin: 8px 0 0; }
     .info-bar {
@@ -1333,6 +1350,21 @@
         <p class="quote-author" id="quoteAuthor"></p>
       </div>
     </div>
+
+    <!-- ============ 工具搜索：过滤下面所有板块的小工具卡片 ============ -->
+    <div class="nav-search tool-search" id="toolSearchBox">
+      <div class="nav-search-field">
+        <span class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+          </svg>
+        </span>
+        <input id="toolSearch" type="search" placeholder="搜索小工具，如「取色」「极光」「游戏」" autocomplete="off" aria-label="搜索下方小工具">
+        <button class="clear" id="toolSearchClear" type="button" aria-label="清空搜索">×</button>
+      </div>
+      <p class="hint" id="toolSearchHint"></p>
+    </div>
+    <div class="tool-empty" id="toolEmpty">没有找到匹配的小工具，换个关键词试试。</div>
 
     <!-- ============ 板块一：工具 ============ -->
     <section class="sp-section" id="sec-tools">
@@ -2177,6 +2209,101 @@
             })
             .catch(useDefault);
         })();
+      })();
+
+      /* ---------------- 首页：工具搜索（过滤下方所有板块的小工具卡片） ----------------
+         只认 .sp-card（快捷导航里是 .nav-link，不参与）；
+         某个板块一张都没命中就整块隐藏，数量徽标临时改成命中数，清空后还原。 */
+      (function () {
+        var input = document.getElementById('toolSearch');
+        if (!input) return;
+        var box = document.getElementById('toolSearchBox');
+        var clearBtn = document.getElementById('toolSearchClear');
+        var hintEl = document.getElementById('toolSearchHint');
+        var emptyEl = document.getElementById('toolEmpty');
+        var cards = Array.prototype.slice.call(document.querySelectorAll('.sp-card'));
+        if (!cards.length) return;
+
+        var secs = Array.prototype.slice.call(document.querySelectorAll('.sp-section'))
+          .filter(function (s) { return s.querySelector('.sp-card'); });
+
+        var total = cards.length;
+        var touchOnly = window.matchMedia && window.matchMedia('(hover: none)').matches;
+
+        /* 预先把每张卡的可搜文本拼好，输入时只做 indexOf */
+        var items = cards.map(function (card) {
+          var n = card.querySelector('.sp-name');
+          var d = card.querySelector('.sp-desc');
+          var t = card.querySelector('.sp-tag');
+          var text = [
+            n ? n.textContent : '',
+            d ? d.textContent : '',
+            t ? t.textContent : '',
+            card.getAttribute('href') || ''
+          ].join(' ').toLowerCase();
+          return { el: card, text: text };
+        });
+
+        /* 记住每个板块原始的数量徽标 */
+        secs.forEach(function (s) {
+          var c = s.querySelector('.sp-count');
+          if (c) c.__total = c.textContent.trim();
+        });
+
+        function apply() {
+          var q = input.value.trim().toLowerCase();
+          var hits = 0;
+
+          items.forEach(function (it) {
+            var ok = !q || it.text.indexOf(q) !== -1;
+            it.el.classList.toggle('hidden', !ok);
+            if (ok) hits++;
+          });
+
+          secs.forEach(function (s) {
+            var localHits = s.querySelectorAll('.sp-card:not(.hidden)').length;
+            s.classList.toggle('hidden', localHits === 0);
+            var c = s.querySelector('.sp-count');
+            if (c) c.textContent = q ? String(localHits) : (c.__total || '');
+          });
+
+          if (emptyEl) emptyEl.classList.toggle('on', hits === 0);
+          if (box) box.classList.toggle('has', !!q);
+
+          if (hintEl) {
+            if (!q) {
+              hintEl.textContent = '共 ' + total + ' 个小工具，输入关键词筛选'
+                + (touchOnly ? '' : '，Ctrl + K 直接定位到搜索框');
+            } else if (hits) {
+              hintEl.textContent = '命中 ' + hits + ' 个小工具';
+            } else {
+              hintEl.textContent = '没有命中，试试「取色」「翻译」「游戏」';
+            }
+          }
+        }
+
+        input.addEventListener('input', apply);
+        input.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') { input.value = ''; apply(); }
+        });
+
+        if (clearBtn) {
+          clearBtn.addEventListener('click', function () {
+            input.value = '';
+            apply();
+            input.focus();
+          });
+        }
+
+        /* Ctrl/Cmd + K 聚焦；不用 /，避免和快捷导航搜索框抢焦点 */
+        document.addEventListener('keydown', function (e) {
+          if (!(e.ctrlKey || e.metaKey) || (e.key !== 'k' && e.key !== 'K')) return;
+          e.preventDefault();
+          input.focus();
+          input.select();
+        });
+
+        apply();
       })();
 
       /* ---------------- 快捷导航：数量统计 + 搜索过滤 + 报纸日期版面 ---------------- */
