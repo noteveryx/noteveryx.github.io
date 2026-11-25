@@ -599,8 +599,13 @@
       /* auto-fit：末行没排满时把空列收掉，不在右边留一大片空白。
          组内 .nav-grid 也是 auto-fit，链接平分这一行。 */
       grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
+      /* 所有行等高。各组链接行数不一样（2 个的、4 个的、6 个的），
+         不拉齐的话卡片高高低低，底下留一排参差不齐的缺口。
+         grid-auto-rows: 1fr 让每一行都取「最高的那行」的高度，
+         于是八张卡片是齐的，矮的那几张底部留白。 */
+      grid-auto-rows: 1fr;
       gap: 14px;
-      align-items: start;   /* 各组链接行数不同，顶部对齐，别把卡片拉等高 */
+      align-items: stretch;
     }
     .nav-group {
       /* 搜索过滤后可能只剩一两组，auto-fit 会把它们拉成一整行 ——
@@ -638,11 +643,32 @@
          auto-fit 把空列收掉，链接平分这一行的宽度。 */
       grid-template-columns: repeat(auto-fit, minmax(102px, 1fr));
       gap: 8px;
+      /* 最多显示两行，超出的在组内滚动。
+         具体高度由 JS 量出实际行高后写到 max-height 上（见 syncNavRowHeight）——
+         写死像素的话，以后一改按钮的内边距或字号就对不上了。 */
+      overflow-y: auto;
+      overscroll-behavior: contain;   /* 滚到底别把整页带着一起滚 */
+      scrollbar-width: thin;         /* Firefox */
     }
+    /* 组内滚动条：默认那个太粗，浅色主题下很扎眼 */
+    .nav-grid::-webkit-scrollbar { width: 6px; }
+    .nav-grid::-webkit-scrollbar-track { background: transparent; }
+    .nav-grid::-webkit-scrollbar-thumb {
+      background: var(--line);
+      border-radius: 3px;
+    }
+    .nav-grid::-webkit-scrollbar-thumb:hover { background: var(--brand); }
+    /* Windows 版 Edge/Chrome 默认带上下箭头按钮，这里去掉 */
+    .nav-grid::-webkit-scrollbar-button { display: none; }
     .nav-link {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      /* 用 block 而不是 flex。
+         text-overflow: ellipsis 只对块级容器生效，flex 容器上写了也不管用 ——
+         英文界面（浏览器翻译）把「新华网」翻成「Xinhua News Agency」之后
+         文字变长撑破按钮，flex 下是被居中硬裁、开头结尾一起掉，
+         看着像「Xinhua News Agen」。改成 block 才有正经的省略号。 */
+      display: block;
+      text-align: center;
+      line-height: 1.5;
       padding: 10px 8px;
       border-radius: 10px;
       font-size: .82rem;
@@ -2576,6 +2602,34 @@
       if (navCountEl) {
         navCountEl.textContent = navLinks.length;
       }
+      /* 名字被按钮宽度截断时，悬停还能看到全称。
+         用 textContent 取，浏览器翻译后就是这个语言下的完整名字。 */
+      navLinks.forEach(function (a) {
+        var t = (a.textContent || '').trim();
+        if (t && !a.title) a.title = t;
+      });
+
+      /* 每组最多显示两行，超出的在组内滚动。
+         行高不写死：按钮的内边距、字号、行高一改，写死的像素就对不上了。
+         这里量出按钮的实际高度，× 2 行 + 1 个行间距，写成 max-height。 */
+      function syncNavRowHeight() {
+        var grids = document.querySelectorAll('.nav-grid');
+        Array.prototype.forEach.call(grids, function (g) {
+          var link = g.querySelector('.nav-link');
+          if (!link) return;
+          var rowH = link.getBoundingClientRect().height;
+          if (!rowH) return;
+          var gap = parseFloat(getComputedStyle(g).rowGap);
+          if (!gap || isNaN(gap)) gap = 8;
+          g.style.maxHeight = Math.round(rowH * 2 + gap) + 'px';
+        });
+      }
+      syncNavRowHeight();
+      /* 字体是异步加载的，字体到位后按钮高度会变，重新量一次 */
+      if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+        document.fonts.ready.then(syncNavRowHeight);
+      }
+      /* 搜索过滤后剩下的链接行数会变，但可见高度仍是两行，不用重算 */
 
       (function () {
         var input = document.getElementById('navSearch');
