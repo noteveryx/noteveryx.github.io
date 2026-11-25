@@ -41,6 +41,11 @@
       --shadow: 0 10px 28px -18px rgba(21, 33, 26, .5);
       --shadow-lg: 0 18px 40px -22px rgba(21, 33, 26, .55);
       --logo-bg: #07130c;
+
+      /* 内容区最大宽度。顶栏 / 主体 / 页脚三处共用一个值，
+         宽屏上才不会出现「顶栏窄、下面宽」的两条边。
+         卡片网格是 auto-fill，容器一放宽列数自动增加。 */
+      --shell: 1920px;
     }
 
     /* ---------- 夜航蓝（深色） ---------- */
@@ -267,7 +272,7 @@
       transition: background-color .28s ease, border-color .28s ease;
     }
     .topbar-inner {
-      max-width: 1080px;
+      max-width: var(--shell);
       margin: 0 auto;
       padding: 14px 24px;
       display: flex;
@@ -426,7 +431,7 @@
     .page {
       position: relative;
       z-index: 1;
-      max-width: 1080px;
+      max-width: var(--shell);
       margin: 0 auto;
       padding: 40px 24px 56px;
     }
@@ -585,8 +590,22 @@
     /* ==========================================================
        快捷导航（新闻 / 财经 / 门户等常用站点直达）
        ========================================================== */
-    .nav-groups { display: grid; gap: 14px; }
+    /* 六组横向铺开。
+       原来只有 display:grid 没给列 → 默认单列纵向堆叠，
+       而组内的 .nav-grid 却按 auto-fill 排了 9 列、只放 2~6 个链接，
+       后面全是空列 —— 宽屏上看着就是「两侧太空」。 */
+    .nav-groups {
+      display: grid;
+      /* auto-fit：末行没排满时把空列收掉，不在右边留一大片空白。
+         组内 .nav-grid 也是 auto-fit，链接平分这一行。 */
+      grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
+      gap: 14px;
+      align-items: start;   /* 各组链接行数不同，顶部对齐，别把卡片拉等高 */
+    }
     .nav-group {
+      /* 搜索过滤后可能只剩一两组，auto-fit 会把它们拉成一整行 ——
+         加个上限，超出就左对齐，不让单个分组撑成一条横幅。 */
+      max-width: 640px;
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -614,7 +633,10 @@
     }
     .nav-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(102px, 1fr));
+      /* auto-fit 而不是 auto-fill：auto-fill 会把空列也占住，
+         组里只有两三个链接时，右侧留下一片空网格；
+         auto-fit 把空列收掉，链接平分这一行的宽度。 */
+      grid-template-columns: repeat(auto-fit, minmax(102px, 1fr));
       gap: 8px;
     }
     .nav-link {
@@ -728,8 +750,12 @@
        ========================================================== */
     .top-widgets { display: grid; gap: 14px; margin: 8px 0 0; }
     .info-bar {
-      display: flex;
-      justify-content: space-between;
+      /* 三栏：时钟 | 每日一句 | 双城天气。
+         原来只放时钟和天气、justify-content:space-between 两端一分离，
+         宽屏上中间就是一千多像素的空白 —— 把每日一句挪进来正好填上。 */
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas: "clock quote weather";
       align-items: center;
       gap: 20px;
       background: var(--card);
@@ -738,6 +764,9 @@
       padding: 18px 22px;
       transition: background-color .28s ease, border-color .28s ease;
     }
+    .info-bar > .datetime-box { grid-area: clock; }
+    .info-bar > .quote-card { grid-area: quote; }
+    .info-bar > .weather-cards { grid-area: weather; }
     .datetime-box {
       display: flex;
       align-items: center;
@@ -856,22 +885,26 @@
     .district-item:hover { color: var(--brand); border-color: var(--brand); }
     .district-item.on { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); font-weight: 700; }
 
+    /* 每日一句：现在是信息栏的中间一栏，不再是独立卡片 —— 去掉自己的
+       边框底色，改用一条竖分隔线跟左右两侧区分开。 */
     .quote-card {
       position: relative;
       overflow: hidden;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 18px 22px 16px;
-      transition: background-color .28s ease, border-color .28s ease;
+      min-width: 0;
+      background: none;
+      border: none;
+      border-left: 1px solid var(--line);
+      border-radius: 0;
+      padding: 2px 0 2px 22px;
+      transition: color .28s ease;
     }
     .quote-card::before {
       content: "\201C";
       position: absolute;
-      top: -26px;
-      left: 14px;
+      top: -22px;
+      left: 12px;
       font-family: Georgia, serif;
-      font-size: 96px;
+      font-size: 72px;
       line-height: 1;
       color: var(--brand-soft);
       pointer-events: none;
@@ -913,9 +946,32 @@
       transition: color .28s ease;
     }
 
+    /* 中等宽度：中间放不下了，引用语挪到下面独占一行，
+       时钟和天气仍然左右分开（跟原来一样）。 */
+    @media (max-width: 900px) {
+      .info-bar {
+        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-areas:
+          "clock weather"
+          "quote quote";
+      }
+      .info-bar > .quote-card {
+        border-left: none;
+        border-top: 1px solid var(--line);
+        padding: 14px 0 0;
+      }
+      .info-bar > .quote-card::before { top: -16px; left: 8px; }
+    }
+
     @media (max-width: 560px) {
       .top-widgets { gap: 12px; }
-      .info-bar { flex-direction: column; align-items: stretch; gap: 16px; padding: 16px 16px; }
+      .info-bar {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "clock" "weather" "quote";
+        gap: 16px;
+        padding: 16px 16px;
+      }
+      .info-bar > .quote-card { padding: 14px 0 0; }
       .dt-time { font-size: 1.7rem; }
       .datetime-box { gap: 12px; }
       .analog-clock { width: 58px; height: 58px; }
@@ -929,7 +985,7 @@
     .page-foot {
       position: relative;
       z-index: 1;
-      max-width: 1080px;
+      max-width: var(--shell);
       margin: 8px auto 0;
       padding: 26px 24px 48px;
       border-top: 1px solid var(--line);
@@ -1533,11 +1589,11 @@
             <div class="district-list"></div>
           </div>
         </div>
-      </div>
-      <div class="quote-card">
-        <div class="quote-title">每日一句</div>
-        <p class="quote-text" id="quoteText">正在获取今日句子…</p>
-        <p class="quote-author" id="quoteAuthor"></p>
+        <div class="quote-card">
+          <div class="quote-title">每日一句</div>
+          <p class="quote-text" id="quoteText">正在获取今日句子…</p>
+          <p class="quote-author" id="quoteAuthor"></p>
+        </div>
       </div>
     </div>
 
