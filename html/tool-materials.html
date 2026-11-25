@@ -178,6 +178,182 @@
 }
 /* 内置视频：外层已经有卡片了，这里只负责排版 */
 .ms-video-card { margin-bottom: 0; }
+
+/* ---------------- 串行加载：总进度条 ----------------
+   12 张图一次只放一张出去，加完再放下一张 —— 进度条一格一格地涨。
+   轨道 → 渐变填充 + 内部流光条纹 + 跟着进度走的光点，数字用补间平滑跳。 */
+.ms-prog {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 12px;
+  max-height: 40px;
+  transition: opacity .45s ease, max-height .45s ease, margin .45s ease;
+}
+.ms-prog.gone {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+}
+.ms-prog-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg1);
+  border: 1px solid var(--line);
+}
+.ms-prog-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--accent2)));
+  box-shadow: 0 0 12px -2px var(--accent-ghost-line);
+  transition: transform .45s cubic-bezier(.2, .8, .25, 1), background .3s ease;
+}
+/* 填充条里斜着扫过的流光 */
+.ms-prog-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(115deg, transparent 22%, rgba(255, 255, 255, .5) 50%, transparent 78%);
+  background-size: 220% 100%;
+  animation: ms-flow 1.1s linear infinite;
+}
+@keyframes ms-flow {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+/* 跟着进度走的光点 */
+.ms-prog-dot {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-ghost-bg), 0 0 14px var(--accent-ghost-line);
+  opacity: 0;
+  transform: translateY(-50%) scale(.55);
+  transition: left .45s cubic-bezier(.2, .8, .25, 1), opacity .3s ease, transform .3s ease;
+}
+.ms-prog.live .ms-prog-dot {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+.ms-prog-text {
+  flex: 0 0 auto;
+  min-width: 118px;
+  text-align: right;
+  font: 700 11.5px/1.4 ui-monospace, Menlo, Consolas, monospace;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ms-prog.done .ms-prog-fill {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  box-shadow: 0 0 14px -2px rgba(34, 197, 94, .6);
+}
+.ms-prog.done .ms-prog-dot {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, .16), 0 0 14px rgba(34, 197, 94, .55);
+}
+.ms-prog.done .ms-prog-text { color: #16a34a; }
+
+/* ---------------- 骨架屏 + 入场 ----------------
+   没加载完的格子显示一道来回扫的微光；图片到位后淡入并轻微放大收住。 */
+.ms-cell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  /* 两层：上面是扫过的微光，下面是占位底色。
+     只留微光的话，浅色主题下底色和页面背景一样，
+     未加载的格子看着就是一片空白（分不清「在加载」和「没图」）。 */
+  background:
+    linear-gradient(100deg, transparent 18%, rgba(255, 255, 255, .22) 48%, transparent 78%),
+    var(--bg1);
+  background-size: 220% 100%;
+  animation: ms-shimmer 1.5s linear infinite;
+  opacity: 1;
+  transition: opacity .35s ease;
+}
+.ms-cell.ready::before {
+  opacity: 0;
+  animation: none;
+}
+@keyframes ms-shimmer {
+  from { background-position: 160% 0; }
+  to { background-position: -60% 0; }
+}
+.ms-cell > img {
+  opacity: 0;
+  transform: scale(1.05);
+  transition: opacity .5s ease, transform .7s cubic-bezier(.2, .8, .25, 1);
+}
+.ms-cell.ready > img {
+  opacity: 1;
+  transform: none;
+}
+/* 加载失败的格子：img 已经被脚本藏掉了，这里补一个占位，
+   别让浏览器自带的破图图标露出来 */
+.ms-cell.failed::after {
+  content: "⚠";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 11px;
+  background: var(--bg1);
+}
+/* 图片到位时整格弹一下 */
+.ms-cell.pop {
+  animation: ms-pop .55s cubic-bezier(.2, .9, .3, 1.15);
+}
+@keyframes ms-pop {
+  from { opacity: 0; transform: translateY(12px) scale(.86); }
+  to { opacity: 1; transform: none; }
+}
+/* 骨架扫光要盖在图上、但不能盖住底部标题和角标按钮 */
+.ms-cell > .ms-cap,
+.ms-cell > .ms-act { z-index: 2; }
+
+/* 窄屏：进度条和读数挤在一行会把数字压扁，改成上下两行 */
+@media (max-width: 520px) {
+  .ms-prog {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .ms-prog-text {
+    text-align: left;
+    min-width: 0;
+  }
+}
+
+/* 系统开了「减少动效」就只留进度，不做流动和弹入 */
+@media (prefers-reduced-motion: reduce) {
+  .ms-prog-fill::after,
+  .ms-cell::before { animation: none; }
+  .ms-cell.pop { animation: none; }
+  .ms-cell > img,
+  .ms-prog-fill,
+  .ms-prog-dot,
+  .ms-prog { transition: none; }
+}
 </style>
 <script>try{var t=localStorage.getItem('tk_theme');document.documentElement.setAttribute('data-theme',['emerald','midnight','sunset','violet','ink','crimson','stone'].indexOf(t)>-1?t:'violet')}catch(e){}</script>
 <script src="../assets/js/theme-kit.js" defer></script>
@@ -537,7 +713,170 @@
     return card;
   }
 
+  /* ---------------- 串行加载器 ----------------
+     一次只放一张图出去，等它 load/error 之后再放下一张。
+     十几张图一起塞进浏览器会互相抢带宽，进度条也是一下冲到头看不出过程；
+     串行之后才是一格一格地涨。
+     job 回调里才去设 img.src，release 用来放行队列。 */
+  var IMG_GAP = 300;   /* 每张之间的节奏间隔（毫秒） */
+  function serialLoader(budgetMs, gapMs) {
+    var q = [], busy = false, waiting = false;
+    var startedAt = 0, gapWaited = 0, lastEnd = 0;
+    budgetMs = budgetMs || 20000;
+    gapMs = gapMs || IMG_GAP;
+    function pump() {
+      if (busy || waiting || !q.length) return;
+      /* 每张之间留一点间隔。
+         一来「一张一张来」才看得见 —— 命中缓存或图本来就很小的时候，
+         十几张几乎一瞬间就完事，进度条直冲 100%，整个过程根本看不见；
+         二来给补间留出跑完的时间，进度条才是一级一级往上爬，
+         而不是一口气冲到头。
+         间隔不够时**不要动队列** —— 让 job 留在队里，等间隔到了再来取。
+         （早先写的是「先 shift 取出来、再判断间隔」，落在间隔等待里的那个 job
+           既没执行也没放回去，就凭空丢了：十二张里有六张被丢掉，
+           页面就成了「隔一张显示一张」。） */
+      var wait = gapMs - (Date.now() - lastEnd);
+      if (wait > 0) {
+        waiting = true;
+        var gapStart = Date.now();
+        setTimeout(function () {
+          waiting = false;
+          gapWaited += Date.now() - gapStart;
+          pump();
+        }, wait);
+        return;
+      }
+      var job = q.shift();
+      if (!job) return;
+      /* 整体预算到了就不再一张一张地等，剩下的图一次性放行。
+         串行的本意是「别让十几张图互相抢带宽、进度条一格一格地涨」，
+         可真碰上慢网，等十几张轮完就太久了 —— 宁可晚点全出来，也别一直卡着。
+         预算只算真正下载的时间：上面那段人为的间隔等待不算在内，
+         否则慢网下光间隔就把预算耗光了，节奏全乱。 */
+      if (startedAt && Date.now() - startedAt - gapWaited > budgetMs) {
+        var rest = q.splice(0, q.length);
+        rest.forEach(function (j) { try { j(function () { }); } catch (e) { } });
+        q = [];
+        job(function () { });
+        return;
+      }
+      busy = true;
+      var released = false;
+      function release() {
+        if (released) return;
+        released = true;
+        busy = false;
+        lastEnd = Date.now();
+        pump();
+      }
+      job(release);
+    }
+    return {
+      push: function (job) {
+        /* 空队列 → 视为新一轮，重新起算 */
+        if (!busy && !q.length && !waiting) { startedAt = Date.now(); gapWaited = 0; }
+        q.push(job);
+        pump();
+      }
+    };
+  }
+
+  /* ---------------- 总进度条 ----------------
+     填充条用 scaleX 推进，光点跟着进度走，右边是「3 / 12 · 25%」。
+     百分比用补间平滑逼近目标值，不是一格一格地硬跳。 */
+  function progressBar() {
+    var node = el('div', {
+      class: 'ms-prog', role: 'progressbar',
+      'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0'
+    });
+    var track = el('div', { class: 'ms-prog-track' });
+    var fill = el('div', { class: 'ms-prog-fill' });
+    var dot = el('div', { class: 'ms-prog-dot' });
+    var text = el('div', { class: 'ms-prog-text', text: '准备中…' });
+    track.appendChild(fill);
+    track.appendChild(dot);
+    node.appendChild(track);
+    node.appendChild(text);
+
+    var shown = 0, target = 0, raf = 0;
+    var total = 0, done = 0, failed = 0, finished = false;
+
+    function paint() {
+      fill.style.transform = 'scaleX(' + shown + ')';
+      dot.style.left = (shown * 100) + '%';
+      node.setAttribute('aria-valuenow', String(Math.round(shown * 100)));
+      if (finished) return;
+      text.textContent = done + ' / ' + total + '  ·  ' + Math.round(shown * 100) + '%';
+    }
+    function tick() {
+      raf = 0;
+      var d = target - shown;
+      if (Math.abs(d) < .002) { shown = target; paint(); return; }
+      shown += d * .2;
+      paint();
+      raf = requestAnimationFrame(tick);
+    }
+    function set(p) {
+      target = Math.max(0, Math.min(1, p));
+      if (!raf) raf = requestAnimationFrame(tick);
+    }
+    function finish() {
+      finished = true;
+      node.classList.add('done');
+      node.classList.remove('live');
+      /* 精确落到 100%：补间的最后几帧不一定跑得完
+         （页面转后台、标签页被冻结、截图工具的虚拟时间预算耗尽都会打断 rAF），
+         进度条停在 96% 上很显眼，这里直接定死。 */
+      shown = 1;
+      target = 1;
+      paint();
+      text.textContent = failed
+        ? '✓ ' + (total - failed) + ' 张已就绪 · ' + failed + ' 张失败'
+        : '✓ ' + total + ' 张已就绪';
+      /* 报完喜就收起来，把版面还给素材本身 */
+      setTimeout(function () { node.classList.add('gone'); }, 2400);
+    }
+    return {
+      node: node,
+      /* 开跑：清掉上一轮的状态，重新计数 */
+      start: function (n) {
+        total = n; done = 0; failed = 0; finished = false;
+        shown = 0; target = 0;
+        node.classList.remove('done', 'gone');
+        node.classList.add('live');
+        paint();
+        text.textContent = '0 / ' + total + '  ·  0%';
+      },
+      /* 增量添加时把总数补上。
+         上一轮如果已经收工（进度条收起、置灰），这一轮又来新图，
+         得把它重新唤醒并从「已完成的那几格」接着往下走，
+         不然进度会从 100% 突然掉回去。 */
+      extend: function (n) {
+        total += n;
+        if (finished) {
+          finished = false;
+          node.classList.remove('done', 'gone');
+          node.classList.add('live');
+          shown = target = total ? done / total : 0;
+          paint();
+        }
+      },
+      /* 一张落地（成功失败都算，占掉一格） */
+      step: function (ok) {
+        done++;
+        if (!ok) failed++;
+        set(total ? done / total : 1);
+        /* 立刻同步一次：分子（几 / 几）是真实进度，不能押在 rAF 上 ——
+           标签页切到后台时 rAF 会停，进度条会僵在那儿不认账。
+           百分比仍由补间平滑追赶，两边各管各的。 */
+        paint();
+        if (total && done >= total) finish();
+      }
+    };
+  }
+
   /* ---------------- 图片素材 ---------------- */
+
   function renderImages(panel) {
     var box = addBox('每行一个图片链接，例如：\nhttps://example.com/cover.jpg',
       '图片直接引用远程地址，不会上传本地文件；点缩略图可看大图。');
@@ -568,6 +907,8 @@
 
     var titleEl = el('div', { class: 'tb-card-title' });
     var grid = el('div', { class: 'ms-grid' });
+    var prog = null;    /* 用户自己的列表：空的时候不显示进度条 */
+    var queue = null;   /* 整个列表共用一条串行队列 */
     function updateTitle() { titleEl.textContent = '图片素材（' + data.images.length + '）'; }
 
     function renderList() {
@@ -576,23 +917,42 @@
       updateTitle();
       if (!data.images.length) {
         listBody.appendChild(el('div', { class: 'ms-empty', text: '还没有图片素材，粘贴一个图片链接试试' }));
+        prog = null;
+        queue = null;
         return;
       }
       grid.innerHTML = '';
+      /* 列表重建就换一条新队列：老队列里还挂着旧卡片的 job，
+         那些卡片已经不在页面里了，队列会一直等下去 */
+      queue = serialLoader();
+      prog = progressBar();
+      listBody.appendChild(prog.node);
+      prog.start(data.images.length);
+      /* 局部抓一份：旧卡片晚到的 load 事件只能影响它自己那条进度条 */
+      var myQueue = queue, myProg = prog;
       data.images.forEach(function (item) {
-        grid.appendChild(imageCell(item, renderList));
+        grid.appendChild(imageCell(item, renderList, null, {
+          queue: myQueue,
+          onSettled: function (ok) { myProg.step(ok); }
+        }));
       });
       listBody.appendChild(grid);
     }
-    /* 增量添加 */
+    /* 增量添加：已经加载好的不动，新来的接着往下排 */
     function appendImages(items) {
       updateTitle();
       if (!items.length) return;
+      if (!queue) { renderList(); return; }   /* 之前是空列表，整个重画 */
       var empty = listBody.querySelector('.ms-empty');
       if (empty) empty.parentNode.removeChild(empty);
       if (!grid.parentNode) listBody.appendChild(grid);
+      prog.extend(items.length);
+      var myProg = prog;
       items.forEach(function (item) {
-        grid.appendChild(imageCell(item, renderList));
+        grid.appendChild(imageCell(item, renderList, null, {
+          queue: queue,
+          onSettled: function (ok) { myProg.step(ok); }
+        }));
       });
     }
     refresh.image = renderList;
@@ -600,9 +960,12 @@
     panel.appendChild(builtinImagesPanel());
   }
 
-  function imageCell(item, onChange, builtin) {
+  function imageCell(item, onChange, builtin, opt) {
+    opt = opt || {};
     var cell = el('div', { class: 'ms-cell' });
-    var img = el('img', { src: item.url, alt: item.name, loading: 'lazy', referrerpolicy: 'no-referrer' });
+    /* src 不在这里设：走串行队列的话要等轮到它才发请求，
+       免得十几张图一上来就互相抢带宽 */
+    var img = el('img', { alt: item.name, referrerpolicy: 'no-referrer', decoding: 'async' });
     cell.appendChild(img);
     var cap = el('div', { class: 'ms-cap', text: item.name });
     cell.appendChild(cap);
@@ -632,9 +995,65 @@
     }
     cell.appendChild(act);
 
-    img.addEventListener('error', function () {
-      cap.textContent = item.name + ' · 加载失败';
-    });
+    /* 落地（成功或失败）统一在这儿收口：骨架光撤掉、格子弹一下、进度走一格 */
+    var settled = false;
+    function settle(ok) {
+      if (settled) return;
+      settled = true;
+      cell.classList.add('ready');
+      cell.classList.add('pop');
+      if (!ok) {
+        /* 加载失败时把 img 藏掉：留着会露出浏览器自带的破图图标，很难看 */
+        img.style.display = 'none';
+        cell.classList.add('failed');
+        cap.textContent = item.name + ' · 加载失败';
+      }
+      if (opt.onSettled) opt.onSettled(ok);
+    }
+
+    if (opt.queue) {
+      opt.queue.push(function (release) {
+        var released = false;
+        function releaseOnce() { if (!released) { released = true; release(); } }
+        img.addEventListener('load', function () { settle(true); releaseOnce(); }, { once: true });
+        img.addEventListener('error', function () { settle(false); releaseOnce(); }, { once: true });
+        /* 远程地址有可能挂住：8 秒没动静就先放行队列，
+           免得后面的图永远轮不上。 */
+        setTimeout(function () {
+          releaseOnce();
+          /* 这一格也必须收尾。
+             以前只放行队列不收尾 —— 图挂住的那一格会永远停在骨架屏上，
+             图片的 opacity 一直是 0，看上去就是一个空白格子（「隔一张显示一张」）。
+             这里判成超时，给个明确的样子；图要是随后才到，
+             load 事件会把它救回来重新显示。 */
+          if (!settled) {
+            settled = true;
+            cell.classList.add('ready');
+            cell.classList.add('pop');
+            cell.classList.add('failed');
+            cap.textContent = item.name + ' · 加载超时';
+            /* img 不藏：迟到的图还能直接显示出来（撤掉失败态即可） */
+            img.addEventListener('load', function () {
+              img.style.display = '';
+              cell.classList.remove('failed');
+              cap.textContent = item.name;
+            }, { once: true });
+            /* 迟到的失败：把 img 藏掉，别露破图图标 */
+            img.addEventListener('error', function () {
+              img.style.display = 'none';
+            }, { once: true });
+            if (opt.onSettled) opt.onSettled(false);
+          }
+        }, 8000);
+        img.src = item.url;
+      });
+    } else {
+      img.addEventListener('load', function () { settle(true); }, { once: true });
+      img.addEventListener('error', function () { settle(false); }, { once: true });
+      img.loading = 'lazy';
+      img.src = item.url;
+    }
+
     cell.addEventListener('click', function () { openLight(item.url, item.name); });
     return cell;
   }
@@ -654,8 +1073,17 @@
       text: '来自 basic_app「我的素材」页的那批图，写死在内置里，不占你的素材列表；点缩略图看大图。'
     }));
     var grid = el('div', { class: 'ms-grid', style: 'margin-top:12px' });
+    /* 这 12 张走串行队列：一张一张来，进度条一格一格地涨 */
+    var prog = progressBar();
+    card.appendChild(prog.node);
+    var queue = serialLoader();
+    var myProg = prog;
+    prog.start(BUILTIN.images.length);
     BUILTIN.images.forEach(function (item) {
-      grid.appendChild(imageCell(item, null, true));
+      grid.appendChild(imageCell(item, null, true, {
+        queue: queue,
+        onSettled: function (ok) { myProg.step(ok); }
+      }));
     });
     card.appendChild(grid);
     bAll.addEventListener('click', function () {
