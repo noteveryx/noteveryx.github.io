@@ -8,6 +8,13 @@
   <meta name="description" content="知识库快捷入口：常用站点导航、天气、时钟与 44 个独立工具页入口，全部纯前端运行。">
   <link rel="icon" type="image/png" href="assets/image/favicon-round.png">
   <link rel="apple-touch-icon" href="assets/image/logo.png">
+  <!-- 静态工具槽：语言 / 全屏两个钮由各自的 kit 直接挂进槽里，
+       位置和先后全由 CSS order 决定 —— 浏览器首帧画出来就是终态。
+       之前没有槽，翻译钮先落在 .topbar-inner 里（靠 .topbar-right 前面），
+       再被 dock-kit 搬进它自建的 .hd-tools，横移一次，看着就是「加载后才挪过来」。
+       ⚠️ 必须 <link> 静态引入：运行时注入晚于各 kit 建按钮，
+          那一瞬间按钮已经按自己的 fixed 默认坐标画过一帧了。 -->
+  <link rel="stylesheet" href="assets/css/tools-slot.css">
   <style>
     /* ==========================================================
        主题变量：所有颜色都走 CSS 变量，切换主题只改 data-theme
@@ -270,6 +277,16 @@
 
     /* 品牌行 */
     .brand { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1; }
+
+    /* 页头右侧的全局钮组：主题钮（页面自绘）+ 静态工具槽（语言 / 全屏）。
+       这里必须是 flex —— 否则槽（display:flex 的块级元素）会掉到主题钮下面另起一行。
+       槽自带的 margin-left:auto 会把「主题钮」和「语言/全屏」撑成两段，
+       组内三个钮应该紧凑挨着，所以清掉；整组靠右由 .brand{flex:1} 负责。 */
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+    .topbar-right > .kb-tools { margin-left: 0; }
+    /* 窄屏时语言 / 全屏都进了工具坞，槽被搬空。
+       空槽在 flex 里仍会占掉一个 8px 的 gap，把主题钮右边顶开一点 —— 藏掉。 */
+    .topbar-right > .kb-tools:empty { display: none !important; }
     .brand-logo {
       flex: 0 0 auto;
       width: 46px; height: 46px;
@@ -975,6 +992,174 @@
     .tech-copy:active { transform: translateY(1px); filter: brightness(.94); }
     .tech-copy.done { background-image: none; background-color: var(--brand); }
     .tech-copy.failed { background-image: none; background-color: var(--muted); }
+
+    /* ==========================================================
+       打赏（页脚）
+       ----------------------------------------------------------
+       收款码是黑白的，底色固定纯白 —— 深色主题下也是白底黑码，
+       扫码器才认得出来。面板宽度用 min()，窄屏不溢出。
+       ========================================================== */
+    .reward { margin-top: 14px; }
+    .reward-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: #fff;
+      font-family: inherit;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: transform .12s ease, filter .12s ease;
+    }
+    .reward-btn:hover { filter: brightness(1.07); }
+    .reward-btn:active { transform: translateY(1px); filter: brightness(.94); }
+    .reward-btn[aria-expanded="true"] { filter: brightness(.94); }
+
+    .reward-mask {
+      position: fixed;
+      inset: 0;
+      z-index: 64;
+      background: rgba(12, 16, 24, .46);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      animation: fadeIn .16s ease-out;
+    }
+    .reward-mask[hidden] { display: none; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .reward-panel {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 65;
+      width: min(340px, calc(100vw - 32px));
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      padding: 14px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+      animation: rewardIn .18s ease-out;
+    }
+    .reward-panel[hidden] { display: none; }
+    @keyframes rewardIn {
+      from { opacity: 0; transform: translate(-50%, -46%) scale(.96); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+    .reward-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .reward-title { font-size: .92rem; font-weight: 800; color: var(--text); }
+    .reward-close {
+      flex: 0 0 auto;
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 50%;
+      background: var(--bg);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: .9rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: color .15s ease;
+    }
+    .reward-close:hover { color: var(--text); }
+    .reward-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 999px;
+      background: var(--bg);
+      margin-bottom: 12px;
+    }
+    .reward-tab {
+      flex: 1;
+      padding: 7px 10px;
+      border: none;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color .18s ease, color .18s ease;
+    }
+    .reward-tab[aria-selected="true"] {
+      background: var(--card);
+      color: var(--brand);
+      box-shadow: var(--shadow-sm);
+    }
+    .qr-box {
+      margin: 0;
+      padding: 10px;
+      border-radius: 16px;
+      background: #fff;          /* 扫码必须白底黑码，主题再暗这里也不变 */
+      border: 1px solid var(--line);
+    }
+    .qr-img {
+      display: block;
+      width: 100%;
+      max-width: 240px;
+      margin: 0 auto;
+      aspect-ratio: 1 / 1;
+      object-fit: contain;
+      -webkit-touch-callout: default;   /* iOS：允许长按存图 */
+    }
+    .qr-tip {
+      margin: 10px 0 0;
+      font-size: .76rem;
+      color: var(--muted);
+      line-height: 1.6;
+      min-height: 1.2em;
+    }
+    .qr-save {
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: #fff;
+      font-family: inherit;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: filter .12s ease;
+    }
+    .qr-save:hover { filter: brightness(1.07); }
+    .qr-save:active { filter: brightness(.94); }
+
+    /* 手机上改成底部抽屉：跟主题 / 翻译面板一个路子 */
+    @media (max-width: 720px) {
+      .reward-panel {
+        left: 10px;
+        right: 10px;
+        top: auto;
+        bottom: 10px;
+        width: auto;
+        transform: none;
+        animation: rewardUp .2s ease-out;
+      }
+      @keyframes rewardUp {
+        from { opacity: 0; transform: translateY(18px); }
+        to { opacity: 1; transform: none; }
+      }
+    }
     .foot-note {
       margin: 14px 0 0;
       color: var(--muted);
@@ -1298,6 +1483,11 @@
             </button>
           </div>
         </div>
+
+        <!-- 静态工具槽：语言钮（translate-kit）、全屏钮（fs-kit）挂进这里，
+             顺序由 tools-slot.css 的 order 定：主题 → 语言 → 全屏。
+             主题钮是本页自绘的（.theme-wrap，自带面板），留在槽外最前面。 -->
+        <div class="kb-tools" data-kb-tools></div>
       </div>
     </div>
   </header>
@@ -1771,8 +1961,41 @@
       <span class="tech-id" id="techWx" role="button" tabindex="0" title="点击复制微信号">not_every</span>
       <button class="tech-copy" id="techCopy" type="button">复制</button>
     </div>
+
+    <!-- 打赏入口 -->
+    <div class="reward">
+      <button class="reward-btn" id="rewardBtn" type="button"
+              aria-haspopup="dialog" aria-expanded="false" aria-controls="rewardPanel">
+        <span aria-hidden="true">☕</span>请我喝杯咖啡
+      </button>
+    </div>
+
     <p class="foot-note">独立页面导航 · 点击卡片在新标签页打开</p>
   </footer>
+
+  <!-- 打赏面板：放在 footer 外面（footer 有 z-index 会形成层叠上下文，
+       里面的 fixed 面板会被别的东西压住）。 -->
+  <div class="reward-mask" id="rewardMask" hidden></div>
+  <div class="reward-panel" id="rewardPanel" role="dialog" aria-label="打赏" hidden>
+    <div class="reward-head">
+      <span class="reward-title">感谢支持 ☕</span>
+      <button class="reward-close" id="rewardClose" type="button" aria-label="关闭">✕</button>
+    </div>
+    <div class="reward-tabs" role="tablist" aria-label="收款方式">
+      <button class="reward-tab" type="button" role="tab" aria-selected="true"
+              data-qr="assets/image/qr-alipay.png" data-qr-name="支付宝">支付宝</button>
+      <button class="reward-tab" type="button" role="tab" aria-selected="false"
+              data-qr="assets/image/qr-wechat.png" data-qr-name="微信">微信</button>
+    </div>
+    <figure class="qr-box">
+      <!-- src 留空，打赏面板打开时才由脚本填上（手动懒加载）。
+           不能用 loading="lazy"：弹层是 display:none，浏览器不会去加载，
+           图片永远不显示，decode() 也永远不返回。 -->
+      <img class="qr-img" id="qrImg" data-src="assets/image/qr-alipay.png" alt="支付宝收款码" />
+    </figure>
+    <p class="qr-tip" id="qrTip">长按二维码可保存到相册</p>
+    <button class="qr-save" id="qrSave" type="button">保存二维码图片</button>
+  </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -2608,6 +2831,168 @@
       }
 
       onScroll();
+    })();
+
+    /* ---------------- 打赏面板 ----------------
+       收款码两张（支付宝 / 微信），点入口弹出，点外面或 ESC 收起，
+       跟主题 / 翻译 / 目录面板互斥（广播 kb:panel-open，同本页的约定）。
+       「保存到相册」在手机上靠长按二维码（系统原生长按菜单），
+       PC 上走 canvas → Blob → <a download> 下载，两边都留一条路。 */
+    (function () {
+      var btn = document.getElementById('rewardBtn');
+      var panel = document.getElementById('rewardPanel');
+      var mask = document.getElementById('rewardMask');
+      var closeBtn = document.getElementById('rewardClose');
+      var img = document.getElementById('qrImg');
+      var tip = document.getElementById('qrTip');
+      var saveBtn = document.getElementById('qrSave');
+      var tabs = Array.prototype.slice.call(document.querySelectorAll('.reward-tab'));
+      if (!btn || !panel || !mask || !img) return;
+
+      var DEFAULT_TIP = '长按二维码可保存到相册';
+      var currentName = '支付宝';
+
+      function setTip(msg) {
+        if (tip) tip.textContent = msg || DEFAULT_TIP;
+      }
+
+      function open() {
+        if (!panel.hidden) return;
+        panel.hidden = false;
+        mask.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        /* 首次打开才把图片挂上去（src 留空是手动懒加载，
+           避免首屏就去拉 400KB 的码图）。 */
+        if (!img.getAttribute('src')) {
+          var first = tabs[0] && tabs[0].getAttribute('data-qr');
+          img.src = first || img.getAttribute('data-src') || '';
+          img.alt = (tabs[0] ? tabs[0].getAttribute('data-qr-name') : '') + '收款码';
+        }
+        /* 手机上右下角的工具坞跟面板叠在一起会挡住内容，先收起来
+           （跟目录面板 x-toc 一个做法）。 */
+        try {
+          if (window.DockKit && typeof window.DockKit.collapsed === 'function' &&
+              !window.DockKit.collapsed()) window.DockKit.toggle();
+        } catch (err) {}
+        /* 面板互斥：翻译列表 / 调色盘 / 主题面板开着时要让位 */
+        try {
+          window.dispatchEvent(new CustomEvent('kb:panel-open', { detail: { id: 'x-reward' } }));
+        } catch (e) {}
+        setTip(DEFAULT_TIP);
+        if (closeBtn) closeBtn.focus();
+      }
+
+      function close() {
+        if (panel.hidden) return;
+        panel.hidden = true;
+        mask.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+      }
+
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (panel.hidden) open(); else close();
+      });
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          close();
+          btn.focus();
+        });
+      }
+
+      /* 点遮罩 / 点面板外面 → 收起 */
+      mask.addEventListener('click', function (e) {
+        e.stopPropagation();
+        close();
+      });
+      document.addEventListener('click', function (e) {
+        if (panel.hidden) return;
+        if (panel.contains(e.target) || btn.contains(e.target)) return;
+        close();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !panel.hidden) { close(); btn.focus(); }
+      });
+
+      /* 别的面板打开时收起自己 */
+      window.addEventListener('kb:panel-open', function (e) {
+        var d = e && e.detail;
+        if (!d || d.id === 'x-reward') return;
+        close();
+      });
+
+      /* ---------------- 收款方式切换 ---------------- */
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function (e) {
+          e.stopPropagation();
+          tabs.forEach(function (t) { t.setAttribute('aria-selected', 'false'); });
+          tab.setAttribute('aria-selected', 'true');
+          currentName = tab.getAttribute('data-qr-name') || '收款码';
+          img.src = tab.getAttribute('data-qr');
+          img.alt = currentName + '收款码';
+          setTip(DEFAULT_TIP);
+        });
+      });
+
+      /* ---------------- 保存图片 ----------------
+         走 canvas → Blob → <a download>。
+         同一站点下的图片不会污染 canvas（两张码都放在 assets/image/），
+         但 file:// 直开时 canvas 是被污染的，toBlob 会抛 SecurityError ——
+         所以整段包 try/catch，失败就退回「请长按保存」。
+         iOS Safari 不支持 download 属性，点按钮会直接打开图片，
+         长按依然能存 —— 提示语里两条路都写了。 */
+      function saveImage() {
+        /* 等图片真的加载完。
+           不用 img.decode()：它对「还没开始加载」的图片会一直挂着，
+           这里改成监听 load 事件 + 4 秒兜底，超时算失败。 */
+        var ready = (img.complete && img.naturalWidth)
+          ? Promise.resolve()
+          : new Promise(function (res, rej) {
+              var timer = setTimeout(function () { rej(new Error('图片加载超时')); }, 4000);
+              img.addEventListener('load', function () { clearTimeout(timer); res(); }, { once: true });
+              img.addEventListener('error', function () { clearTimeout(timer); rej(new Error('图片加载失败')); }, { once: true });
+              if (!img.getAttribute('src')) {
+                var f = tabs[0] && tabs[0].getAttribute('data-qr');
+                img.src = f || img.getAttribute('data-src') || '';
+              }
+            });
+        ready.then(function () {
+          if (!img.naturalWidth) throw new Error('图片尚未加载');
+          var c = document.createElement('canvas');
+          c.width = img.naturalWidth;
+          c.height = img.naturalHeight;
+          c.getContext('2d').drawImage(img, 0, 0);
+          var blob = new Promise(function (res, rej) {
+            if (c.toBlob) c.toBlob(function (b) { b ? res(b) : rej(new Error('toBlob empty')); }, 'image/png');
+            else rej(new Error('no toBlob'));
+          });
+          return blob;
+        }).then(function (blob) {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = '收款码-' + currentName + '.png';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+          setTip('已保存到下载目录；手机上长按二维码可直接存到相册');
+          showToast('二维码已保存');
+        }).catch(function () {
+          setTip('当前环境不支持直接下载，请长按二维码保存到相册');
+          showToast('请长按二维码保存到相册');
+        });
+      }
+
+      if (saveBtn) {
+        saveBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          saveImage();
+        });
+      }
     })();
   </script>
 </body>

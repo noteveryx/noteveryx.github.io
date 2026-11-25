@@ -597,6 +597,28 @@ buildPanel(panel, {
 还让人以为「点主题没生效」。翻译列表同理（`translate-kit.js` 点完语言项调 `closePanel()`）。
 页面自绘的面板也要在选中项后主动收起。
 
+**静态工具槽：按钮不搬家**。全站四个全局钮（主题 / 语言 / 全屏 / 调色盘）的落点只有三种：
+游戏页的 `.gk-tools` 竖列、有页头页面的页头横排（`.hd-tools`）、沉浸式页的右上竖列（`.kb-col`）。
+默认走「后两种」是 dock-kit 在运行时**搬**出来的 —— 按钮先按自己的 fixed 默认坐标画出一帧，
+再被搬到该去的位置，用户看到的就是「加载完之后按钮才挪过来」。
+解法是页面 HTML 里直接写好容器 `<div class="kb-tools" data-kb-tools>`，
+各 kit 挂进去后由 CSS `order` 定序，浏览器首帧画出来就是终态；
+dock-kit 的 `alignGlobalTools()` 一见到 `[data-kb-tools]` 就直接 return，
+不再建 `.hd-tools`、也不再搬任何按钮。
+⚠️ `assets/css/tools-slot.css` 必须用 `<link>` **静态**引入，不能像 dock-kit 那样运行时注入 `<style>`：
+注入晚于各 kit 建按钮，那一瞬间按钮已经按 fixed 默认坐标画过一帧了 —— 跳动就是这么来的。
+
+覆盖情况：45 个页面（44 个独立页 + 首页 `x.html`）全部引了这份 CSS；
+其中带 `[data-kb-tools]` 容器的由各 kit 直接挂进去，其余是 visual-* 这类固定配色页，本来就没有全局钮。
+
+首页 `x.html` 曾是唯一漏掉的一个（所以翻译钮每次加载都要横移一次）：
+槽放在 `.topbar-right` 里，主题钮是页面自绘的（`.theme-wrap`，自带面板）留在槽外最前面，
+组内顺序 = 主题 → 语言 → 全屏，和手机端工具坞里的顺序一致。
+配套两条 CSS：`.topbar-right` 要改成 flex（否则槽会掉到主题钮下面另起一行）；
+槽自带的 `margin-left:auto` 要清掉（否则主题钮和语言钮被撑成两段）——
+整组靠右是由 `.brand{flex:1}` 负责的。窄屏时按钮进了工具坞、槽被搬空，
+再加一条 `:empty` 隐藏，否则空槽在 flex 里仍占一个 8px 的 gap。
+
 **页面自己画的浮层：用 `panel-kit.js`**。原先只有三个 kit 之间互斥，页面自绘的浮层没接进去，
 于是「点开字号面板 → 再打开调色盘 → 关掉调色盘」之后字号面板还杵在屏幕上（两块的按钮都
 `stopPropagation`，彼此收不到对方的点击，各自「点外部收起」那条 `document` 监听都失效了）。
@@ -655,6 +677,32 @@ PanelKit.announce('ptext-type');            // 我打开时告诉别人收起
 > ⚠️ 站内卡片要去掉 `target="_blank"` 时，**`rel="noopener noreferrer"` 也必须一起去掉**：
 > `noreferrer` 会清空 `document.referrer`，`game-kit.js` 里「从游戏中心进来就回游戏中心」
 > 的判断就失效了，游戏页的返回按钮会一律指回首页。
+
+---
+
+#### 打赏（页脚收款码）
+
+页脚「技术支持」下面挂一个「请我喝杯咖啡」入口，点开弹层，支付宝 / 微信两张收款码切换。
+码图放在 `assets/image/qr-alipay.png`、`assets/image/qr-wechat.png`。
+
+三个坑：
+
+- **不能用 `loading="lazy"`。** 弹层是 `display:none`，浏览器不会去加载 lazy 图片 ——
+  图永远不显示，`img.decode()` 也永远不返回（挂着的 Promise 没人解）。
+  做法是 `src` 留空、用 `data-src` 备份，**打开面板时**才由脚本填 src（手动懒加载，
+  首屏不必拉 800KB 的码图）。
+- **存图不能只靠 `decode()`。** `decode()` 对「还没开始加载」的图片会一直挂着。
+  改成监听 `load` / `error` + 4 秒兜底超时，且 resolve 之后还要查 `naturalWidth`，
+  否则会拿到一张 0×0 的空图。
+- **canvas 存图有同源限制。** 两张码图与页面同源（都在 `assets/image/`），
+  `drawImage` + `toBlob` 不会污染 canvas；但 `file://` 直开时 canvas 被污染，
+  `toBlob` 会抛 SecurityError —— 整段包 try/catch，失败就退回「请长按保存」。
+  iOS Safari 不支持 `<a download>`，点了会直接打开图片，长按依然能存，
+  所以提示语里长按和下载两条路都写了。
+
+二维码底色固定纯白（扫码必须白底黑码，深色主题下也不变）。
+面板与主题 / 翻译 / 目录面板互斥（广播 `kb:panel-open`，id `x-reward`），
+点外面或 ESC 收起；手机上改成底部抽屉（跟主题 / 翻译面板一个路子）。
 
 ---
 
