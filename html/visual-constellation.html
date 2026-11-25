@@ -69,7 +69,6 @@
   var W = 0, H = 0, DPR = 1;
 
   var pts = [];
-  var links = [];
   var attract = { x: -999, y: -999, on: false };
   var baseColor = '#7cc4ff';
   var rgb = { r: 124, g: 196, b: 255 };
@@ -176,7 +175,6 @@
 
   function loop(now) {
     rafId = requestAnimationFrame(loop);
-    var dt = lastT ? Math.min((now - lastT) / 1000, 0.05) : 0.016;
     lastT = now;
     render();
   }

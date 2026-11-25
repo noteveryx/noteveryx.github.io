@@ -51,7 +51,7 @@
     'background:rgba(14,16,26,.66);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);',
     'color:rgba(255,255,255,.9);font:700 16px/1 -apple-system,system-ui,sans-serif;',
     'display:flex;align-items:center;justify-content:center;cursor:pointer;',
-    '-webkit-tap-highlight-color:transparent;box-shadow:0 2px 10px rgba(0,0,0,.26);',
+    '-webkit-tap-highlight-color:transparent;box-shadow:0 1px 4px rgba(0,0,0,.18);',
     'transition:transform .14s ease,background-color .2s,color .2s,border-color .2s;}',
     '.dk-toggle:active{transform:scale(.92);}',
     '.dk-toggle:focus-visible{outline:2px solid rgba(255,255,255,.55);outline-offset:2px;}',
@@ -111,7 +111,7 @@
     'background:rgba(14,16,26,.66);',
     'border:1px solid rgba(255,255,255,.22);',
     'color:rgba(255,255,255,.9);',
-    'box-shadow:0 2px 10px rgba(0,0,0,.26);}',
+    'box-shadow:0 1px 4px rgba(0,0,0,.18);}',
     '.dk .dk-toggle:hover,.dk .dk-back:hover,.dk .tk-btn:hover,',
     '.dk .tk-t .tk-t-btn:hover,.dk .fsk-btn:hover{',
     'background:rgba(14,16,26,.84);color:#fff;border-color:rgba(255,255,255,.42);}',
@@ -121,7 +121,8 @@
     'background:var(--card,#fff);',
     'border-color:var(--line,rgba(0,0,0,.08));',
     'color:var(--text-2,var(--muted,#3d5049));',
-    'box-shadow:var(--shadow,0 2px 10px rgba(0,0,0,.12));}',
+    /* 主题版同样只留接触级浅影；页面可用 --dk-shadow:none 整体关掉 */
+    'box-shadow:var(--dk-shadow,0 1px 4px rgba(0,0,0,.10));}',
     '.dk.dk-themed .dk-toggle:hover,.dk.dk-themed .dk-back:hover,.dk.dk-themed .tk-btn:hover,',
     '.dk.dk-themed .tk-t .tk-t-btn:hover,.dk.dk-themed .fsk-btn:hover{',
     'background:var(--card,#fff);',
@@ -171,7 +172,9 @@
        它要用 theme-kit 自己的 JS 跟着按钮走（面板在按钮正下方、右缘对齐）。
        放进来会被 !important 压过 inline style，面板就和按钮分家了。 */
     '.fsk-btn,.tk-btn,.pk-float,.gk-tools,.gk-dpad,',
-    '.ui.tools,.ui.side,.ui.palette,.ui.clock{',
+    /* .ui.clock 故意不放进来：天际页(visual-sky)的时钟要避开右侧圆钮，
+       拉到同一条竖线会被按钮压住，由页面自己定位 */
+    '.ui.tools,.ui.side,.ui.palette{',
     'right:calc(var(--kb-float-right, 18px) + env(safe-area-inset-right)) !important;}',
 
     /* ---------------- PC 端：全局按钮归位到页头右侧 ----------------
@@ -637,8 +640,9 @@
       /* 语言（float 悬浮钮、inline 页头钮都收） */
       var tk = doc.querySelector('.tk-t');
       if (tk && !inDock(tk)) list.push(rank(tk, 2));
-      /* 全屏 */
-      var fs2 = doc.getElementById('fsKitBtn');
+      /* 全屏：fs-kit 注入的圆钮，或页面自带的文字按钮
+         （tool-standby 的 #btnFull —— 它自己实现了全屏，fs-kit 检测到 btnFull 就不会再注入） */
+      var fs2 = doc.getElementById('fsKitBtn') || doc.getElementById('btnFull');
       if (fs2 && !inDock(fs2)) list.push(rank(fs2, 3));
     }
     /* ⑤ 底部工具条（.ui.bar）**故意不收**：它本身就是「贴底通栏 + 横向滚动」，

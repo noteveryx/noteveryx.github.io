@@ -498,7 +498,7 @@
      UI
      ========================================================== */
   /* 句子条：quotes 列表 + 自己写一句 */
-  var tkBar = window.TextKit.mountBar(document.getElementById('quoteBar'), {
+  window.TextKit.mountBar(document.getElementById('quoteBar'), {
     layout: 'list',
     limit: 30,
     value: plain(QUOTES[0] || ''),

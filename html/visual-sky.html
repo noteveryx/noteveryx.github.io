@@ -37,10 +37,13 @@
     pointer-events:none;user-select:none;
   }
   .label b{font-weight:600;letter-spacing:.14em;color:rgba(255,255,255,.9);}
+  /* dock-kit 会把 .ui.clock 强制拉到 right:18px（和右侧圆钮同一竖线），
+     时间正好压在按钮下面；这里用 ID 特异性覆盖，整块左移让出一列按钮宽度（44px 钮 + 18px 边距 + 间隙） */
   .clock{
-    right:calc(16px + env(safe-area-inset-right));top:calc(16px + env(safe-area-inset-top));
+    right:calc(84px + env(safe-area-inset-right));top:calc(16px + env(safe-area-inset-top));
     text-align:right;pointer-events:none;
   }
+  #clock{ right:calc(84px + env(safe-area-inset-right)) !important; }
   .clock .t{font-size:30px;font-weight:200;letter-spacing:.02em;line-height:1;
     text-shadow:0 2px 18px rgba(0,0,0,.3);}
   .clock .d{font-size:12px;opacity:.72;margin-top:5px;letter-spacing:.06em;}

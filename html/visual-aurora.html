@@ -127,7 +127,6 @@
 
   var cv = document.getElementById('cv');
   var ctx = cv.getContext('2d', { alpha: false });
-  var labelEl = document.getElementById('label');
 
   /* ==========================================================
      配色：调色板选一个主色，其余光斑色相由它派生（同色系）
@@ -290,8 +289,6 @@
     if (reduceMotion) { pauseBtn.innerHTML = ICON_PLAY; }
     pauseBtn.addEventListener('click', togglePause);
   }
-
-  var paletteBtn = null;
 
   var fsBtn = document.getElementById('fsBtn');
   var canFs = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);

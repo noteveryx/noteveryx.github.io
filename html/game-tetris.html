@@ -161,7 +161,7 @@
   var history = [];            // 已出过的方块序列（验证 7-bag 用）
   var level = 1, lines = 0;
   var dropTimer = 0, lockTimer = 0, lockResets = 0, grounded = false;
-  var flashRows = null, flashT = 0;
+  var flashT = 0;
 
   function dropInterval() {
     var ms = 800 - (level - 1) * 70;

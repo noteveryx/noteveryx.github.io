@@ -42,7 +42,12 @@
     user-select: none;
   }
 
-  /* ---------- 返回首页（待机页是全屏，没有页头，固定在左上角） ---------- */
+  /* ---------- 返回首页（待机页是全屏，没有页头，固定在左上角） ----------
+     PC：留在左上角。
+     手机：dock-kit 的 findBack() 认 a.back-btn，会把按钮克隆成 .dk-back 收进右侧工具坞，
+           再隐藏这个原键 —— 所以类名必须保持 .back-btn，不能改名。
+     本页故意不引 nav-kit：它会按 referrer 给 <html> 加 no-back，
+     那样 dock-kit 的 makeBack() 会直接 return，坞里也不会有返回键。 */
   .back-btn{
     position:fixed;
     left:calc(12px + env(safe-area-inset-left));
@@ -405,7 +410,6 @@
   .standby-on .stage { display: none; }
   .standby-on .type-wrap { display: flex; }
 
-  @keyframes blink { 50% { opacity: 0; } }
   @keyframes breathe { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -550,6 +554,31 @@
   }
   .tool-btn:hover { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); }
   .tool-btn:active { transform: scale(.96); }
+  /* 手机端「全屏」被 dock-kit 收进工具坞后，要和坞里其它按钮完全同款：
+     44px 圆形 + 主题玻璃底 + 18px 图标（不是文字胶囊）。
+     文字用 font-size:0 收起，再用 mask 画四角箭头 —— mask 吃 currentColor，
+     换主题时图标会跟着变深浅，和旁边的圆钮一致。 */
+  .dk .tool-btn{
+    width:44px;height:44px;padding:0;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:0;
+    background:var(--card,var(--panel,#fff));
+    border:1px solid var(--line,rgba(0,0,0,.08));
+    color:var(--text-2,var(--text,var(--muted,#3d5049)));
+    box-shadow:var(--dk-shadow,0 1px 4px rgba(0,0,0,.10));
+  }
+  .dk .tool-btn::before{
+    content:"";
+    width:18px;height:18px;
+    background-color:currentColor;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'/%3E%3C/svg%3E") center/contain no-repeat;
+            mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'/%3E%3C/svg%3E") center/contain no-repeat;
+  }
+  .dk .tool-btn:hover{
+    background:var(--card,var(--panel,#fff));
+    color:var(--accent,var(--brand));
+    border-color:var(--accent-ghost-line,rgba(0,0,0,.16));
+  }
 
   /* ---------- 编辑面板 ---------- */
   .editor {
@@ -813,7 +842,7 @@
     --on-brand:#fff;
   }
 </style>
-  <script src="../assets/js/nav-kit.js" defer></script>
+  <!-- nav-kit 会按 document.referrer 隐藏返回键；待机页是屏保型全屏页，常被直接打开，故不引它 -->
   <script src="../assets/js/fs-kit.js" defer></script>
   <script src="../assets/js/translate-kit.js" defer></script>
   <script src="../assets/js/dock-kit.js" defer></script>

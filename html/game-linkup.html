@@ -64,7 +64,6 @@
 
   var LW = 480, LH = 720;
   var GAP = 5;
-  var LIMIT = 150;                 // 一局 150 秒
 
   var SYMBOLS = ['●', '○', '◆', '◇', '■', '□', '▲', '△',
                  '★', '☆', '♥', '♦', '♠', '♣', '※', '◉'];
@@ -137,13 +136,6 @@
         这样每一对消除时，路径上一定没有更晚消除的牌
         → 玩家一定能通关
      ========================================================== */
-  function shuffle(a) {
-    for (var i = a.length - 1; i > 0; i--) {
-      var j = (Math.random() * (i + 1)) | 0;
-      var t = a[i]; a[i] = a[j]; a[j] = t;
-    }
-    return a;
-  }
 
   function solveOrder(occ) {
     var n = cols * rows;

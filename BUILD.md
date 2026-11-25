@@ -58,8 +58,7 @@ knowledge-base/
 │   │   └── text-kit.css       # 句子条组件
 │   ├── js/
 │   │   ├── docsify.min.js / sidebar-collapse.min.js / docsify-copy-code.min.js / zoom-image.min.js
-│   │   ├── search.min.js      # （已停用，文件保留备用；不再在 index.html 引用）
-│   │   ├── ebook-search.js / living-better-search.js / static-pages.js
+│   │   ├── ebook-search.js / living-better-search.js
 │   │   ├── theme-kit.js / toolbox.js / game-kit.js / palette-kit.js
 │   │   ├── fs-kit.js / save-kit.js / text-kit.js / quotes-data.js / qrcode.js
 │   │   ├── translate-kit.js / dock-kit.js   # 全站注入：页面翻译 / 手机端工具坞

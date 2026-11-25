@@ -98,8 +98,8 @@
   }
 
   function paintBg() {
-    var W2 = bgCv.width = Math.round(W * DPR);
-    var H2 = bgCv.height = Math.round(H * DPR);
+    bgCv.width = Math.round(W * DPR);
+    bgCv.height = Math.round(H * DPR);
     bgCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
     var deep = derived[3];
