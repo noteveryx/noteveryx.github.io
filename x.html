@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#1e7a4c">
   <title>独立页面</title>
-  <meta name="description" content="知识库快捷入口：常用站点导航、天气、时钟与 43 个独立工具页入口，全部纯前端运行。">
+  <meta name="description" content="知识库快捷入口：常用站点导航、天气、时钟与 44 个独立工具页入口，全部纯前端运行。">
   <link rel="icon" type="image/png" href="assets/image/favicon-round.png">
   <link rel="apple-touch-icon" href="assets/image/logo.png">
   <style>
@@ -1366,10 +1366,11 @@
     </div>
     <div class="tool-empty" id="toolEmpty">没有找到匹配的小工具，换个关键词试试。</div>
 
-    <!-- ============ 板块一：工具 ============ -->
-    <section class="sp-section" id="sec-tools">
-      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🧰</span>工具 <span class="sp-count">4</span></h2>
-      <p class="sp-sub">提升效率的小工具。</p>
+    
+    <!-- ============ 板块一：常用工具 ============ -->
+    <section class="sp-section" id="sec-common">
+      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🧰</span>常用工具 <span class="sp-count">12</span></h2>
+      <p class="sp-sub">日常随手就用的那几样，打开即用，不用绕弯子。</p>
       <div class="sp-grid">
         <a class="sp-card" href="html/search.html">
           <span class="sp-tag">检索</span>
@@ -1383,36 +1384,10 @@
           <p class="sp-desc">自动检测源语种，28 种语言互译，附翻译历史，结果本地缓存。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-quote-copy.html">
-          <span class="sp-tag">工具</span>
-          <span class="sp-name">文案快捷复制</span>
-          <p class="sp-desc">10 条接单常用话术，一键复制，手机端直接转发给客户。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-        <a class="sp-card" href="html/tool-standby.html">
-          <span class="sp-tag">工具</span>
-          <span class="sp-name">待机展示</span>
-          <p class="sp-desc">全屏屏保页，可自定义文字循环展示，默认显示待机时钟。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-        <a class="sp-card" href="html/tool-quotes.html">
-          <span class="sp-tag">收藏</span>
-          <span class="sp-name">句子收藏</span>
-          <p class="sp-desc">日常摘录的句子合集，点击任意一句即可复制，可持续补充。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-      </div>
-    </section>
-
-    <!-- ============ 板块一·二：效率工具 ============ -->
-    <section class="sp-section" id="sec-eff">
-      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">⚡</span>效率工具 <span class="sp-count">7</span></h2>
-      <p class="sp-sub">日常和开发都用得上的小工具，全部在浏览器本地跑，数据不出本机。</p>
-      <div class="sp-grid">
-        <a class="sp-card" href="html/tool-eyedropper.html">
-          <span class="sp-tag">设计</span>
-          <span class="sp-name">取色器</span>
-          <p class="sp-desc">屏幕取色、WCAG 对比度检测、图片主色提取，配色好不好终于有据可依。</p>
+        <a class="sp-card" href="html/tool-web-nav.html">
+          <span class="sp-tag">导航</span>
+          <span class="sp-name">外部工具导航</span>
+          <p class="sp-desc">把工具哇、菜鸟工具两个站的 1100 多个在线工具聚到一页，按分类筛选一键直达。</p>
           <span class="sp-arrow">打开</span>
         </a>
         <a class="sp-card" href="html/tool-textbox.html">
@@ -1421,22 +1396,10 @@
           <p class="sp-desc">大小写转换、批量去重排序、中英标点互转、字数统计、密码生成。</p>
           <span class="sp-arrow">打开</span>
         </a>
-        <a class="sp-card" href="html/tool-image.html">
-          <span class="sp-tag">图片</span>
-          <span class="sp-name">图片处理台</span>
-          <p class="sp-desc">压到指定体积、格式互转、加文字水印、裁剪旋转、切圆角做应用商店图标，全程本地不上传。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
         <a class="sp-card" href="html/tool-diff.html">
           <span class="sp-tag">对比</span>
           <span class="sp-name">文本对比</span>
           <p class="sp-desc">左右两栏逐行比对，高亮标出到底改了哪几个词，忽略空格大小写可选。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-        <a class="sp-card" href="html/tool-pomodoro.html">
-          <span class="sp-tag">专注</span>
-          <span class="sp-name">专注番茄钟</span>
-          <p class="sp-desc">25 分钟一轮，配实时合成的雨声海浪白噪音，记下每天完成几个。</p>
           <span class="sp-arrow">打开</span>
         </a>
         <a class="sp-card" href="html/tool-qrcode.html">
@@ -1445,19 +1408,105 @@
           <p class="sp-desc">网址或文本转二维码，配色与尺寸随意调，导出 PNG 或矢量 SVG。</p>
           <span class="sp-arrow">打开</span>
         </a>
+        <a class="sp-card" href="html/tool-quote-copy.html">
+          <span class="sp-tag">文案</span>
+          <span class="sp-name">文案快捷复制</span>
+          <p class="sp-desc">10 条接单常用话术，一键复制，手机端直接转发给客户。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/tool-quotes.html">
+          <span class="sp-tag">收藏</span>
+          <span class="sp-name">句子收藏</span>
+          <p class="sp-desc">日常摘录的句子合集，点击任意一句即可复制，可持续补充。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
         <a class="sp-card" href="html/tool-materials.html">
           <span class="sp-tag">素材</span>
           <span class="sp-name">素材库</span>
           <p class="sp-desc">粘贴 m3u8 或图片链接，本地预览、复制、下载，列表自动记住。</p>
           <span class="sp-arrow">打开</span>
         </a>
+        <a class="sp-card" href="html/tool-pomodoro.html">
+          <span class="sp-tag">专注</span>
+          <span class="sp-name">专注番茄钟</span>
+          <p class="sp-desc">25 分钟一轮，配实时合成的雨声海浪白噪音，记下每天完成几个。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/tool-standby.html">
+          <span class="sp-tag">屏保</span>
+          <span class="sp-name">待机展示</span>
+          <p class="sp-desc">全屏屏保页，可自定义文字循环展示，默认显示待机时钟。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/tool-delta-escort.html">
+          <span class="sp-tag">专题</span>
+          <span class="sp-name">行动突围护航社</span>
+          <p class="sp-desc">纯绿双护护航落地页，正文以 V6 定稿，5 套主题一键切换。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
       </div>
     </section>
 
-    <!-- ============ 板块二：氛围屏 ============ -->
+    <!-- ============ 板块二：创作 ============ -->
+    <section class="sp-section" id="sec-create">
+      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🎨</span>创作 <span class="sp-count">8</span></h2>
+      <p class="sp-sub">做图、做画、做配色，成品都能直接存下来。</p>
+      <div class="sp-grid">
+        <a class="sp-card" href="html/tool-image.html">
+          <span class="sp-tag">图片</span>
+          <span class="sp-name">图片处理台</span>
+          <p class="sp-desc">压到指定体积、格式互转、加文字水印、裁剪旋转、切圆角做应用商店图标，全程本地不上传。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/tool-paint.html">
+          <span class="sp-tag">绘画</span>
+          <span class="sp-name">画板</span>
+          <p class="sp-desc">五种笔刷、橡皮、油漆桶、取色器、撤销重做。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/tool-handwriting.html">
+          <span class="sp-tag">书写</span>
+          <span class="sp-name">手写板</span>
+          <p class="sp-desc">纸面随手写，导出透明底 PNG，签名、留言都好用。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/tool-eyedropper.html">
+          <span class="sp-tag">设计</span>
+          <span class="sp-name">取色器</span>
+          <p class="sp-desc">屏幕取色、WCAG 对比度检测、图片主色提取，配色好不好终于有据可依。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/visual-gradient.html">
+          <span class="sp-tag">配色</span>
+          <span class="sp-name">渐变配色</span>
+          <p class="sp-desc">一点就出一组好看的渐变，HEX 与 CSS 一键复制。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/visual-mandala.html">
+          <span class="sp-tag">生成</span>
+          <span class="sp-name">曼陀罗</span>
+          <p class="sp-desc">画一笔自动镜像出对称花纹，可随机生成，保存 PNG。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/visual-poster.html">
+          <span class="sp-tag">生成</span>
+          <span class="sp-name">句子海报</span>
+          <p class="sp-desc">把收藏的句子做成 1080×1440 海报，四种模板，主色自选。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+        <a class="sp-card" href="html/visual-pixel-avatar.html">
+          <span class="sp-tag">生成</span>
+          <span class="sp-name">像素头像</span>
+          <p class="sp-desc">输入名字生成对称像素头像，可下载当头像用。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============ 板块三：氛围屏 ============ -->
     <section class="sp-section" id="sec-ambient">
-      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🌌</span>氛围屏 <span class="sp-count">5</span></h2>
-      <p class="sp-sub">打开就是一幅画，适合当屏保或壁纸。颜色都能自己调。</p>
+      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🌌</span>氛围屏 <span class="sp-count">6</span></h2>
+      <p class="sp-sub">打开就是一幅画，适合当屏保或壁纸，颜色都能自己调。</p>
       <div class="sp-grid">
         <a class="sp-card" href="html/visual-aurora.html">
           <span class="sp-tag">氛围</span>
@@ -1489,10 +1538,16 @@
           <p class="sp-desc">三层视差雪花静静落下，手指划过能把雪拨开。</p>
           <span class="sp-arrow">打开</span>
         </a>
+        <a class="sp-card" href="html/visual-noise.html">
+          <span class="sp-tag">壁纸</span>
+          <span class="sp-name">噪声壁纸</span>
+          <p class="sp-desc">分形噪声生成抽象纹理，每次都不一样，可存成手机壁纸。</p>
+          <span class="sp-arrow">打开</span>
+        </a>
       </div>
     </section>
 
-    <!-- ============ 板块三：交互视觉 ============ -->
+    <!-- ============ 板块四：交互视觉 ============ -->
     <section class="sp-section" id="sec-inter">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">👆</span>交互视觉 <span class="sp-count">5</span></h2>
       <p class="sp-sub">碰一下就有反馈的玩具，指针在哪它就跟着动。</p>
@@ -1530,65 +1585,7 @@
       </div>
     </section>
 
-    <!-- ============ 板块四：生成器 ============ -->
-    <section class="sp-section" id="sec-gen">
-      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">✨</span>生成器 <span class="sp-count">5</span></h2>
-      <p class="sp-sub">玩完能带走一张图的工具，都能直接保存。</p>
-      <div class="sp-grid">
-        <a class="sp-card" href="html/visual-poster.html">
-          <span class="sp-tag">生成</span>
-          <span class="sp-name">句子海报</span>
-          <p class="sp-desc">把收藏的句子做成 1080×1440 海报，四种模板，主色自选。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-        <a class="sp-card" href="html/visual-mandala.html">
-          <span class="sp-tag">生成</span>
-          <span class="sp-name">曼陀罗</span>
-          <p class="sp-desc">画一笔自动镜像出对称花纹，可随机生成，保存 PNG。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-        <a class="sp-card" href="html/visual-gradient.html">
-          <span class="sp-tag">生成</span>
-          <span class="sp-name">渐变配色</span>
-          <p class="sp-desc">一点就出一组好看的渐变，HEX 与 CSS 一键复制。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-        <a class="sp-card" href="html/visual-noise.html">
-          <span class="sp-tag">生成</span>
-          <span class="sp-name">噪声壁纸</span>
-          <p class="sp-desc">分形噪声生成抽象纹理，每次都不一样，可存成手机壁纸。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-        <a class="sp-card" href="html/visual-pixel-avatar.html">
-          <span class="sp-tag">生成</span>
-          <span class="sp-name">像素头像</span>
-          <p class="sp-desc">输入名字生成对称像素头像，可下载当头像用。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-      </div>
-    </section>
-
-    <!-- ============ 板块五：画板 ============ -->
-    <section class="sp-section" id="sec-paint">
-      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🖌️</span>画板 <span class="sp-count">2</span></h2>
-      <p class="sp-sub">写与画，一个写签名，一个正经画画。</p>
-      <div class="sp-grid">
-        <a class="sp-card" href="html/tool-handwriting.html">
-          <span class="sp-tag">书写</span>
-          <span class="sp-name">手写板</span>
-          <p class="sp-desc">纸面随手写，导出透明底 PNG，签名、留言都好用。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-        <a class="sp-card" href="html/tool-paint.html">
-          <span class="sp-tag">绘画</span>
-          <span class="sp-name">画板</span>
-          <p class="sp-desc">五种笔刷、橡皮、油漆桶、取色器、撤销重做。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-      </div>
-    </section>
-
-    <!-- ============ 板块六：小游戏 ============ -->
+<!-- ============ 板块五：小游戏 ============ -->
     <section class="sp-section" id="sec-games">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🎮</span>小游戏 <span class="sp-count">13</span></h2>
       <p class="sp-sub">休闲来一局，最高分自动记录，键盘和手机滑动都能玩，右上色球随时换配色。</p>
@@ -1674,21 +1671,8 @@
       </div>
     </section>
 
-    <!-- ============ 板块七：行动突围护航社 ============ -->
-    <section class="sp-section" id="sec-escort">
-      <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🛡️</span>行动突围护航社 <span class="sp-count">1</span></h2>
-      <p class="sp-sub">内容已合并为统一版，主题风格在页面内一键切换。</p>
-      <div class="sp-grid">
-        <a class="sp-card" href="html/tool-delta-escort.html">
-          <span class="sp-tag">统一版</span>
-          <span class="sp-name">行动突围护航社</span>
-          <p class="sp-desc">纯绿双护护航落地页，正文以 V6 定稿，5 套主题一键切换。</p>
-          <span class="sp-arrow">打开</span>
-        </a>
-      </div>
-    </section>
 
-    <!-- ============ 板块八：快捷导航 ============ -->
+    <!-- ============ 板块六：快捷导航 ============ -->
     <section class="sp-section" id="sec-nav">
       <h2 class="sp-head"><span class="sp-emoji" aria-hidden="true">🧭</span>快捷导航 <span class="sp-count" id="navCount">30</span></h2>
       <p class="sp-sub">新闻 · 财经 · 门户常用站点直达，点击在新标签页打开。</p>
@@ -1921,7 +1905,7 @@
         'html/tool-eyedropper.html': '💧', 'html/tool-textbox.html': '🔤',
         'html/tool-image.html': '🖼️', 'html/tool-diff.html': '🔀',
         'html/tool-pomodoro.html': '🍅', 'html/tool-qrcode.html': '🔳',
-        'html/tool-materials.html': '📁',
+        'html/tool-materials.html': '📁', 'html/tool-web-nav.html': '🧭',
         'html/visual-aurora.html': '🌌', 'html/visual-starfield.html': '🌠',
         'html/visual-rain.html': '🌧️', 'html/visual-sky.html': '🌤️',
         'html/visual-snow.html': '❄️', 'html/visual-wave-grid.html': '🌊',

@@ -187,6 +187,12 @@
     for (var i = 0; i < THEMES.length; i++) {
       if (THEMES[i].id === item.getAttribute('data-theme')) { apply(THEMES[i], true); break; }
     }
+    /* 选中主题后收起面板。
+       下面那条「点面板外就收起」的 document 监听收不到这里的点击 ——
+       事件目标在面板内部（panel.contains 为真），所以必须自己收。
+       不收的话面板会一直挂在页面上，挡住下面的内容，
+       还让人以为「点主题没生效」。 */
+    toggle(false);
   });
 
   function boot() {
